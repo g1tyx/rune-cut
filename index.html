@@ -1,0 +1,517 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RuneCut — Incremental</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <div class="brand">Rune<b>Cut</b> · <span class="muted">Incremental</span></div>
+    <div class="row">
+      <button id="saveBtn" class="btn-success">Save</button>
+      <button id="resetBtn" class="btn-danger">Reset</button>
+      <button id="exportBtn">Export Save</button>
+      <button id="importBtn">Import Save</button>
+      <input id="importFile" type="file" accept="application/json" hidden>
+
+      <span class="pill" title="Autosaves every 30s"><span>💾</span> Autosave <b>ON</b></span>
+    </div>
+  </header>
+
+  <script>
+    window.addEventListener('securitypolicyviolation', e => {
+      console.error('[CSP]', {
+        directive: e.violatedDirective,
+        blockedURI: e.blockedURI,
+        sourceFile: e.sourceFile,
+        lineNumber: e.lineNumber,
+        columnNumber: e.columnNumber,
+        sample: e.sample
+      });
+    });
+    window.addEventListener('error', e => console.error('[window.onerror]', e.message, e.error));
+    window.addEventListener('unhandledrejection', e => console.error('[unhandledrejection]', e.reason));
+  </script>
+  
+
+  <div class="wrap">
+    <div class="grid">
+      <!-- LEFT: Skills + Inventory -->
+      <section class="card" id="skillsCard">
+        <h2>🧭 Skills</h2>
+        <div class="row" style="gap:8px; margin-bottom:8px;">
+          <div class="stat"><span>Total</span> <b id="totalLevel">4</b></div>
+          <div class="stat"><span>Gold</span> <b class="gold" id="gold">0</b></div>
+        </div>
+
+        <!-- Compact skills grid (single source of truth) -->
+        <div class="skills-grid">
+          <div class="skill-tile" id="tile-wc">
+            <div class="tile-header">🪓 <span>Forestry</span></div>
+            <div class="tile-level">Lvl <b id="wcLevelMini">1</b></div>
+            <div class="progress xs" title=""><div class="bar" id="wcBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-craft">
+            <div class="tile-header">🪚 <span>Crafting</span></div>
+            <div class="tile-level">Lvl <b id="craftLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="craftBarMini"></div></div>
+          </div>          
+          <div class="skill-tile" id="tile-min">
+            <div class="tile-header">⛏️ <span>Mining</span></div>
+            <div class="tile-level">Lvl <b id="minLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="minBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-smith">
+            <div class="tile-header">⚒️ <span>Smithing</span></div>
+            <div class="tile-level">Lvl <b id="smithLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="smithBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-fish">
+            <div class="tile-header">🎣 <span>Fishing</span></div>
+            <div class="tile-level">Lvl <b id="fishLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="fishBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-cook">
+            <div class="tile-header">🍳 <span>Cooking</span></div>
+            <div class="tile-level">Lvl <b id="cookLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="cookBarMini"></div></div>
+          </div>
+          <div id="tile-enchant" class="skill-tile">
+            <div class="tile-header">Enchanting</div>
+            <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="enchantBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-atk">
+            <div class="tile-header">⚔️ <span>Attack</span></div>
+            <div class="tile-level">Lvl <b id="atkLevelMini">1</b></div>
+            <div class="progress xs" title=""><div class="bar" id="atkBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-str">
+            <div class="tile-header">💪 <span>Strength</span></div>
+            <div class="tile-level">Lvl <b id="strLevelMini">1</b></div>
+            <div class="progress xs" title=""><div class="bar" id="strBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-def">
+            <div class="tile-header">🛡️ <span>Defense</span></div>
+            <div class="tile-level">Lvl <b id="defLevelMini">1</b></div>
+            <div class="progress xs" title=""><div class="bar" id="defBarMini"></div></div>
+          </div>
+
+          <!-- NEW: Royal Service mini tile -->
+          <div class="skill-tile" id="tile-royal">
+            <div class="tile-header">👑 <span>Royal Service</span></div>
+            <div class="tile-level">Lvl <b id="royalLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="royalBarMini"></div></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <h2>🎒 Inventory</h2>
+        <div id="inventory" class="inventory"></div>
+      </section>
+
+      <!-- MIDDLE: Areas -->
+      <section class="card" id="areasCard">
+        <div class="tabs">
+          <button class="tab active" data-tab="forests">🌲 Forests</button>
+          <button class="tab" data-tab="crafting">🪚 Crafting</button>
+          <button class="tab" data-tab="fishing">🎣 Fishing</button>
+          <button class="tab" data-tab="cooking">🍳 Cooking</button>
+          <button class="tab" data-tab="mining">⛏️ Mining</button>
+          <button class="tab" data-tab="smithing">⚒️ Smithing</button>
+          <button class="tab" data-tab="enchanting">Enchanting</button>
+          <button class="tab" data-tab="combat">⚔️ Combat</button>
+          <!-- NEW: Royal Service tab -->
+          <button class="tab" data-tab="royal">👑 Royal Service</button>
+        </div>
+
+        <!-- Forests panel -->
+        <div class="tabpanel" id="tab-forests">
+          <h2>🌲 Chop Trees</h2>
+          <div class="row" style="gap:10px; margin-bottom:10px;">
+            <label class="muted" for="treeSelect">Tree</label>
+            <select id="treeSelect"></select>
+            <button id="chopBtn" class="btn-primary">Chop</button>
+          </div>
+          <div class="progress" style="margin-bottom:10px;">
+            <div class="bar" id="actionBar"></div>
+            <div class="label" id="actionLabel">Idle</div>
+          </div>
+            <div class="card" style="padding:10px;">
+              <h2 style="margin-bottom:6px;">📜 Log</h2>
+              <div id="wcLog" class="log" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <!-- Crafting panel -->
+        <div class="tabpanel hidden" id="tab-crafting">
+          <h2>🪚 Crafting</h2>
+          <p class="small muted" style="margin:6px 0;">Craft items from gathered materials. Higher <b>Crafting</b> level speeds crafting.</p>
+
+          <div id="craftList" class="shop" style="margin-top:6px;"></div>
+
+          <div class="progress" style="margin-top:8px;">
+            <div class="bar" id="craftBar"></div>
+            <div class="label" id="craftLabel">Idle</div>
+          </div>
+
+          <div id="craftLog" class="log" aria-live="polite" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- Fishing panel -->
+        <div class="tabpanel hidden" id="tab-fishing">
+          <h2>🎣 Fishing</h2>
+          <div class="row" style="gap:10px; margin-bottom:10px;">
+            <label class="muted" for="spotSelect">Spot</label>
+            <select id="spotSelect"></select>
+            <button id="fishBtn" class="btn-primary">Fish</button>
+          </div>
+          <div class="progress" style="margin-bottom:10px;">
+            <div class="bar" id="fishBar"></div>
+            <div class="label" id="fishLabel">Idle</div>
+          </div>
+          <div class="card" style="padding:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+            <div id="fishLog" class="log" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- Cooking panel -->
+        <div class="tabpanel hidden" id="tab-cooking">
+          <h2>🍳 Cooking</h2>
+          <p class="small muted">
+            Drag a <b>raw food</b> from your inventory onto the fire and hold it.
+            Release when the bar is in the <b>golden zone</b>. Too short = raw. Too long = burnt.
+          </p>
+          <div id="cookFire" class="cook-fire" aria-dropeffect="move">
+            <div class="cook-bar">
+              <div class="perfect-zone" id="cookPerfectZone"></div>
+              <div class="bar" id="cookBar"></div>
+            </div>
+            <div class="fire-emoji">🔥</div>
+            <div class="hint" id="cookHint">Drop raw food here</div>
+          </div>
+          <div class="card" style="padding:10px; margin-top:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+            <div id="cookLog" class="log" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- Mining panel -->
+        <div class="tabpanel hidden" id="tab-mining">
+          <h2>⛏️ Mining</h2>
+          <div class="row" style="gap:10px; margin-bottom:10px;">
+            <label class="muted" for="rockSelect">Rock</label>
+            <select id="rockSelect"></select>
+            <button id="mineBtn" class="btn-primary">Mine</button>
+          </div>
+          <div class="progress" style="margin-bottom:10px;">
+            <div class="bar" id="mineBar"></div>
+            <div class="label" id="mineLabel">Idle</div>
+          </div>
+          <div class="card" style="padding:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+            <div id="mineLog" class="log" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- Smithing panel -->
+        <div class="tabpanel hidden" id="tab-smithing">
+          <h2>⚒️ Smithing</h2>
+
+          <!-- Smelting -->
+          <div class="card" style="padding:10px; margin-bottom:10px;">
+            <h3 style="margin:0 0 8px;">🔥 Smelting</h3>
+            <div class="row" style="gap:10px; margin-bottom:8px;">
+              <label class="muted" for="smeltSelect">Bar</label>
+              <select id="smeltSelect"></select>
+              <button id="smeltOneBtn"  class="btn-primary">Smelt 1</button>
+              <button id="smeltAllBtn"  class="btn-primary">Smelt All</button>
+            </div>
+            <div class="progress" style="margin-bottom:8px;">
+              <div class="bar" id="smithBar"></div>
+              <div class="label" id="smithLabel">Idle</div>
+            </div>
+            <div id="smithLog" class="log" aria-live="polite"></div>
+          </div>
+
+          <!-- Upgrade Gear -->
+          <div class="card" style="padding:10px; margin-bottom:10px;">
+            <h3 style="margin:0 0 8px;">🛠️ Upgrade Gear</h3>
+            <p class="small muted">
+              Spend <b>1× Copper Upgrade Bar</b> to improve quality by <b>+10–25%</b> (higher Smithing skews higher).
+            </p>
+
+            <div class="row" style="gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+              <label class="muted" for="upgradeFilter">Metal</label>
+              <select id="upgradeFilter">
+                <option value="all">All</option>
+                <option value="copper">Copper</option>
+                <option value="bronze">Bronze</option>
+                <option value="iron">Iron</option>
+                <option value="steel">Steel</option>
+                <option value="blacksteel">Blacksteel</option>
+              </select>
+
+              <select id="upgradeTarget" style="min-width:220px;">
+                <option disabled selected>Nothing upgradable</option>
+              </select>
+
+              <button id="applyUpgradeBtn" class="btn-success" disabled>Apply</button>
+            </div>
+
+            <p class="small muted">Tip: Items with a quality (e.g., <i>qty: 62%</i>) can be upgraded up to 100%.</p>
+          </div>
+
+
+          <!-- Forging (gear + materials) -->
+          <div class="card" style="padding:10px;">
+            <h3 style="margin:0 0 8px;">🛡️ Forge Gear & Materials</h3>
+            <!-- metal filter -->
+            <div class="row" style="gap:10px; margin-bottom:8px;">
+              <label class="muted" for="forgeMetal">Metal</label>
+              <select id="forgeMetal">
+                <option value="copper">Copper</option>
+                <option value="bronze">Bronze</option>
+                <option value="iron">Iron</option>
+                <option value="steel">Steel</option>
+                <option value="blacksteel">Blacksteel</option>
+              </select>
+            </div>
+            <div id="forgeList" class="shop"></div>
+          </div>
+        </div>
+
+        <!-- Enchanting panel -->
+        <div class="tabpanel hidden" id="tab-enchanting">
+          <h2>🪄 Enchanting</h2>
+          <p class="small muted" style="margin:6px 0;">
+            Turn <b>Books</b> into <b>Tomes</b> using <b>Mana</b> and <b>Essences</b>. Higher Enchanting level unlocks more recipes.
+          </p>
+        
+          <div class="row small muted" style="justify-content:space-between; align-items:center;">
+            <span>Mana: <b id="enchantManaVal">0/0</b></span>
+            <span id="enchantLabel">Idle</span>
+          </div>
+        
+          <div class="progress xs" style="margin:6px 0 10px;">
+            <div id="enchantBar" class="bar" style="width:0%"></div>
+          </div>
+          <div class="card" style="padding:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+          <div id="enchantLog" class="log" aria-live="polite"></div>
+          </div>
+          <div id="enchantList" class="shop"></div>
+        </div>
+
+        <!-- Combat panel -->
+        <div class="tabpanel hidden" id="tab-combat">
+          <h2>⚔️ Combat</h2>
+          <div class="row" style="gap:10px; margin-bottom:10px;">
+            <div id="combatMap" class="combat-map">
+              <button class="zone-btn" data-zone="Swamp">🌿 Swamp</button>
+              <button class="zone-btn" data-zone="Volcano">🌋 Volcano</button>
+              <button class="zone-btn" data-zone="Wastes">🏜️ Wastes</button>
+              <button class="zone-btn" data-zone="Crypts">🪦 Crypts</button>
+              <button class="zone-btn" data-zone="Mountains">⛰️ Mountains</button>
+            </div>
+            <div id="monsterGrid" class="monster-grid"></div>
+          </div>
+          <p class="small muted">Tip: Click a monster to select and Fight.</p>
+        </div>
+
+        <!-- NEW: Royal Service panel -->
+        <div class="tabpanel hidden" id="tab-royal">
+          <h2>👑 Royal Service</h2>
+          <div id="royalStatus" class="small" style="margin:6px 0 10px;">Level — · XP —</div>
+
+          <div class="row" style="gap:8px; margin-bottom:10px;">
+            <button id="royalRequestBtn" class="btn-primary">Request Contract</button>
+            <button id="royalAbandonBtn" class="btn-danger" disabled>Abandon Contract</button>
+          </div>
+
+          <div id="royalContract" class="card" style="padding:10px;">
+            <div class="muted">No active contract. Click “Request Contract”.</div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- RIGHT: Equipment + Character -->
+      <section class="card" id="equipmentCard">
+        <h2>🧰 Equipment</h2>
+        <!-- Compact equipment grid -->
+        <div id="equipmentGrid" class="equip-grid">
+          <div class="equip-cell" data-slot="cape">
+            <div class="slot empty"><span class="icon">🧣</span><button class="unequip-x" data-unequip="cape" title="Unequip">✕</button></div>
+            <div class="slot-label">Cape</div>
+          </div>
+          <div class="equip-cell" data-slot="head">
+            <div class="slot empty"><span class="icon">🪖</span><button class="unequip-x" data-unequip="head" title="Unequip">✕</button></div>
+            <div class="slot-label">Head</div>
+          </div>
+          <div class="equip-cell" data-slot="amulet">
+            <div class="slot empty"><span class="icon">📿</span><button class="unequip-x" data-unequip="amulet" title="Unequip">✕</button></div>
+            <div class="slot-label">Amulet</div>
+          </div>
+
+          <div class="equip-cell" data-slot="weapon">
+            <div class="slot empty"><span class="icon">🗡️</span><button class="unequip-x" data-unequip="weapon" title="Unequip">✕</button></div>
+            <div class="slot-label">Weapon</div>
+          </div>
+          <div class="equip-cell" data-slot="body">
+            <div class="slot empty"><span class="icon">🧥</span><button class="unequip-x" data-unequip="body" title="Unequip">✕</button></div>
+            <div class="slot-label">Body</div>
+          </div>
+          <div class="equip-cell" data-slot="shield">
+            <div class="slot empty"><span class="icon">🛡️</span><button class="unequip-x" data-unequip="shield" title="Unequip">✕</button></div>
+            <div class="slot-label">Shield</div>
+          </div>
+
+          <div class="equip-cell" data-slot="gloves">
+            <div class="slot empty"><span class="icon">🧤</span><button class="unequip-x" data-unequip="gloves" title="Unequip">✕</button></div>
+            <div class="slot-label">Gloves</div>
+          </div>
+          <div class="equip-cell" data-slot="legs">
+            <div class="slot empty"><span class="icon">👖</span><button class="unequip-x" data-unequip="legs" title="Unequip">✕</button></div>
+            <div class="slot-label">Legs</div>
+          </div>
+          <div class="equip-cell" data-slot="boots">
+            <div class="slot empty"><span class="icon">🥾</span><button class="unequip-x" data-unequip="boots" title="Unequip">✕</button></div>
+            <div class="slot-label">Boots</div>
+          </div>
+
+          <div class="equip-cell" data-slot="ring">
+            <div class="slot empty"><span class="icon">💍</span><button class="unequip-x" data-unequip="ring" title="Unequip">✕</button></div>
+            <div class="slot-label">Ring</div>
+          </div>
+          <div class="equip-cell" data-slot="axe">
+            <div class="slot empty"><span class="icon">🪓</span><button class="unequip-x" data-unequip="axe" title="Unequip">✕</button></div>
+            <div class="slot-label">Axe</div>
+          </div>
+          <div class="equip-cell" data-slot="pick">
+            <div class="slot empty"><span class="icon">⛏️</span><button class="unequip-x" data-unequip="pick" title="Unequip">✕</button></div>
+            <div class="slot-label">Pickaxe</div>
+          </div>
+          <div class="equip-cell" data-slot="fishing">
+            <div class="slot empty">
+              <span class="icon">🎣</span>
+              <button class="unequip-x" data-unequip="fishing" title="Unequip">✕</button>
+            </div>
+            <div class="slot-label">Rod</div>
+          </div>
+          <div class="equip-cell" data-slot="tome">
+            <div class="slot empty">
+              <span class="icon">📖</span>
+              <button class="unequip-x" data-unequip="tome" title="Unequip">✕</button>
+            </div>
+            <div class="slot-label">Tome</div>
+          </div>
+          <div class="equip-cell" data-slot="food">
+            <div class="slot empty"><span class="icon">🍖</span><button class="unequip-x" data-unequip="food" title="Unequip">✕</button></div>
+            <div class="slot-label">Food</div>
+          </div>
+          <div class="equip-cell spacer"></div>
+        </div>
+
+        <div class="divider"></div>
+        <h2>🧙 Character</h2>
+        <div class="row" style="gap:10px; margin-bottom:8px;">
+          <div class="stat"><span>Atk</span> <b id="charAtk">0</b></div>
+          <div class="stat"><span>Str</span> <b id="charStr">0</b></div>
+          <div class="stat"><span>Def</span> <b id="charDef">0</b></div>
+        </div>
+        <div class="progress hp" title="Your HP"><div class="bar" id="charHpBar"></div><div class="label" id="charHpLabel">0%</div></div>
+        <div class="progress mana">
+          <div class="bar" id="charManaBar"></div>
+          <div class="label" id="charManaLabel">10/10</div>
+        </div>        
+        <div class="row small" style="margin-top:8px;">
+          <span class="pill">Max Hit: <b id="charMaxHit">1</b></span>
+        </div>
+      </section>
+    </div>
+    <footer>
+      Notice: Game is in very early development.
+    </footer>
+  </div>
+  
+  <div id="popover" class="popover hidden" role="menu"></div>
+  <div id="tooltip" class="tooltip hidden"></div>
+
+  <!-- Combat Overlay (single source of truth for combat UI IDs) -->
+  <div id="combatOverlay" class="combat-overlay hidden" aria-modal="true" role="dialog">
+    <div class="combat-box">
+      <button id="closeCombat" class="close-btn" aria-label="Close combat overlay">×</button>
+
+      <!-- Monster Card -->
+      <div class="monster-card" id="monsterCard">
+        <img id="monsterImg" class="monster-img" alt="Monster" />
+        <div class="monster-meta">
+          <div class="monster-title">
+            <span id="monsterCardName">—</span>
+            <span class="muted">Lv <b id="monsterCardLevel">—</b></span>
+          </div>
+          <div class="monster-stats small muted" id="monsterCardStats">HP — · Atk — · Def — · Max —</div>
+        </div>
+        <div class="card-row">
+          <div class="label">Drops</div>
+          <div id="monsterDrops" class="monster-drops"></div>
+        </div>
+      </div>
+
+      <!-- HUD -->
+      <div class="combat-hud">
+        <div class="hud-col">
+          <div class="hud-name">You</div>
+          <div class="progress hp">
+            <div class="bar" id="playerHpBar"></div>
+            <div class="label" id="playerHpVal">0/0</div>
+          </div>
+          <div class="progress mana">
+            <div class="bar" id="playerManaBar"></div>
+            <div class="label" id="playerManaVal">10/10</div>
+          </div>
+        </div>
+      
+        <div class="hud-col">
+          <div class="hud-name" id="monName">—</div>
+          <div class="progress hp enemy">
+            <div class="bar" id="monHpBar"></div>
+            <div class="label" id="monHpVal">0/0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="combat-actions">
+        <label class="muted" for="trainingSelect">Style</label>
+        <select id="trainingSelect">
+          <option value="attack">Attack</option>
+          <option value="strength">Strength</option>
+          <option value="defense">Defense</option>
+          <option value="shared" selected>Shared</option>
+        </select>
+        <button id="fightBtn" class="btn-primary">Start Fight</button>
+        <!-- Attack button label changed to Eat; id kept for JS wiring -->
+        <button id="attackTurnBtn" class="btn-primary" disabled>Eat</button>
+        <button id="fleeBtn" class="btn-danger" disabled>Flee</button>
+      </div>
+
+      <!-- Combat Log -->
+      <div class="card" style="padding:10px; margin-top:10px;">
+        <h3 class="small muted" style="margin:0 0 6px;">Combat Log</h3>
+        <div id="combatLog" class="log" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import './ui/app.js';
+  </script>
+</body>
+</html>

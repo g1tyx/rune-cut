@@ -1,0 +1,1066 @@
+:root {
+  --bg: #0f1220;
+  --panel: #171a2b;
+  --panel-2: #1e2237;
+  --text: #e8ecff;
+  --text-dim: #a9b0d3;
+  --accent: #7aa2ff;
+  --accent-2: #45d483;
+  --danger: #ff6b6b;
+  --gold: #ffd166;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --progress-h: 20px;
+  --progress-h-xs: 8px;
+  --progress-h-hp: 30px;
+  --cook-bar-h: 20px;
+  --font-title: "Marcellus", serif;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Red Hat Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; font-family: var(--font-title), serif; }
+h1, h2, h3, .monster-title, .panel-title {
+  font-family: var(--font-title);
+  letter-spacing: .02em;
+}
+.badge, .qty-badge, .stat, .damage, .enchant-badge {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums; /* aligned numbers for HP/DMG */
+}
+*, *::before, *::after {
+  font-family: inherit !important;
+}
+body {
+  margin: 0; background: radial-gradient(1200px 800px at 20% 10%, #141834, #0d1020) no-repeat, var(--bg);
+  color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px; background: #0b0e1b80; backdrop-filter: blur(6px); position: sticky; top: 0; z-index: 9;
+  border-bottom: 1px solid #1b2040;
+}
+.brand { font-weight: 800; letter-spacing: .2px; }
+.brand b { color: var(--accent); }
+.wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
+.grid { display: grid; grid-template-columns: 390px 1.4fr 280px; gap: 16px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+
+.card { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid #242a4f; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
+.card h2 { margin: 0 0 10px; font-size: 16px; letter-spacing: .3px; color: var(--text); }
+.muted { color: var(--text-dim); }
+.small { font-size: 12px; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stat { background: #0e1230; border: 1px solid #252b54; padding: 8px 10px; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 8px; }
+.stat b { color: var(--text); }
+
+select, button, input[type="number"] {
+  background: #0e132c; color: var(--text); border: 1px solid #2a3162; border-radius: 10px; padding: 8px 10px;
+  font: inherit; outline: none; transition: .15s ease; 
+}
+button { cursor: pointer; }
+button:hover { border-color: #3a4290; transform: translateY(-1px); }
+button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.btn-primary { background: linear-gradient(180deg, #2330a5, #1b2688); border-color: #2e3ac9; }
+.btn-success { background: linear-gradient(180deg, #1f8f5f, #15714b); border-color: #2ac985; }
+.btn-danger { background: linear-gradient(180deg, #9b2d2d, #7c2121); border-color: #cf4a4a; }
+.btn-gold { background: linear-gradient(180deg, #b4841a, #8e6a16); border-color: #f4c16e; color: #1b1204; }
+
+.progress { height: var(--progress-h); background: #0b0f25; border: 1px solid #1f2652; border-radius: 999px; overflow: hidden; position: relative; }
+.progress .bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #87f4ff); transition: width .12s linear; }
+.progress .label { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--text-dim); }
+.progress.xs { height: var(--progress-h-xs); }
+
+.monster-card{
+  --mon-img: 128px;
+  display:grid;
+  grid-template-columns: var(--mon-img) 1fr;
+  gap:12px;
+  align-items:center;
+  border:1px solid #2a3162;
+  background:#0f1431;
+  padding:10px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+.monster-img{
+  width:var(--mon-img); height:var(--mon-img);
+  object-fit:contain; border-radius:10px;
+  background:#0b1028; border:1px solid #242a4f;
+}
+
+.monster-title{ font-weight:600; display:flex; align-items:center; gap:8px; text-transform: none; }
+.monster-stats{ margin-top:4px; }
+
+
+/* HP bars */
+.progress.hp { height: var(--progress-h-hp); border-color:#3b2141; background:#160b1b; }
+.progress.hp .bar { background: linear-gradient(90deg, #ff6b6b, #ffb3b3); }
+.progress.hp.enemy { height: var(--progress-h-hp); border-color:#34413b; background:#0c1610; overflow: hidden}
+.progress.hp.enemy .bar { background: linear-gradient(90deg, #6bff8e, #b3ffd0); }
+
+.combat-hud { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+.hud-col { display:grid; gap:6px; }
+.hud-name { font-weight:700; }
+
+.cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid #2a3162; background: #0e132c; font-size: 12px; }
+
+.inventory { display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; }
+
+@media (max-width: 520px) {
+  .inventory { grid-template-columns: repeat(2, 1fr); }
+}
+
+.item-card { background: #0f1431; border: 1px solid #2a3162; padding: 10px; border-radius: 12px; display: grid; gap: 8px; }
+.item-card h3 { margin: 0; font-size: 14px; }
+
+.shop { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.shop-item { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; border: 1px solid #2a3162; background: #0f1431; padding: 10px; border-radius: 12px; }
+
+.log { height: 140px; overflow: auto; background: #0f1431; border: 1px solid #2a3162; border-radius: 12px; padding: 8px; font-family: var(--mono); }
+.log p { margin: 0 0 6px; color: var(--text-dim); }
+.gold { color: var(--gold); font-weight: 700; }
+.accent { color: var(--accent); }
+
+footer { margin-top: 10px; color: var(--text-dim); font-size: 12px; text-align: center; }
+.kbd { font-family: var(--mono); background: #0e132c; border: 1px solid #2a3162; padding: 1px 6px; border-radius: 6px; }
+
+/* Old list-style equipment slots (kept for backwards compat if present) */
+.equip-slot { display: grid; grid-template-columns: 80px 1fr; gap: 5px; align-items: center; border: 1px dashed #394281; border-radius: 12px; padding: 5px; background: #0c1030; }
+.equip-slot .label { color: var(--text-dim); font-size: 12px; }
+
+/* Tabs */
+.tabs{
+  display: grid;
+  /* 4 equal columns instead of content-sized */
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 10px;
+  padding-bottom: 20px;
+
+  /* optional: center the whole grid and cap width */
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.tab{
+  width: 100%;                 /* fill the grid cell */
+  justify-content: center;     /* center the label inside */
+  white-space: nowrap;         /* keep labels on one line */
+  border-radius: 9999px;
+  padding: 12px 14px;          /* slightly more balanced padding */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #2a3162;
+  background: #0e132c;
+}
+.tab.active {
+  background: linear-gradient(180deg, #2330a5, #1b2688);
+  border-color:#2e3ac9;
+}
+.tabpanel.hidden { display:none !important; }
+
+
+/* Sub-elements */
+.divider { height: 12px; }
+
+/* Skills grid */
+.skills-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:8px; }
+.skill-tile { background:#0f1431; border:1px solid #2a3162; border-radius:12px; padding:8px; }
+.skill-tile .tile-header { display:flex; align-items:center; gap:6px; font-weight:700; margin-bottom:6px; }
+.skill-tile .tile-level { font-size:12px; color:var(--text-dim); margin-bottom:4px; }
+
+/* Equipment grid */
+.equip-grid { display: grid; grid-template-columns: repeat(3, 72px); column-gap: 10px; row-gap: 6px; padding: 6px 2px; justify-content: center; }
+.equip-cell { display: grid; gap: 4px; justify-items: center; }
+.equip-cell .slot { position: relative; width: 72px; height: 72px; border: 1px dashed #394281; border-radius: 12px; display: grid; place-items: center; background: #0c1030; box-shadow: inset 0 0 0 1px #121739; }
+.equip-cell .slot:hover { border-color: #6270d9; box-shadow: inset 0 0 0 1px #2b3aa0; }
+.equip-cell .slot.empty .icon { opacity: .35; }
+.equip-cell .icon { font-size: 28px; line-height: 1; }
+.equip-cell .slot-label { font-size: 12px; color: var(--text-dim); text-align: center; }
+.unequip-x { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 999px; border: 1px solid #2a3162; background: #0e132c; color: var(--text); font-weight: 700; display: none; align-items: center; justify-content: center; }
+.equip-cell .slot.has-item .unequip-x { display: grid; }
+.unequip-x:hover { border-color: #3a4290; }
+
+/* items icons */
+.icon-img{
+  width:40px; height:40px;
+  image-rendering:auto;
+  display:block; pointer-events:none;
+}
+/* a bit larger inside equipment slots */
+.equip-cell .slot .icon-img{ width:44px; height:44px; }
+
+
+/* Compact inventory slots */
+.inv-slot { position: relative; height: 72px; border:1px solid #2a3162; background: linear-gradient(180deg,#0f1431,#0b1028); border-radius:12px; display:grid; place-items:center; padding:6px; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; box-shadow: inset 0 0 0 1px #121739; }
+.inv-slot:hover { border-color:#4a56c7; box-shadow: inset 0 0 0 1px #2b3aa0, 0 6px 16px rgba(0,0,0,.25); transform: translateY(-1px); }
+.inv-slot .icon { font-size:28px; line-height:1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
+
+/* Quantity badge (top-right) */
+.inv-slot .qty-badge{
+  position:absolute; top:6px; right:6px;
+  font-size:11px; padding:2px 6px; border-radius:999px;
+  background:#0e132c; border:1px solid #2a3162; color:var(--text);
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  z-index: 1;
+}
+.inv-slot .sell-btn {
+  position:absolute; left:6px; bottom:6px;
+  font-size:11px; padding:3px 6px; border-radius:999px;
+  border:1px solid #2a3162; background:#0e132c; color:var(--text);
+  opacity:0; transform: translateY(2px); transition:.12s ease;
+  z-index: 2;
+}
+.inv-slot:hover .sell-btn { opacity:1; transform: translateY(0); }
+.inv-slot.equip { cursor: pointer; }
+
+/* Eat button (top-left) */
+.inv-slot .use-btn{
+  position:absolute; top:6px; left:6px;
+  font-size:11px; padding:3px 6px; border-radius:999px;
+  border:1px solid #2a3162; background:#0e132c; color:var(--text);
+  opacity:0; transform: translateY(2px); transition:.12s ease;
+  z-index: 2;
+}
+.inv-slot:hover .use-btn{ opacity:1; transform: translateY(0); }
+
+/* Colorful hover: Sell = gold, Eat = green */
+.inv-slot .sell-btn {
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.inv-slot .sell-btn:hover {
+  background: linear-gradient(180deg, #b4841a, #8e6a16);
+  border-color: #f4c16e;
+  color: #1b1204;
+  box-shadow: 0 2px 10px rgba(180,132,26,.35);
+  transform: translateY(0); /* keep it crisp on hover */
+}
+
+.inv-slot .use-btn {
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.inv-slot .use-btn:hover {
+  background: linear-gradient(180deg, #1f8f5f, #15714b);
+  border-color: #2ac985;
+  color: #e8ffef;
+  box-shadow: 0 2px 10px rgba(42,201,133,.35);
+  transform: translateY(0);
+}
+
+/* Keyboard focus (accessibility) */
+.inv-slot .sell-btn:focus-visible {
+  outline: 2px solid #f4c16e; outline-offset: 2px;
+}
+.inv-slot .use-btn:focus-visible {
+  outline: 2px solid #2ac985; outline-offset: 2px;
+}
+
+
+/* Inventory popover */
+.popover { position: fixed; z-index: 9999; min-width: 160px; background:#0f1431; border:1px solid #2a3162; border-radius:10px; box-shadow: var(--shadow); padding:8px; }
+.popover.hidden { display:none; }
+.popover .row { gap:6px; margin-top:6px; }
+.popover button { font-size:12px; padding:4px 8px; }
+.popover input[type="number"]{ width:70px; }
+
+/* Tooltip */
+.tooltip { position: fixed; z-index: 9999; max-width: 260px; background: #0f1431; border: 1px solid #2a3162; color: var(--text); padding: 8px 10px; border-radius: 10px; box-shadow: var(--shadow); pointer-events: none; transition: opacity .12s ease, transform .12s ease; font-size: 12px; }
+.tooltip.hidden { opacity: 0; transform: translateY(-4px); }
+.tooltip b { color: var(--text); }
+.tooltip .muted { color: var(--text-dim); }
+
+/* Cooking fire */
+.cook-fire{
+  position: relative;
+  display:grid; place-items:center;
+  height:140px; border:1px solid #2a3162; border-radius:12px;
+  background: radial-gradient(300px 140px at 50% 120%, #21130f, #0f1431);
+}
+.cook-fire.dragging{ outline:2px dashed #87f4ff; outline-offset:-6px; }
+.cook-bar{
+  position:absolute; top:18px; left:18px; right:18px; height:16px;
+  background:#0b0f25; border:1px solid #1f2652; border-radius:999px; overflow:hidden;
+}
+.cook-bar .bar{
+  height:100%; width:0%; background:linear-gradient(90deg, #ffb454, #ffd166);
+  transition: width .05s linear;
+}
+.cook-bar .perfect-zone{
+  position:absolute; top:0; height:100%; background:rgba(122,162,255,.22);
+  border-left:2px solid #7aa2ff; border-right:2px solid #7aa2ff;
+}
+.cook-fire .fire-emoji{ font-size:44px; filter: drop-shadow(0 2px 8px rgba(255,140,0,.4)); }
+.cook-fire .hint{ position:absolute; bottom:12px; color: var(--text-dim); font-size:12px; }
+
+.chip {
+  padding: 4px 10px; border-radius: 999px; border:1px solid #2a3162;
+  background:#0e132c; color:var(--text); font-weight:600; cursor:pointer;
+}
+.chip:hover { border-color:#3a4290; transform: translateY(-1px); }
+.chip.active {
+  background: linear-gradient(180deg, #2330a5, #1b2688);
+  border-color:#2e3ac9;
+}
+
+html, body {            /* let the page grow; don't lock height to viewport */
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+/* prevent grid/children from blocking overflow in nested contexts */
+.grid, .card, .tabpanel { min-height: 0; }
+
+/* give the main cards their own scroll area */
+#skillsCard,
+#areasCard,
+#smithingCard,
+#craftingCard,
+#equipmentCard {
+  max-height: calc(100vh - 130px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; 
+}
+
+
+/* Container grid */
+/* --- FORGE LIST LAYOUT --- */
+#forgeList, #smithList {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* Card button (works whether or not you added .forge-card in HTML) */
+#forgeList > button,
+#smithList > button,
+#forgeList .forge-card,
+#smithList .forge-card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #2a3162;
+  border-radius: 14px;
+  background: var(--panel);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .08s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  box-shadow: inset 0 0 0 1px #121739;
+}
+
+/* Hover/active */
+#forgeList > button:hover,
+#smithList > button:hover,
+#forgeList .forge-card:hover,
+#smithList .forge-card:hover {
+  border-color: #4a56c7;
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px #2b3aa0, 0 6px 16px rgba(0,0,0,.25);
+}
+
+/* Locked/disabled state */
+#forgeList > button.locked,
+#smithList > button.locked,
+#forgeList > button[aria-disabled="true"],
+#smithList > button[aria-disabled="true"],
+#forgeList .forge-card.locked,
+#smithList .forge-card.locked,
+#forgeList .forge-card[aria-disabled="true"],
+#smithList .forge-card[aria-disabled="true"],
+#forgeList > button:disabled,
+#smithList > button:disabled {
+  cursor: not-allowed !important;
+  opacity: .6;
+  filter: grayscale(.15);
+  transform: none;
+}
+
+/* Top row */
+#forgeList .forge-head,
+#smithList .forge-head {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+#forgeList .forge-icon,
+#smithList .forge-icon,
+#forgeList .forge-icon-fallback,
+#smithList .forge-icon-fallback {
+  width: 44px; height: 44px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+#forgeList .forge-titles,
+#smithList .forge-titles { line-height: 1.1; }
+
+#forgeList .forge-name,
+#smithList .forge-name { font-weight: 700; letter-spacing: .2px; }
+
+#forgeList .forge-sub,
+#smithList .forge-sub { opacity: .75; font-size: 12px; }
+
+#forgeList .forge-lvl,
+#smithList .forge-lvl {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2330a5, #1b2688);
+  border: 1px solid #2e3ac9;
+}
+
+/* Body */
+#forgeList .forge-body,
+#smithList .forge-body { display: grid; gap: 8px; }
+
+#forgeList .forge-costs,
+#smithList .forge-costs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+#forgeList .cost,
+#smithList .cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  font-size: 12px;
+}
+
+#forgeList .cost.ok,
+#smithList .cost.ok {
+  border-color: rgba(120,255,120,.25);
+  background: rgba(120,255,120,.06);
+}
+
+#forgeList .cost.miss,
+#smithList .cost.miss {
+  border-color: rgba(255,120,120,.25);
+  background: rgba(255,120,120,.06);
+}
+
+#forgeList .cost .cost-icon,
+#smithList .cost .cost-icon {
+  width: 16px; height: 16px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+#forgeList .forge-meta,
+#smithList .forge-meta {
+  font-size: 12px;
+  opacity: .85;
+  display:flex; align-items:center; gap:6px;
+}
+
+#forgeList .badge,
+#smithList .badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+#forgeList .sep, #smithList .sep { opacity: .5; }
+
+/* Locked overlay */
+#forgeList .forge-overlay,
+#smithList .forge-overlay {
+  position: absolute; inset: 0;
+  border-radius: 14px;
+  background: repeating-linear-gradient(45deg,
+      rgba(0,0,0,.0), rgba(0,0,0,.0) 6px,
+      rgba(0,0,0,.15) 6px, rgba(0,0,0,.15) 12px);
+  pointer-events: none;
+}
+
+/* forge thumbnails & material icons */
+.forge-icon { display:block; }
+.cost-icon  { display:inline-block; vertical-align:middle; }
+
+/* inventory/log/thumb helpers (if you render item imgs elsewhere) */
+.inv-icon, .tree-thumb {
+  width: 22px; height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* Locked overlay */
+.forge-overlay {
+  position: absolute; inset: 0;
+  border-radius: 14px;
+  background: repeating-linear-gradient(45deg, rgba(0,0,0,.0), rgba(0,0,0,.0) 6px, rgba(0,0,0,.15) 6px, rgba(0,0,0,.15) 12px);
+  pointer-events: none;
+}
+
+
+/* Tooltips never intercept clicks */
+#tooltip { pointer-events: none !important; }
+
+/* ---- Crafting list polish ---- */
+#craftList { display: grid; gap: 8px; }
+
+.craft-item{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #2a3162;
+  border-radius: 12px;
+  background: #0f1431;
+  box-shadow: inset 0 0 0 1px #121739;
+  transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
+  text-align: left;
+}
+.craft-item:hover{
+  border-color: #4a56c7;
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px #2b3aa0, 0 6px 16px rgba(0,0,0,.25);
+}
+.craft-item.active{
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.craft-item.disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.craft-item .left { display: grid; gap: 4px; }
+.craft-item .title{ font-weight: 700; }
+.craft-item .io   { font-size: 12px; color: var(--text-dim); }
+
+.craft-item .right { display: flex; gap: 6px; align-items: center; }
+.craft-item .badge{
+  display: inline-flex; align-items: center; height: 22px;
+  padding: 0 6px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  border: 1px solid #2a3162; background: #0e132c; color: var(--text);
+}
+.craft-item .badge.level{
+  border-color: #3a4290;
+  background: linear-gradient(180deg, #1b2688, #17236f);
+}
+.craft-item .badge.xp{
+  border-color: #2ac985;
+  background: linear-gradient(180deg, #1f8f5f, #15714b);
+}
+
+/* --- Combat micro-animations --- */
+@keyframes shake {
+  0%   { transform: translateX(0) }
+  25%  { transform: translateX(-2px) }
+  50%  { transform: translateX(2px) }
+  75%  { transform: translateX(-1px) }
+  100% { transform: translateX(0) }
+}
+@keyframes flashRed {
+  0%   { box-shadow: inset 0 0 0 0 rgba(255,80,80,.0), 0 0 0 rgba(0,0,0,0) }
+  30%  { box-shadow: inset 0 0 0 9999px rgba(255,80,80,.15) }
+  100% { box-shadow: inset 0 0 0 0 rgba(255,80,80,.0) }
+}
+@keyframes riseFade {
+  0%   { transform: translateY(0);   opacity: 1 }
+  100% { transform: translateY(-14px); opacity: 0 }
+}
+
+.shake { animation: shake .25s ease-in-out; }
+.flash-dmg { animation: flashRed .3s ease-out; }
+
+/* floating damage numbers appear inside the progress host (which is already position:relative) */
+.floating-dmg{
+  position: absolute;
+  right: 8px;
+  top: -6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffb3b3;
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  pointer-events: none;
+  animation: riseFade .6s ease-out forwards;
+}
+
+/* attack cooldown look */
+#attackTurnBtn.cooldown {
+  filter: saturate(.7) brightness(.9);
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* Bronze */
+img.icon-img.tint-bronze {
+  filter:
+    sepia(1)
+    saturate(1.35)
+    hue-rotate(-10deg)
+    brightness(0.88)
+    contrast(1.05);
+}
+
+/* Iron */
+img.icon-img.tint-iron {
+  filter:
+    grayscale(0.9)
+    brightness(0.95)
+    contrast(1.25)
+    saturate(0.9)
+    hue-rotate(190deg);
+}
+
+/* Neutral bluish-grey steel tint */
+.icon-img.tint-steel {
+  filter:
+    brightness(0.95)
+    contrast(1.05)
+    saturate(0.85)
+    sepia(0.05)
+    hue-rotate(190deg);
+}
+
+/* In-button progress bar for forge actions */
+.forge-card .forge-progress,
+#forgeList > button .forge-progress,
+#smithList > button .forge-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #0b0f25;
+  border: 1px solid #1f2652;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.forge-card .forge-progress .bar,
+#forgeList > button .forge-progress .bar,
+#smithList > button .forge-progress .bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), #87f4ff);
+  transition: width .05s linear;
+}
+
+/* Optional: dim the active card while forging */
+.forge-card.busy { filter: saturate(.9) brightness(.98); }
+
+/* Bigger, bolder, readable anywhere */
+.floating-dmg{
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translateX(-50%) translateY(0) scale(.85);
+  opacity: 0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  pointer-events: none;
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.55),
+    0 2px 6px rgba(0,0,0,.35);
+  animation: dmgPopSlow 1.3s cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+.floating-dmg.dealt{
+  color: #87f4ff;
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.6),
+    0 0 12px rgba(135,244,255,.35);
+}
+.floating-dmg.taken{
+  color: #ff6b6b;
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.6),
+    0 0 12px rgba(255,107,107,.35);
+}
+.floating-dmg.crit{
+  color: #ffd166;
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.65),
+    0 0 14px rgba(255,209,102,.45);
+  animation-duration: 1.5s;
+  transform-origin: 50% 60%;
+}
+.floating-dmg.miss{ color:#a9b0d3; font-size:20px; opacity:.9; }
+.floating-dmg.block{ color:#45d483; font-size:20px; opacity:.95; }
+.floating-dmg.miss{ color:#a9b0d3; }
+.floating-dmg.block{ color:#45d483; }
+
+@keyframes dmgPopSlow{
+  0%   { opacity: 0; transform: translateX(-50%) translateY(8px)  scale(.6); }
+  12%  { opacity: 1; transform: translateX(-50%) translateY(0px)  scale(1.2); }
+  25%  {            transform: translateX(-50%) translateY(-6px)  scale(1.0); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(-22px) scale(1.0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-40px) scale(1.0); }
+}
+
+.floating-dmg.taken.slam{
+  animation: dmgSlamSlow 1.2s cubic-bezier(.2,.9,.2,1) forwards;
+}
+@keyframes dmgSlamSlow{
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.6); }
+  18%  { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1.28); }
+  45%  {            transform: translateX(-50%) translateY(-8px)  scale(1.0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-32px) scale(1.0); }
+}
+
+#playerHpVal,
+#monHpVal {
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.progress.mana {
+  height: var(--progress-h-hp);
+  border-color:#243a6b;
+  background:#0b1226;
+  color: #cfe3ff;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+.progress.mana .bar {
+  background: linear-gradient(90deg, #7aa2ff, #87f4ff);
+}
+#playerManaVal {
+  color:#cfe3ff;
+  text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+
+#charHpText,
+#charManaText {
+  font-weight: 800;
+  color: #cfe3ff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+
+.progress.hp .label,
+.progress.hp.enemy .label,
+.progress.mana .label,
+#charHpLabel,
+#charManaLabel{
+  color: var(--text);
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+
+.icon-img.tint-forest { filter: hue-rotate(90deg) saturate(1.2); }
+.icon-img.tint-sea  { filter: hue-rotate(200deg) saturate(1.15) brightness(1.05); }
+.icon-img.tint-rock { filter: grayscale(1) contrast(1.25) brightness(0.92); }
+
+/* Enchanting animation layer */
+.enchant-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.enchant-ghost {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  opacity: 0;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.25));
+}
+.enchant-ghost .ghost-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.enchant-ghost.mana {
+  width: 22px;
+  height: 22px;
+  font-size: 22px;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* quick little pulse at the focus point */
+.enchant-burst {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 2px rgba(80,200,255,.4),
+    0 0 16px 6px rgba(120,220,255,.25),
+    inset 0 0 24px rgba(120,220,255,.2);
+  animation: enchant-pulse 900ms ease-out 1 forwards;
+  opacity: .9;
+  transform: translate(-60px, -60px);
+}
+@keyframes enchant-pulse {
+  0%   { opacity:.95; transform: translate(-60px,-60px) scale(.9); }
+  50%  { opacity:1;   transform: translate(-60px,-60px) scale(1.05); }
+  100% { opacity:.0;  transform: translate(-60px,-60px) scale(1.2); }
+}
+
+.combat-map {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.zone-btn {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #0e132c;
+  border: 1px solid #2a3162;
+  cursor: pointer;
+  font-weight: 700;
+}
+.zone-btn:hover { border-color: #4a56c7; transform: translateY(-1px); }
+.zone-btn.active {
+  background: linear-gradient(180deg, #2330a5, #1b2688);
+  border-color:#2e3ac9;
+}
+
+.monster-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.monster-choice {
+  flex: 1 1 160px; /* can shrink, grow, but minimum 160px */
+  max-width: 220px;
+}
+
+.monster-choice {
+  border: 1px solid #2a3162;
+  background: #0f1431;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .12s ease;
+}
+.monster-choice:hover {
+  border-color: #4a56c7;
+  transform: translateY(-2px);
+}
+.monster-choice.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.monster-choice img {
+  width: 72px; height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+  background:#0b1028;
+  margin-bottom:6px;
+}
+.monster-choice .title { font-weight: 700; }
+.monster-choice .muted { font-size: 12px; }
+
+.combat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.combat-overlay.hidden { display: none; }
+
+.combat-box {
+  background: #0f1431;
+  border: 2px solid #2a3162;
+  border-radius: 16px;
+  padding: 20px;
+  width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.combat-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.combat-header img {
+  width: 72px; height: 72px;
+  background: #0b1028;
+  border-radius: 8px;
+}
+
+.combat-log {
+  background: #0b1028;
+  border: 1px solid #2a3162;
+  border-radius: 8px;
+  padding: 8px;
+  height: 200px;
+  overflow-y: auto;
+  margin-top: 16px;
+}
+
+/* ---- Crafting cards (compact, like smithing) ---- */
+#craftList { display: grid; gap: 8px; }
+
+#craftList .craft-card {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #2a3162;
+  border-radius: 12px;
+  background: #0f1431;
+  box-shadow: inset 0 0 0 1px #121739;
+  transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease;
+  text-align: left;
+}
+
+#craftList .craft-card:hover{
+  border-color: #4a56c7;
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px #2b3aa0, 0 6px 16px rgba(0,0,0,.25);
+}
+#craftList .craft-card.disabled{
+  opacity: .6; cursor: not-allowed; transform: none;
+}
+
+#craftList .craft-head{
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+#craftList .craft-head .icon-img{ width:36px; height:36px; object-fit:contain; }
+
+#craftList .craft-titles{ line-height: 1.1; }
+#craftList .craft-name{ font-weight: 700; letter-spacing: .2px; }
+#craftList .craft-sub{ font-size: 12px; }
+
+#craftList .craft-badges{ display:flex; gap:6px; align-items:center; }
+#craftList .craft-badges .badge{
+  display:inline-flex; align-items:center; height: 20px;
+  padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  border: 1px solid #2a3162; background: #0e132c; color: var(--text);
+}
+#craftList .craft-badges .badge.level{
+  border-color: #3a4290;
+  background: linear-gradient(180deg, #1b2688, #17236f);
+}
+#craftList .craft-badges .badge.xp{
+  border-color: #2ac985;
+  background: linear-gradient(180deg, #1f8f5f, #15714b);
+}
+
+/* In-card progress (shown only when crafting that item) */
+#craftList .craft-progress{
+  height: 6px;
+  border-radius: 999px;
+  background: #0b0f25;
+  border: 1px solid #1f2652;
+  overflow: hidden;
+}
+#craftList .craft-progress .bar{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), #87f4ff);
+  transition: width .05s linear;
+}
+
+/* Make default .craft-item (old) rows match spacing if any remain */
+#craftList .craft-item { padding: 10px 12px; }
+
+.equip-cell.drag-target .slot { outline: 2px dashed rgba(255,255,255,.35); }
+.enchant-badge { position:absolute; right:4px; top:4px; font-size:12px; opacity:.95; }
+.enchanted-pulse { animation: swiftPulse .35s ease; }
+@keyframes swiftPulse { from{transform:scale(1.04)} to{transform:scale(1)} }
+
+/* --- Monster Card: show drops only when hovering the monster image --- */
+#monsterCard .card-row {
+  /* hidden by default */
+  display: none;
+  align-items: flex-start;
+  gap: 10px;
+}
+#monsterImg:hover ~ .card-row {
+  /* become visible when you hover the monster image only */
+  display: flex;
+}
+
+/* Drops layout (row + wrap) */
+#monsterDrops {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+#monsterDrops > .drop-chip {
+  display: inline-flex;
+  flex: 0 0 auto;        /* never stretch to full width */
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ddd;
+  user-select: none;
+}
+#monsterDrops > .drop-chip img {
+  width: 16px; height: 16px; border-radius: 3px; display: block;
+}
+#monsterDrops > .drop-chip .name {
+  white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Rarity tints */
+#monsterDrops > .drop-chip.common    { border-color: rgba(180,180,180,.3); color:#e0e0e0; }
+#monsterDrops > .drop-chip.uncommon  { border-color: rgba(88,200,120,.35); box-shadow: inset 0 0 0 1px rgba(88,200,120,.15); color:#bff0ca; }
+#monsterDrops > .drop-chip.rare      { border-color: rgba(86,156,214,.35); box-shadow: inset 0 0 0 1px rgba(86,156,214,.15); color:#c9e6ff; }
+#monsterDrops > .drop-chip.epic      { border-color: rgba(171,103,230,.4);  box-shadow: inset 0 0 0 1px rgba(171,103,230,.18); color:#e6d4ff; }
+#monsterDrops > .drop-chip.legendary { border-color: rgba(255,198,65,.5);   box-shadow: inset 0 0 0 1px rgba(255,198,65,.22);  color:#ffe7a6; }
+#monsterDrops > .drop-chip.unknown   { border-color: rgba(140,140,140,.25); color:#bbb; background: rgba(255,255,255,0.04); }
+
+/* --- Monster Grid: show the tiny drop dots only on hover of the card --- */
+.monster-choice .drops-row { display: none; gap: 4px; margin-top: 6px; }
+.monster-choice:hover .drops-row { display: flex; }
+.monster-choice .drops-row .dot {
+  width:8px; height:8px; border-radius:50%; background:#888; opacity:.9;
+}
+.monster-choice .drops-row .dot.uncommon  { background:#58c878; }
+.monster-choice .drops-row .dot.rare      { background:#569cd6; }
+.monster-choice .drops-row .dot.epic      { background:#ab67e6; }
+.monster-choice .drops-row .dot.legendary { background:#ffc641; }
+.monster-choice .drops-row .dot.unknown   { background:#666; }
