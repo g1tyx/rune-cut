@@ -7,7 +7,7 @@ const XP_TABLE = buildXpTable();
 const speedFromLevel = lvl => 1 + 0.02*(lvl-1);
 const clampMs = (ms)=> Math.max(100, ms);
 
-export const UPGRADE_METALS = ['copper','bronze','iron'];
+export const UPGRADE_METALS = ['copper','bronze','iron', 'steel', 'blacksteel'];
 
 export const upgradeBarIdForMetal = (metal='copper') => `${metal}_upgrade_bar`;
 

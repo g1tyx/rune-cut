@@ -34,21 +34,33 @@ export const MONSTERS = [
     id:'swamp_elemental', name:'Swamp Elemental', level:20,
     zone:'Swamp', hp:120, attack:18, defense:14, maxHit:12,
     img:'assets/monsters/swamp_elemental.png',
-    drops:[{ id:'quicksilver', chance:0.08, min:1, max:1 }],
+    drops:[{ id:'quicksilver', chance:0.10, min:1, max:1 }],
     xp:{attack:200,strength:200,defense:200}
+  },
+  { id:'bog_hydra', name:'Bog Hydra', level:26, time:4200,
+    zone:'Swamp', hp:180, attack:24, defense:18, maxHit:16,
+    xp:{attack:260,strength:260,defense:260},
+    drops:[{gold:18, chance:0.7}],
+    img:'assets/monsters/bog_hydra.png'
+  },
+  { id:'marsh_colossus', name:'Marsh Colossus', level:32, time:4600,
+    zone:'Swamp', hp:260, attack:32, defense:24, maxHit:22,
+    xp:{attack:320,strength:320,defense:320},
+    drops:[{gold:26, chance:0.7}],
+    img:'assets/monsters/marsh_colossus.png'
   },
 
   /* ---------- Wastes ---------- */
   { id:'dust_rat', name:'Dust Rat', level:5, time:3000,
     zone:'Wastes', hp:35, attack:8, defense:6, maxHit:5,
     xp:{attack:50,strength:50,defense:50},
-    drops:[{gold:6, chance:0.7}],
+    drops:[{gold:6, chance:0.7},{id:'leather', chance:0.5}],
     img:'assets/monsters/dust_rat.png'
   },
   { id:'scavenger_dog', name:'Scavenger Dog', level:9, time:3400,
     zone:'Wastes', hp:65, attack:14, defense:10, maxHit:9,
     xp:{attack:90,strength:90,defense:90},
-    drops:[{gold:12, chance:0.7}],
+    drops:[{gold:12, chance:0.7},{ id:'leather', chance:0.50, min:1, max:2}],
     img:'assets/monsters/scavenger_dog.png'
   },
   { id:'thorn_lizard', name:'Thorn Lizard', level:13, time:3800,
@@ -68,6 +80,18 @@ export const MONSTERS = [
     xp:{attack:220,strength:220,defense:220},
     drops:[{gold:34, chance:0.7}],
     img:'assets/monsters/sand_beast.png'
+  },
+  { id:'glass_scorpion', name:'Glass Scorpion', level:28, time:5000,
+    zone:'Wastes', hp:240, attack:34, defense:28, maxHit:22,
+    xp:{attack:280,strength:280,defense:280},
+    drops:[{gold:32, chance:0.7}],
+    img:'assets/monsters/glass_scorpion.png'
+  },
+  { id:'dune_titan', name:'Dune Titan', level:36, time:5600,
+    zone:'Wastes', hp:340, attack:44, defense:36, maxHit:30,
+    xp:{attack:360,strength:360,defense:360},
+    drops:[{gold:46, chance:0.7}],
+    img:'assets/monsters/dune_titan.png'
   },
 
   /* ---------- Volcano ---------- */
@@ -92,7 +116,7 @@ export const MONSTERS = [
   { id:'lava_hound', name:'Lava Hound', level:21, time:4200,
     zone:'Volcano', hp:170, attack:29, defense:23, maxHit:19,
     xp:{attack:210,strength:210,defense:210},
-    drops:[{gold:30, chance:0.7}],
+    drops:[{gold:30, chance:0.7},{ id:'leather', chance:0.50, min:2, max:3}],
     img:'assets/monsters/lava_hound.png'
   },
   { id:'flame_ogre', name:'Flame Ogre', level:28, time:4800,
@@ -100,6 +124,18 @@ export const MONSTERS = [
     xp:{attack:280,strength:280,defense:280},
     drops:[{gold:44, chance:0.7}],
     img:'assets/monsters/flame_ogre.png'
+  },
+  { id:'pyre_drake', name:'Pyre Drake', level:36, time:5200,
+    zone:'Volcano', hp:340, attack:46, defense:38, maxHit:30,
+    xp:{attack:360,strength:360,defense:360},
+    drops:[{gold:46, chance:0.7}],
+    img:'assets/monsters/pyre_drake.png'
+  },
+  { id:'inferno_colossus', name:'Inferno Colossus', level:44, time:5800,
+    zone:'Volcano', hp:440, attack:58, defense:48, maxHit:38,
+    xp:{attack:440,strength:440,defense:440},
+    drops:[{gold:62, chance:0.7}],
+    img:'assets/monsters/inferno_colossus.png'
   },
 
   /* ---------- Crypts ---------- */
@@ -133,18 +169,30 @@ export const MONSTERS = [
     drops:[{gold:52, chance:0.7}],
     img:'assets/monsters/shadow_wraith.png'
   },
+  { id:'death_priest', name:'Death Priest', level:40, time:5400,
+    zone:'Crypts', hp:380, attack:48, defense:40, maxHit:32,
+    xp:{attack:400,strength:400,defense:400},
+    drops:[{gold:40, chance:0.7}],
+    img:'assets/monsters/death_priest.png'
+  },
+  { id:'crypt_lich', name:'Crypt Lich', level:48, time:6000,
+    zone:'Crypts', hp:520, attack:60, defense:52, maxHit:42,
+    xp:{attack:480,strength:480,defense:480},
+    drops:[{gold:60, chance:0.7}],
+    img:'assets/monsters/crypt_lich.png'
+  },
 
   /* ---------- Mountains ---------- */
   { id:'cliff_rat', name:'Cliff Rat', level:6, time:3000,
     zone:'Mountains', hp:38, attack:9, defense:7, maxHit:5,
     xp:{attack:60,strength:60,defense:60},
-    drops:[{gold:6, chance:0.7}],
+    drops:[{gold:6, chance:0.7},{ id:'leather', chance:0.70}],
     img:'assets/monsters/cliff_rat.png'
   },
   { id:'mountain_goat', name:'Mountain Goat', level:12, time:3400,
     zone:'Mountains', hp:85, attack:16, defense:12, maxHit:10,
     xp:{attack:120,strength:120,defense:120},
-    drops:[{gold:14, chance:0.7}],
+    drops:[{gold:14, chance:0.7},{ id:'leather', chance:0.50, min:1, max:2}],
     img:'assets/monsters/mountain_goat.png'
   },
   { id:'rock_troll', name:'Rock Troll', level:18, time:3800,
@@ -156,7 +204,7 @@ export const MONSTERS = [
   { id:'ice_wolf', name:'Ice Wolf', level:25, time:4200,
     zone:'Mountains', hp:230, attack:34, defense:27, maxHit:23,
     xp:{attack:250,strength:250,defense:250},
-    drops:[{gold:38, chance:0.7}],
+    drops:[{gold:38, chance:0.7},{ id:'leather', chance:0.50, min:2, max:3}],
     img:'assets/monsters/ice_wolf.png'
   },
   { id:'peak_giant', name:'Peak Giant', level:34, time:4800,
@@ -164,5 +212,17 @@ export const MONSTERS = [
     xp:{attack:340,strength:340,defense:340},
     drops:[{gold:58, chance:0.7}],
     img:'assets/monsters/peak_giant.png'
-  }
+  },
+  { id:'frost_drake', name:'Frost Drake', level:42, time:5400,
+    zone:'Mountains', hp:420, attack:52, defense:44, maxHit:36,
+    xp:{attack:420,strength:420,defense:420},
+    drops:[{gold:50, chance:0.7}],
+    img:'assets/monsters/frost_drake.png'
+  },
+  { id:'storm_colossus', name:'Storm Colossus', level:50, time:6000,
+    zone:'Mountains', hp:560, attack:64, defense:56, maxHit:44,
+    xp:{attack:500,strength:500,defense:500},
+    drops:[{gold:70, chance:0.7}],
+    img:'assets/monsters/storm_colossus.png'
+  },
 ];

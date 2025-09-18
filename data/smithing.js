@@ -1,18 +1,23 @@
 // data/smithing.js
 export const SMELT_RECIPES = {
-  bar_copper: { 
-    name: 'Copper Bar', 
-    time: 2000, 
-    xp: 6, 
-    inputs: [{ id: 'ore_copper', qty: 1 }] 
+  bar_copper: {
+    id: 'bar_copper',
+    name: 'Copper Bar',
+    level: 1,
+    time: 2000,
+    xp: 6,
+    inputs: [{ id: 'ore_copper', qty: 1 }]
   },
-  glass_glob: { 
-    name: 'Glass Glob', 
-    time: 2200, 
-    xp: 10, 
-    inputs: [{ id: 'silica_sand', qty: 1 }] 
+  glass_glob: {
+    id: 'glass_glob',
+    name: 'Glass Glob',
+    level: 1,
+    time: 2200,
+    xp: 10,
+    inputs: [{ id: 'silica_sand', qty: 1 }]
   },
   bar_bronze: {
+    id: 'bar_bronze',
     name: 'Bronze Bar',
     level: 10,
     time: 2000,
@@ -20,6 +25,7 @@ export const SMELT_RECIPES = {
     inputs: [{ id: 'ore_copper', qty: 1 }, { id: 'ore_tin', qty: 1 }]
   },
   bar_iron: {
+    id: 'bar_iron',
     name: 'Iron Bar',
     level: 20,
     time: 2000,
@@ -27,6 +33,7 @@ export const SMELT_RECIPES = {
     inputs: [{ id: 'ore_iron', qty: 2 }]
   },
   bar_steel: {
+    id: 'bar_steel',
     name: 'Steel Bar',
     level: 30,
     time: 2200,
@@ -37,6 +44,7 @@ export const SMELT_RECIPES = {
     ]
   },
   bar_blacksteel: {
+    id: 'bar_blacksteel',
     name: 'Blacksteel Bar',
     level: 40,
     time: 2600,
@@ -48,7 +56,6 @@ export const SMELT_RECIPES = {
   }
 };
 
-// Forging: uses bars by type via barId (e.g., 'bar_copper') and is timed.
 export const FORGE_RECIPES = [
   // Copper gear
   { id:'copper_helm',   metal:'copper', name:'Copper Helm',       barId:'bar_copper', bars:2, time:2000, xp:16, level:2 },

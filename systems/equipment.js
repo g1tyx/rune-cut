@@ -1,12 +1,55 @@
 import { ITEMS } from '../data/items.js';
 import { baseId } from './itemutil.js';
 import { startTomeRun, isTomeActive } from './tomes.js';
+import { levelFromXp } from './xp.js';
+
+export function equipReqLabel(id) {
+  const it = ITEMS[baseId(id)];
+  if (!it) return '';
+  if (it.reqAtk) return `Requires Attack ${it.reqAtk}`;
+  if (it.reqDef) return `Requires Defence ${it.reqDef}`;
+  return '';
+}
+
+export function canEquip(state, id) {
+  const it = ITEMS[baseId(id)];
+  if (!it) return { ok: false, message: 'Unknown item.' };
+
+  // No requirement? Auto-pass.
+  if (!it.reqAtk && !it.reqDef) return { ok: true };
+
+  // Weapons use Attack; armor/shields use Defence
+  if (it.slot === 'weapon' || it.reqAtk) {
+    const have = levelFromXp(state.atkXp || 0);
+    const need = it.reqAtk || 1;
+    if (have < need) {
+      return { ok: false, message: `You need Attack ${need} to equip ${it.name} (you are ${have}).` };
+    }
+  } else {
+    const have = levelFromXp(state.defXp || 0);
+    const need = it.reqDef || 1;
+    if (have < need) {
+      return { ok: false, message: `You need Defence ${need} to equip ${it.name} (you are ${have}).` };
+    }
+  }
+  return { ok: true };
+}
 
 export function equipItem(state, id){
   const def = ITEMS[baseId(id)];
   if (!def) return false;
   const slot = def.slot;
   if (!slot) return false;
+
+  const gate = canEquip(state, id);
+  if (!gate.ok) {
+    // If your tooltip helper is globally exposed, tell the user immediately.
+    if (typeof window !== 'undefined' && window.showTip) {
+      window.showTip(gate.message);
+    }
+    // Block equip. Returning an object lets UI show the message too.
+    return { ok: false, message: gate.message };
+  }
 
   // Tome slot: stack identical tomes instead of replacing
   if (slot === 'tome'){
@@ -49,7 +92,7 @@ export function equipItem(state, id){
   state.equipment[slot] = id;
   state.inventory[id] = (state.inventory[id] || 0) - 1;
   if (state.inventory[id] <= 0) delete state.inventory[id];
-  return true;
+  return { ok: true };
 }
 
 export function unequipItem(state, slot){

@@ -2,7 +2,7 @@
 import { ITEMS } from '../data/items.js';
 import { saveState, state } from '../systems/state.js';
 import { removeItem, addGold } from '../systems/inventory.js';
-import { equipItem } from '../systems/equipment.js';
+import { equipItem, canEquip, equipReqLabel } from '../systems/equipment.js';
 import { renderEquipment } from './equipment.js';
 import { hpMaxFor } from '../systems/combat.js';
 import { qs, on } from '../utils/dom.js';
@@ -199,15 +199,22 @@ on(elInv, 'click', 'button.equip-quick', (e, btn)=>{
 // Clicking an equipment tile equips it — but ignore if a nested button was clicked
 on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   if (e.target.closest('button')) return; // don't equip when pressing Sell/Equip buttons
-  const id = tile.getAttribute('data-id');
+  const id   = tile.getAttribute('data-id');
   const base = baseId(id);
-  const it = ITEMS[base];
-  if (it?.type==='equipment'){
-    equipItem(state, id);
-    renderInventory();
-    renderEquipment();
-    saveState(state);
+  const it   = ITEMS[base];
+  if (!it || it.type !== 'equipment') return;
+
+  const gate = canEquip(state, id); // handles @quality internally
+  if (!gate.ok) {
+    // 3-arg signature: (event, title, body)
+    showTip(e, it.name || base, gate.message);
+    return;
   }
+
+  equipItem(state, id);
+  renderInventory();
+  renderEquipment();
+  saveState(state);
 });
 
 on(elInv, 'dragstart', '.inv-slot', (e, tile)=>{
@@ -282,6 +289,8 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     if (def.slot === 'tome'){
       lines.push(...tomeTooltipLines(base));
     }
+    const req = equipReqLabel(base);
+    if (req) lines.push(req);
   }
 
   if (isFood){

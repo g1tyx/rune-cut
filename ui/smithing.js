@@ -38,6 +38,22 @@ const el = {
 };
 
 // ---------- helpers ----------
+function isSmithBusy(){
+  return state.action?.type === 'smith';
+}
+
+function stopAfkIfNotSmithingOrTome(reason = 'smithing'){
+  const a = state.action;
+  if (a && a.type !== 'smith' && a.type !== 'tome') {
+    state.action = null;
+    try { window.dispatchEvent(new Event('action:stop')); } catch {}
+    pushSmithLog(`Stopped ${a.type || 'afk'} to ${reason}.`);
+    saveState(state);
+    return true;
+  }
+  return false;
+}
+
 function prettyName(idOrBase){
   const base = String(idOrBase).split('@')[0];
   return ITEMS?.[base]?.name || base.replace(/_/g,' ');
@@ -77,59 +93,79 @@ function progressPct(){
 }
 
 // ---------- Smelt dropdown + buttons ----------
+function reqStrSmelt(outId){
+  const r = SMELT_RECIPES?.[outId];
+  if (!r) return '';
+  const parts = (r.inputs || []).map(inp => `${inp.qty}× ${prettyName(inp.id)}`);
+  return parts.join(' + ');
+}
+
 function ensureSmeltDropdown(){
   if (!el.smeltSelect) return;
 
-  const lvl = smithLevel();
-
-  const ids = Object.keys(SMELT_RECIPES || {});
-  const order = ['bar_copper','bar_bronze','bar_iron', 'bar_steel', 'bar_blacksteel'];
-  ids.sort((a,b)=> (order.indexOf(a)+999) - (order.indexOf(b)+999) || a.localeCompare(b));
-
+  const lvl  = smithLevel();
   const prev = el.smeltSelect.value;
+
+  // Bars in a sensible order; anything else (like glass_glob) after
+  const order = ['bar_copper','glass_glob','bar_bronze','bar_iron','bar_steel','bar_blacksteel'];
+  const ordIdx = id => {
+    const i = order.indexOf(id);
+    return i === -1 ? 999 : i;
+  };
+
+  const ids = Object.keys(SMELT_RECIPES || {}).sort((a,b)=>{
+    const oa = ordIdx(a), ob = ordIdx(b);
+    if (oa !== ob) return oa - ob;
+    const na = SMELT_RECIPES[a]?.name || prettyName(a);
+    const nb = SMELT_RECIPES[b]?.name || prettyName(b);
+    return String(na).localeCompare(String(nb));
+  });
 
   el.smeltSelect.innerHTML = ids.map(id => {
     const r = SMELT_RECIPES[id] || {};
-    const need = r.level || 1;
-    const underLevel = lvl < need;
-    const reqTxt = `Lv ${need}`;
-    const label = `${r.name || prettyName(id)} — ${reqTxt}`;
-    const disabled = underLevel ? 'disabled' : '';
-    const title = underLevel ? `Requires ${reqTxt}` : '';
-    return `<option value="${id}" ${disabled} title="${title}">${label}</option>`;
+    const need   = r.level || 1;
+    const under  = lvl < need;
+    const inputs = reqStrSmelt(id); // e.g., "1× ore_copper" or "1× ore_iron + 1× ore_coal"
+    const label  = `${r.name || prettyName(id)} (Lv ${need}${inputs ? `) ${inputs}` : ''}`;
+    const title  = `${under ? `Requires Lv ${need}. ` : ''}${inputs ? `Inputs: ${inputs}` : ''}`;
+
+    return `<option value="${id}" ${under ? 'disabled' : ''} title="${title}">
+      ${label}
+    </option>`;
   }).join('');
 
-  // Try to keep selection; otherwise pick first enabled
-  const hasPrev = ids.includes(prev);
-  if (hasPrev) {
-    el.smeltSelect.value = prev;
-    const opt = el.smeltSelect.options[el.smeltSelect.selectedIndex];
-    if (opt && opt.disabled){
-      const firstEnabled = Array.from(el.smeltSelect.options).find(o=>!o.disabled);
-      if (firstEnabled) el.smeltSelect.value = firstEnabled.value;
-    }
-  } else {
-    const firstEnabled = Array.from(el.smeltSelect.options).find(o=>!o.disabled);
+  // keep previous selection if possible; else first enabled
+  if (prev && ids.includes(prev)) el.smeltSelect.value = prev;
+  const sel = el.smeltSelect.options[el.smeltSelect.selectedIndex];
+  if (!sel || sel.disabled){
+    const firstEnabled = Array.from(el.smeltSelect.options).find(o => !o.disabled);
     if (firstEnabled) el.smeltSelect.value = firstEnabled.value;
   }
+
+  // also reflect in a helper line under the select, if present
+  const outId = el.smeltSelect.value;
+  const reqEl = document.getElementById('smeltReqs');
+  if (outId && reqEl) reqEl.textContent = reqStrSmelt(outId);
 }
 
 function updateSmeltButtons(){
   const rid = el.smeltSelect?.value;
   if (!rid){
-    if (el.smeltOneBtn) el.smeltOneBtn.disabled = true;
-    if (el.smeltAllBtn) el.smeltAllBtn.disabled = true;
+    el.smeltOneBtn && (el.smeltOneBtn.disabled = true);
+    el.smeltAllBtn && (el.smeltAllBtn.disabled = true);
     return;
   }
   const need = (SMELT_RECIPES[rid]?.level) || 1;
   const allowed = smithLevel() >= need;
+  const smithBusy = isSmithBusy();
 
-  const canOne = allowed && canSmelt(state, rid) && !state.action;
+  const canOne = allowed && canSmelt(state, rid) && !smithBusy;
   const maxN   = allowed ? maxSmeltable(state, rid) : 0;
 
-  if (el.smeltOneBtn) el.smeltOneBtn.disabled = !canOne;
-  if (el.smeltAllBtn) el.smeltAllBtn.disabled = !(maxN > 0) || !!state.action;
+  el.smeltOneBtn && (el.smeltOneBtn.disabled = !canOne);
+  el.smeltAllBtn && (el.smeltAllBtn.disabled = !(maxN > 0) || smithBusy);
 }
+
 
 // ---------- forge progress loop ----------
 let RAF = null;
@@ -160,13 +196,6 @@ function startForgeLoop(){
     RAF = requestAnimationFrame(tick);
   };
   RAF = requestAnimationFrame(tick);
-}
-
-function reqStrSmelt(outId){
-  const r = SMELT_RECIPES?.[outId];
-  if (!r) return '';
-  const parts = (r.inputs || []).map(inp => `${inp.qty}× ${prettyName(inp.id)}`);
-  return parts.join(' + ');
 }
 
 // ---------- renderers ----------
@@ -264,7 +293,7 @@ on(document, 'click', '#smeltOneBtn', ()=>{
   const need = (SMELT_RECIPES[outId]?.level) || 1;
   if (smithLevel() < need) return;
   if (!canSmelt(state, outId)) return;
-
+  stopAfkIfNotSmithingOrTome('smelt');
   const ok = startSmelt(state, outId, ()=>{
     const res = finishSmelt(state);
     const xp = (SMELT_RECIPES?.[outId]?.xp) || 0;
@@ -281,6 +310,7 @@ on(document, 'click', '#smeltAllBtn', ()=>{
   const outId = el.smeltSelect?.value || 'bar_copper';
   const need = (SMELT_RECIPES[outId]?.level) || 1;
   if (smithLevel() < need) return;
+  stopAfkIfNotSmithingOrTome('smelt');
 
   const N = maxSmeltable(state, outId);
   if (N <= 0) return;
@@ -334,6 +364,7 @@ on(document, 'click', '#forgeList .forge-item', (e, btn)=>{
   // hard guard: disabled/locked or busy
   if (!id || btn.hasAttribute('disabled') || btn.classList.contains('disabled') || isForging()) return;
   if (!canForge(state, id)) return;
+  stopAfkIfNotSmithingOrTome('forge');
 
   const ok = startForge(state, id, ()=>{
     const res = finishForge(state); // { outId, q, xp }

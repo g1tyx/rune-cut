@@ -1,4 +1,4 @@
-// /systems/combat.js — quality-aware gear, stable HP calc, UI-compatible XP payload
+// /systems/combat.js — quality-aware gear, min/max drop qty, stable HP calc
 import { MONSTERS } from '../data/monsters.js';
 import { renderMonsterGrid } from '../ui/combat.js';
 import { addItem, addGold } from './inventory.js';
@@ -20,7 +20,7 @@ const BALANCE = {
 
   // Defense vs monsters
   defLevelWeight: 1.4,   // Defense level → resist
-  defGearWeight:  0.8,   // +Def gear → resist
+  defGearWeight:  1.0,   // +Def gear → resist
   monAccBase:  0.05,     // monster base hit chance
   monAccScale: 0.90,     // monster accuracy scaling
 
@@ -151,7 +151,7 @@ export function turnFight(state){
     const mx = hpMaxFor(state);
     const cur = Math.max(0, Math.min(mx, state.hpCurrent ?? mx));
     state.hpCurrent = Math.max(0, cur - dmg);
-    state.lastDamageMs = performance.now();
+    state.lastDamageMs = performance.now(); // regen cooldown hook (used by UI tick)
     emitHpChange();
     log.push(`${mon.name} hits you for ${dmg}.`);
   } else {
@@ -199,6 +199,16 @@ function onMonsterKilled(mon){
   saveState();
 }
 
+// Roll quantity for a drop: supports qty, min/max (inclusive). Defaults to 1.
+function rollQty(d){
+  if (Number.isFinite(d?.qty)) return d.qty;
+  const lo = Number.isFinite(d?.min) ? d.min
+           : Number.isFinite(d?.max) ? d.max
+           : 1;
+  const hi = Number.isFinite(d?.max) ? d.max : lo;
+  return Math.floor(lo + Math.random() * (hi - lo + 1));
+}
+
 function awardWin(state, mon){
   // 1) Mark kill FIRST so any listeners (Royal Service) update immediately
   onMonsterKilled(mon);
@@ -228,12 +238,20 @@ function awardWin(state, mon){
   for (const d of (mon.drops || [])){
     if (Math.random() < (d.chance ?? 0)){
       if (d.id){
-        addItem(state, d.id, 1);
-        lootNames.push(ITEMS[d.id]?.name || d.id);
+        const n = rollQty(d);
+        addItem(state, d.id, n);
+        const nm = ITEMS[d.id]?.name || d.id;
+        lootNames.push(`${nm}${n>1 ? ` ×${n}` : ''}`);
       }
       if (d.gold){
-        addGold(state, d.gold);
-        lootNames.push(`${d.gold}g`);
+        // If qty/min/max provided, use that; else use fixed d.gold
+        const amount = (Number.isFinite(d.qty) || Number.isFinite(d.min) || Number.isFinite(d.max))
+          ? rollQty(d)
+          : Number(d.gold) || 0;
+        if (amount > 0){
+          addGold(state, amount);
+          lootNames.push(`${amount}g`);
+        }
       }
       recordDiscovery(state, d);
     }

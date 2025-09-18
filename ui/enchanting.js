@@ -77,42 +77,85 @@ function iconHtml(id){
 }
 
 // ---------- animation utilities ----------
+function _scrollX(){ return window.pageXOffset ?? window.scrollX ?? 0; }
+function _scrollY(){ return window.pageYOffset ?? window.scrollY ?? 0; }
+
 function rectOf(el){
   const r = el.getBoundingClientRect();
-  return { x:r.left+window.scrollX, y:r.top+window.scrollY, w:r.width, h:r.height };
+  return { x: r.left + _scrollX(), y: r.top + _scrollY(), w: r.width, h: r.height };
 }
+
 function cloneNodeForAnim(srcEl){
-  const isImg = srcEl.tagName === 'IMG';
+  const isImg = srcEl && srcEl.tagName === 'IMG';
   const clone = document.createElement(isImg ? 'img' : 'span');
   if (isImg) clone.src = srcEl.src;
   clone.className = 'fly-img';
-  clone.textContent = isImg ? '' : (srcEl.textContent || '✨');
+  clone.textContent = isImg ? '' : (srcEl?.textContent || '✨');
+
   const r = rectOf(srcEl);
   Object.assign(clone.style, {
-    position:'absolute', left:`${r.x}px`, top:`${r.y}px`,
-    width:`${r.w}px`, height:`${r.h}px`, pointerEvents:'none',
+    position: 'absolute',
+    left: `${r.x}px`,
+    top: `${r.y}px`,
+    width: `${Math.max(1, r.w)}px`,
+    height: `${Math.max(1, r.h)}px`,
+    pointerEvents: 'none',
+    willChange: 'transform, opacity',
     transition: 'transform 550ms ease, opacity 200ms ease',
-    transformOrigin: 'center center', zIndex: 9999
+    transform: 'translate(0px, 0px) scale(1)', // explicit starting state
+    transformOrigin: 'center center',
+    zIndex: 9999
   });
+
   document.body.appendChild(clone);
+  // Force reflow so Firefox recognizes the starting transform
+  // eslint-disable-next-line no-unused-expressions
+  clone.offsetWidth;
   return { clone, r };
 }
-function flyFromTo(srcEl, dstEl, { scale=1.35, shrinkAtEnd=true } = {}){
+
+function flyFromTo(srcEl, dstEl, { scale = 1.35, shrinkAtEnd = true, travelMs = 550 } = {}){
   if (!srcEl || !dstEl) return Promise.resolve();
-  const { clone, r:sr } = cloneNodeForAnim(srcEl);
+  const { clone, r: sr } = cloneNodeForAnim(srcEl);
   const dr = rectOf(dstEl);
-  const dx = (dr.x + dr.w/2) - (sr.x + sr.w/2);
-  const dy = (dr.y + dr.h/2) - (sr.y + sr.h/2);
-  clone.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
-  return new Promise(res=>{
-    clone.addEventListener('transitionend', ()=>{
-      if (shrinkAtEnd){
+  const dx = (dr.x + dr.w / 2) - (sr.x + sr.w / 2);
+  const dy = (dr.y + dr.h / 2) - (sr.y + sr.h / 2);
+
+  return new Promise(resolve => {
+    let finished = false;
+    let timeoutId;
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeoutId);
+      if (shrinkAtEnd) {
         clone.style.transition = 'transform 180ms ease, opacity 180ms ease';
         clone.style.transform = `translate(${dx}px, ${dy}px) scale(0.4)`;
         clone.style.opacity = '0';
-        setTimeout(()=>{ clone.remove(); res(); }, 180);
-      } else { clone.remove(); res(); }
-    }, { once:true });
+        setTimeout(() => { clone.remove(); resolve(); }, 190);
+      } else {
+        clone.remove(); resolve();
+      }
+    };
+
+    const onEnd = (ev) => {
+      if (ev && ev.propertyName && ev.propertyName !== 'transform') return;
+      clone.removeEventListener('transitionend', onEnd);
+      clone.removeEventListener('transitioncancel', onEnd);
+      finish();
+    };
+
+    clone.addEventListener('transitionend', onEnd);
+    clone.addEventListener('transitioncancel', onEnd);
+
+    // Fallback in case transitionend never fires (FF edge cases / zero distance)
+    timeoutId = setTimeout(() => onEnd({ propertyName: 'transform' }), travelMs + 1000);
+
+    // Apply the transform in the next frame to ensure the transition starts
+    requestAnimationFrame(() => {
+      clone.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+    });
   });
 }
 
@@ -123,105 +166,125 @@ function viewportCenterRect(size=40){
   return { x: x - size/2, y: y - size/2, w: size, h: size };
 }
 
-function flyInputsToCenterMerge(srcEls=[], { travelMs=700, mergeMs=550, scale=1.45 } = {}){
-  if (!srcEls.length) return Promise.resolve({ clones: [] });
+function flyInputsToCenterMerge(srcEls = [], { travelMs = 700, mergeMs = 550, scale = 1.45 } = {}){
+  if (!srcEls.length) return Promise.resolve({ clones: [], centerRect: viewportCenterRect(18) });
 
   const clones = srcEls.map(el => {
     const { clone, r } = cloneNodeForAnim(el);
-    clone.style.transform = 'translate(0, 0) scale(1.0)';
     clone.style.transition = `transform ${travelMs}ms ease`;
-    return { clone, from:r };
+    // eslint-disable-next-line no-unused-expressions
+    clone.offsetWidth; // ensure start state
+    return { clone, from: r };
   });
 
   const center = viewportCenterRect(40);
   const targets = clones.map((c, i) => {
     const sr = c.from;
-    const offset = i % 2 === 0 ? -48 : 48; // approach from both sides
-    const tx = (center.x + center.w/2 + offset) - (sr.x + sr.w/2);
-    const ty = (center.y + center.h/2) - (sr.y + sr.h/2);
+    const offset = i % 2 === 0 ? -48 : 48;
+    const tx = (center.x + center.w / 2 + offset) - (sr.x + sr.w / 2);
+    const ty = (center.y + center.h / 2) - (sr.y + sr.h / 2);
     return { tx, ty };
   });
 
-  return new Promise(resolve=>{
-    requestAnimationFrame(()=>{
-      clones.forEach(({ clone }, i)=>{
-        const { tx, ty } = targets[i];
-        clone.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  return new Promise(resolve => {
+    let arrived = 0;
+    let timeoutId;
+
+    const finishTravel = () => {
+      const center2 = viewportCenterRect(18);
+      clones.forEach(c => {
+        const sr = c.from;
+        const dx = (center2.x + center2.w / 2) - (sr.x + sr.w / 2);
+        const dy = (center2.y + center2.h / 2) - (sr.y + sr.h / 2);
+        c.clone.style.transition = `transform ${mergeMs}ms ease-out`;
+        // eslint-disable-next-line no-unused-expressions
+        c.clone.offsetWidth;
+        c.clone.style.transform = `translate(${dx}px, ${dy}px) scale(${scale * 1.1})`;
       });
 
-      let arrived = 0;
-      const onArrive = ()=>{
-        arrived++;
-        if (arrived !== clones.length) return;
+      setTimeout(() => {
+        const GLOW_SIZE = 120;
+        const cx = center2.x + center2.w / 2 - GLOW_SIZE / 2;
+        const cy = center2.y + center2.h / 2 - GLOW_SIZE / 2;
 
-        const center2 = viewportCenterRect(18);
-        clones.forEach((c)=>{
-          const sr = c.from;
-          const dx = (center2.x + center2.w/2) - (sr.x + sr.w/2);
-          const dy = (center2.y + center2.h/2) - (sr.y + sr.h/2);
-          c.clone.style.transition = `transform ${mergeMs}ms ease-out`;
-          c.clone.style.transform  = `translate(${dx}px, ${dy}px) scale(${scale*1.1})`;
+        const glow = document.createElement('div');
+        Object.assign(glow.style, {
+          position: 'absolute',
+          left: `${cx}px`,
+          top: `${cy}px`,
+          width: `${GLOW_SIZE}px`,
+          height: `${GLOW_SIZE}px`,
+          borderRadius: '50%',
+          boxShadow: [
+            '0 0 40px 25px rgba(116,255,148,0.80)',
+            '0 0 80px 35px rgba(116,255,148,0.40)'
+          ].join(', '),
+          opacity: '0',
+          zIndex: 9998,
+          pointerEvents: 'none',
+          transition: 'opacity 320ms ease'
         });
+        document.body.appendChild(glow);
+        requestAnimationFrame(() => { glow.style.opacity = '1'; });
+        setTimeout(() => {
+          glow.style.opacity = '0';
+          setTimeout(() => glow.remove(), 260);
+        }, 280);
 
-        setTimeout(()=>{
-            // Bigger centered glow
-            const GLOW_SIZE = 120; // tweak to taste
-            const cx = center2.x + center2.w/2 - GLOW_SIZE/2;
-            const cy = center2.y + center2.h/2 - GLOW_SIZE/2;
-          
-            const glow = document.createElement('div');
-            Object.assign(glow.style, {
-              position:'absolute',
-              left:`${cx}px`, top:`${cy}px`,
-              width:`${GLOW_SIZE}px`, height:`${GLOW_SIZE}px`,
-              borderRadius:'50%',
-              // stronger layered glow
-              boxShadow: [
-                '0 0 40px 25px rgba(116,255,148,0.80)',
-                '0 0 80px 35px rgba(116,255,148,0.40)'
-              ].join(', '),
-              opacity:'0', zIndex: 9998, pointerEvents:'none',
-              transition:'opacity 320ms ease'
-            });
-            document.body.appendChild(glow);
-            requestAnimationFrame(()=>{ glow.style.opacity = '1'; });
-            setTimeout(()=>{
-              glow.style.opacity='0';
-              setTimeout(()=>glow.remove(), 260);
-            }, 280);
-            (clones || []).forEach(c=>{
-                try {
-                  c.clone.style.transition = 'opacity 220ms ease';
-                  c.clone.style.opacity = '0';
-                  setTimeout(()=> c.clone.remove(), 220);
-                } catch {}
-              });
-          
-            resolve({ clones, centerRect: center2 });
-          }, mergeMs + 10);
-      };
-      clones.forEach(({ clone })=> clone.addEventListener('transitionend', onArrive, { once:true }));
+        resolve({ clones, centerRect: center2 });
+      }, mergeMs + 10);
+    };
+
+    const onArriveOne = (ev) => {
+      if (ev && ev.propertyName && ev.propertyName !== 'transform') return;
+      arrived++;
+      if (arrived >= clones.length) {
+        clearTimeout(timeoutId);
+        finishTravel();
+      }
+    };
+
+    // Fallback if some 'transitionend' don't fire
+    timeoutId = setTimeout(() => {
+      arrived = clones.length;
+      finishTravel();
+    }, travelMs + 1000);
+
+    requestAnimationFrame(() => {
+      clones.forEach(({ clone }, i) => {
+        const { tx, ty } = targets[i];
+        clone.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+        clone.addEventListener('transitionend', onArriveOne, { once: true });
+        clone.addEventListener('transitioncancel', onArriveOne, { once: true });
+      });
     });
   });
 }
 
-function spawnOutputAtCenterAndFly(outImgSrc, centerRect, dstEl, { travelMs=700 } = {}){
+
+function spawnOutputAtCenterAndFly(outImgSrc, centerRect, dstEl, { travelMs = 700 } = {}){
   if (!outImgSrc || !dstEl) return Promise.resolve();
   const ghost = document.createElement('img');
   ghost.src = outImgSrc;
   ghost.className = 'fly-img';
   Object.assign(ghost.style, {
-    position:'absolute',
-    left:`${centerRect.x}px`, top:`${centerRect.y}px`,
-    width:`${Math.max(26, centerRect.w)}px`,
-    height:`${Math.max(26, centerRect.h)}px`,
-    transform:'scale(1.0)',
-    transition:`transform ${travelMs}ms ease, opacity 200ms ease`,
-    zIndex:9999, pointerEvents:'none'
+    position: 'absolute',
+    left: `${centerRect.x}px`,
+    top: `${centerRect.y}px`,
+    width: `${Math.max(26, centerRect.w)}px`,
+    height: `${Math.max(26, centerRect.h)}px`,
+    transform: 'scale(1.0)', // explicit start
+    willChange: 'transform, opacity',
+    transition: `transform ${travelMs}ms ease, opacity 200ms ease`,
+    zIndex: 9999,
+    pointerEvents: 'none'
   });
   document.body.appendChild(ghost);
-  // reuse flyFromTo (it will clone the ghost). We remove the original ghost afterwards.
-  return flyFromTo(ghost, dstEl, { scale:1.2 }).then(()=> ghost.remove());
+  // Ensure layout before flying
+  // eslint-disable-next-line no-unused-expressions
+  ghost.offsetWidth;
+
+  return flyFromTo(ghost, dstEl, { scale: 1.2 }).then(() => ghost.remove());
 }
 
 // ---------- render ----------
@@ -255,8 +318,10 @@ export function renderEnchanting(){
         <div class="left">
           <div class="title">${r.name || pretty(rid)}</div>
           <div class="io">${ioText(r) || '&nbsp;'}</div>
-          <span class="combine-spot" aria-hidden="true" style="display:none"></span>
-          <span class="io-icons" aria-hidden="true" style="display:none">${inputsIcons}</span>
+          <span class="combine-spot" aria-hidden="true"
+            style="position:absolute;left:-9999px;top:-9999px;width:24px;height:24px;opacity:0"></span>
+          <span class="io-icons" aria-hidden="true"
+            style="position:absolute;left:-9999px;top:-9999px;opacity:0">${inputsIcons}</span>
         </div>
         <div class="right">
           <span class="badge level">Lv ${lvl}</span>

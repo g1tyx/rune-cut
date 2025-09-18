@@ -99,6 +99,7 @@ function loadSaveObject(nextObj) {
   renderEnchanting();
   renderCombat();
   renderSkills();
+  renderEquipment();
   renderPanelLogs();
   renderRoyal();
 }
@@ -283,7 +284,7 @@ function tick(){
     // optional cooldown after damage (set state.lastDamageMs when you take damage)
     const lastHit = Number(state.lastDamageMs) || 0;
     const sinceDmg = lastHit > 0 ? Math.max(0, now - lastHit) : Infinity;
-    
+
     if (curHp < maxHp && sinceDmg >= REGEN_COOLDOWN_MS){
       regenCarry += dt;                          // accumulate elapsed seconds
       const toHeal = Math.floor(regenCarry * REGEN_RATE);
