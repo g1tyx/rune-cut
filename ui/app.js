@@ -1,6 +1,6 @@
-// /ui/app.js
 import { state, hydrateState, saveState, defaultState } from '../systems/state.js';
 import { hpMaxFor } from '../systems/combat.js';
+
 import { renderInventory } from './inventory.js';
 import { renderSmithing } from './smithing.js';
 import { renderCooking } from './cooking.js';
@@ -16,44 +16,39 @@ import { renderPanelLogs, wireLogFilters, pushLog } from './logs.js';
 import { setTab, wireRoutes } from './router.js';
 import { updateBar, resetBar } from './actionbars.js';
 import { qs } from '../utils/dom.js';
+
 import './royal_service.js';
 import { renderRoyal } from './royal_service.js';
 
-// ---- one-time hydrate + bootstrap ------------------------------------------
-hydrateState();
-if (state.hpCurrent == null) state.hpCurrent = hpMaxFor(state); // start full HP
+import { initCamp, renderCamp } from './camp.js';
 
-// Cache progress bar/label els used by tick (keep IDs aligned with your HTML)
+// 🔥 Auto-cook UI + logic (no boot-starts)
+import { initAutoCook } from '../systems/autocook.js';
+import { initAutoCookUI } from './autocook.js';
+
+// ---- hydrate first ----
+hydrateState();
+if (state.hpCurrent == null) state.hpCurrent = hpMaxFor(state);
+
+// Cache progress bars used by RAF tick
 const el = {
-  // woodcutting
   actionBar:   qs('#actionBar'),
   actionLabel: qs('#actionLabel'),
-
-  // fishing
   fishBar:     qs('#fishBar'),
   fishLabel:   qs('#fishLabel'),
-
-  // mining
   mineBar:     qs('#mineBar'),
   mineLabel:   qs('#mineLabel'),
-
-  // smithing
   smithBar:    qs('#smithBar'),
   smithLabel:  qs('#smithLabel'),
-
-  // crafting
   craftBar:    qs('#craftBar'),
   craftLabel:  qs('#craftLabel'),
-
-  // cooking
   cookBar:     qs('#cookBar'),
   cookHint:    qs('#cookHint'),
 };
 
-// --- Manual save Export/Import helpers ---
+// Export/Import (unchanged)
 function exportSaveFile() {
   const KEY = 'runecut-save';
-  // Prefer what's on disk; fallback to current in-memory state
   const data = localStorage.getItem(KEY) || JSON.stringify(state);
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const name = `runecut-save_${stamp}.json`;
@@ -74,21 +69,17 @@ function loadSaveObject(nextObj) {
     return;
   }
 
-  // Merge with defaults to avoid missing keys
   const fresh = defaultState();
   const merged = { ...fresh, ...nextObj };
 
-  // Replace contents of the *same* state object (keep references stable)
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, merged);
 
-  // Clamp HP to new max
   const mx = hpMaxFor(state);
   state.hpCurrent = Math.min(mx, state.hpCurrent == null ? mx : state.hpCurrent);
 
   saveState(state);
 
-  // Repaint everything
   renderInventory();
   renderSmithing();
   renderCooking();
@@ -107,19 +98,12 @@ function loadSaveObject(nextObj) {
 function importSaveFromFile(file) {
   const r = new FileReader();
   r.onload = () => {
-    try {
-      const obj = JSON.parse(r.result);
-      loadSaveObject(obj);
-      alert('Save imported successfully.');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to import save: invalid JSON.');
-    }
+    try { loadSaveObject(JSON.parse(r.result)); alert('Save imported successfully.'); }
+    catch (e) { console.error(e); alert('Failed to import save: invalid JSON.'); }
   };
   r.readAsText(file);
 }
 
-// Optional: expose simple console hooks
 window.exportRunecutSave = exportSaveFile;
 window.importRunecutSaveFromText = (txt) => {
   try { loadSaveObject(JSON.parse(txt)); } catch { alert('Bad JSON'); }
@@ -128,8 +112,6 @@ window.importRunecutSaveFromText = (txt) => {
 function wireSaveReset(){
   const saveBtn   = document.getElementById('saveBtn');
   const resetBtn  = document.getElementById('resetBtn');
-
-  // NEW: export/import controls
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
   let importInput = document.getElementById('importFile');
@@ -148,11 +130,9 @@ function wireSaveReset(){
   importInput?.addEventListener('change', (e)=>{
     const f = e.target.files?.[0];
     if (f) importSaveFromFile(f);
-    // reset input so choosing the same file again still fires change
     e.target.value = '';
   });
 
-  // existing Save button
   saveBtn?.addEventListener('click', ()=>{
     try{
       saveState(state);
@@ -160,41 +140,17 @@ function wireSaveReset(){
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saved ✓';
       setTimeout(()=>{ saveBtn.disabled = false; saveBtn.textContent = prev; }, 800);
-    }catch(err){
-      console.error('Save error:', err);
-    }
+    }catch(err){ console.error('Save error:', err); }
   });
 
-  // existing Reset button
   resetBtn?.addEventListener('click', ()=>{
     if(!confirm('Reset your progress? This cannot be undone.')) return;
-
     try{ localStorage.removeItem('runecut-save'); }catch{}
-    const fresh = defaultState();
-    for (const k of Object.keys(state)) delete state[k];
-    Object.assign(state, fresh);
-    state.hpCurrent = hpMaxFor(state);
-    saveState(state);
-
-    renderInventory();
-    renderSmithing();
-    renderCooking();
-    renderFishing();
-    renderMining();
-    renderCrafting();
-    renderWoodcutting();
-    renderCombat();
-    renderSkills();
-    renderEquipment();
-    renderEnchanting();
-    renderPanelLogs();
-    renderRoyal();
-    setTab('forests');
+    location.reload();
   });
 }
 
-
-// ---- initial renders --------------------------------------------------------
+// ---- initial renders ----
 function initialPaint(){
   renderInventory();
   renderSmithing();
@@ -208,10 +164,12 @@ function initialPaint(){
   renderSkills();
   renderEquipment();
   renderPanelLogs();
-  renderRoyal();                 // paint Royal Service once at boot
+  renderRoyal();
+  initCamp();
+  renderCamp();
 }
 
-// ---- render after gaining an item ------------------------------------------
+// Combined re-render helper
 export function renderAllSkillingPanels(){
   renderWoodcutting?.();
   renderCrafting?.();
@@ -223,15 +181,14 @@ export function renderAllSkillingPanels(){
   renderInventory?.();
   renderEquipment?.();
   renderSkills?.();
-  renderRoyal?.();               // update Royal (deliver buttons/progress)
+  renderRoyal?.();
 }
 
-// Refresh on inventory changes
 window.addEventListener('inventory:change', () => {
   renderAllSkillingPanels();
 });
 
-// ---- single RAF loop: progress bars + passive HP regen ----------------------
+// ---- RAF loop (unchanged) ----
 let rafId = 0;
 let last = performance.now();
 let regenCarry = 0;
@@ -266,7 +223,6 @@ function tick(){
     if (act.type === 'smith')  updateBar(el.smithBar,   el.smithLabel,  v, frac);
     if (act.type === 'craft')  updateBar(el.craftBar,   el.craftLabel,  v, frac);
     if (act.type === 'cook')   updateBar(el.cookBar,    null,           v, frac);
-
   }else{
     resetBar(el.actionBar, el.actionLabel);
     resetBar(el.fishBar,   el.fishLabel);
@@ -276,26 +232,24 @@ function tick(){
     resetBar(el.cookBar,   null);
   }
 
-  // Passive HP regen when not in combat
+  // Passive regen
   if (!state.combat){
     const maxHp = hpMaxFor(state);
     const curHp = (state.hpCurrent == null) ? maxHp : state.hpCurrent;
 
-    // optional cooldown after damage (set state.lastDamageMs when you take damage)
     const lastHit = Number(state.lastDamageMs) || 0;
     const sinceDmg = lastHit > 0 ? Math.max(0, now - lastHit) : Infinity;
 
     if (curHp < maxHp && sinceDmg >= REGEN_COOLDOWN_MS){
-      regenCarry += dt;                          // accumulate elapsed seconds
+      regenCarry += dt;
       const toHeal = Math.floor(regenCarry * REGEN_RATE);
       if (toHeal > 0){
         state.hpCurrent = Math.min(maxHp, curHp + toHeal);
-        regenCarry -= toHeal / REGEN_RATE;       // consume just what we applied
+        regenCarry -= toHeal / REGEN_RATE;
         renderEquipment();
         renderCombat();
       }
     } else {
-      // don't let carry build up while full HP or in cooldown
       regenCarry = 0;
     }
   }
@@ -303,55 +257,18 @@ function tick(){
   rafId = requestAnimationFrame(tick);
 }
 
-// Tome logs
-window.addEventListener('tome:tick', (e)=>{
-  const { dropId, skill, xp } = e.detail || {};
-  pushLog(`Tome gathered +1 ${dropId.replace(/_/g,' ')}${xp?` · +${xp} ${skill} xp`:''}`, skill || 'skilling');
-  renderPanelLogs();
-});
-
-function refreshInvAndSkills(){
-  renderInventory();
-  renderSkills();
-}
-
-window.addEventListener('tome:tick', refreshInvAndSkills);
-window.addEventListener('tome:stack', () => {
-  renderEquipment();
-  refreshInvAndSkills();
-});
-window.addEventListener('tome:end', () => {
-  renderEquipment();
-  renderInventory();
-});
-
-// ---- app start --------------------------------------------------------------
+// ---- boot ----
 function startApp(){
   wireRoutes();
-
-  // Make sure Royal tab triggers a render when you click it
-  document.querySelector('.tabs')?.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-tab]');
-    if (!btn) return;
-    if (btn.getAttribute('data-tab') === 'royal') {
-      renderRoyal();
-    }
-  });
-
-  // Live refresh Royal Service progress on kills (combat dispatches kills:change)
-  window.addEventListener('kills:change', () => {
-    // If a contract just finished because of this kill, complete & re-render
-    import('../systems/royal_service.js')
-      .then(m => { m.completeIfAllDone?.(); renderRoyal(); })
-      .catch(() => renderRoyal());
-  });
-
-  wireLogFilters();
   wireSaveReset();
   initialPaint();
+
+  // Auto-cook UI first, then logic (no automatic start on refresh)
+  initAutoCookUI();
+  initAutoCook();
+
   setInterval(()=>saveState(state), 30_000);
   if (!rafId) rafId = requestAnimationFrame(tick);
-  console.log('RuneCut booted');
 }
 
 startApp();

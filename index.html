@@ -13,13 +13,15 @@
 <script src="core.js"></script>
   <header>
     <div class="brand">Rune<b>Cut</b> · <span class="muted">Incremental</span></div>
+    <button id="tabCamp">Camp</button>
+  
     <div class="row">
       <button id="saveBtn" class="btn-success">Save</button>
       <button id="resetBtn" class="btn-danger">Reset</button>
       <button id="exportBtn">Export Save</button>
       <button id="importBtn">Import Save</button>
       <input id="importFile" type="file" accept="application/json" hidden>
-
+  
       <span class="pill" title="Autosaves every 30s"><span>💾</span> Autosave <b>ON</b></span>
     </div>
   </header>
@@ -39,8 +41,8 @@
     window.addEventListener('unhandledrejection', e => console.error('[unhandledrejection]', e.reason));
   </script>
   
-
-  <div class="wrap">
+<main id="gameRoot">
+  <div class="wrap" >
     <div class="grid">
       <!-- LEFT: Skills + Inventory -->
       <section class="card" id="skillsCard">
@@ -82,10 +84,18 @@
             <div class="tile-level">Lvl <b id="cookLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="cookBarMini"></div></div>
           </div>
-          <div id="tile-enchant" class="skill-tile">
-            <div class="tile-header">Enchanting</div>
+          <!-- Enchanting tile -->
+          <div class="skill-tile" id="tile-enchant">
+            <div class="tile-header">🪄 <span>Enchanting</span></div>
             <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="enchantBarMini"></div></div>
+          </div>
+
+          <!-- Construction tile -->
+          <div class="skill-tile" id="tile-construct">
+            <div class="tile-header">🏕️ <span>Construction</span></div>
+            <div class="tile-level">Lvl <b id="constructionLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="constructionBarMini"></div></div>
           </div>
           <div class="skill-tile" id="tile-atk">
             <div class="tile-header">⚔️ <span>Attack</span></div>
@@ -511,6 +521,19 @@
       </div>
     </div>
   </div>
+  </main>
+  <section id="camp" class="camp hidden" aria-label="Campground">
+    <div class="camp-layer sky"></div>
+    <div class="camp-layer far"></div>
+    <div class="camp-layer mid"></div>
+    <div class="camp-layer ground"></div>
+  
+    <aside class="camp-palette" id="campPalette"></aside>
+    <aside class="camp-inspector" id="campInspector"></aside>
+    <div class="camp-hud" id="campHud">
+      <button id="campBackBtn" class="camp-back" type="button" aria-label="Back">← Back</button>
+    </div>
+  </section>
 
   <script type="module">
     import './ui/app.js';
@@ -532,6 +555,5 @@ var _hmt = _hmt || [];
 })();
 </script>
     </div>
-
 </body>
 </html>

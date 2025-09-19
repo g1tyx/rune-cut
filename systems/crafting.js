@@ -31,15 +31,38 @@ function getRec(id){
   if (!r) return null;
   return { id, name: r.name || id, ...r };
 }
-function awardXp(state, r){
-  if(!r?.xp?.skill || !r?.xp?.amount) return;
-  const amt = r.xp.amount;
-  if(r.xp.skill==='craft') state.craftXp = (state.craftXp||0) + amt;
-  else if(r.xp.skill==='wc')    state.wcXp    = (state.wcXp||0)    + amt;
-  else if(r.xp.skill==='fish')  state.fishXp  = (state.fishXp||0)  + amt;
-  else if(r.xp.skill==='min')   state.minXp   = (state.minXp||0)   + amt;
-  else if(r.xp.skill==='smith') state.smithXp = (state.smithXp||0) + amt;
+
+function xpGainsOf(r){
+  return Array.isArray(r?.xp)
+    ? r.xp.map(g => ({ skill:g?.skill, amount:(g?.amount|0) }))
+        .filter(g => g.skill && g.amount > 0)
+    : [];
 }
+
+function awardXp(state, r){
+  if (!r || !Array.isArray(r.xp) || r.xp.length === 0) return;
+
+  const KEY = {
+    craft: 'craftXp',
+    wc: 'wcXp',
+    fish: 'fishXp',
+    min: 'minXp',
+    smith: 'smithXp',
+    construction: 'constructionXp',
+  };
+
+  for (const g of r.xp){
+    const skill = g?.skill;
+    const amt   = (g?.amount|0);
+    if (!skill || amt <= 0) continue;
+
+    const prop = KEY[skill] || (skill + 'Xp');
+    state[prop] = (state[prop] || 0) + amt;
+  }
+
+  try { window.dispatchEvent(new Event('xp:gain')); } catch {}
+}
+
 
 // Which skill gates the recipe's required level? Default to 'craft'.
 function gateSkillFor(r){ return r.reqSkill || 'craft'; }
@@ -103,10 +126,26 @@ export function finishCraft(state, recipeOrId){
 
   (r.inputs || []).forEach(inp => removeItem(state, inp.id, inp.qty));
   (r.outputs|| []).forEach(out => addItem(state, out.id, out.qty));
+
+  const gains = xpGainsOf(r);
   awardXp(state, r);
 
   state.action = null;
-  return { id, name: r.name };
+  return { id, name: r.name, xpGains: gains };
+}
+
+export function finishOneCraft(state){
+  const key = state.action?.key; if(!key) return null;
+  const r = getRec(key); if(!r) return null;
+  if(!canCraft(state, key, 1)) return null;
+
+  (r.inputs||[]).forEach(inp => removeItem(state, inp.id, inp.qty));
+  (r.outputs||[]).forEach(out => addItem(state, out.id, out.qty));
+
+  const gains = xpGainsOf(r);
+  awardXp(state, r);
+
+  return { id:key, name:r.name, xpGains: gains };
 }
 
 // ---- legacy queue-style API (kept for compatibility) ----
@@ -124,16 +163,4 @@ export function startCraftQueued(state, id, count=1){
     queue: Math.max(1, count|0)
   };
   return true;
-}
-
-export function finishOneCraft(state){
-  const key = state.action?.key; if(!key) return null;
-  const r = getRec(key); if(!r) return null;
-  if(!canCraft(state, key, 1)) return null;
-
-  (r.inputs||[]).forEach(inp => removeItem(state, inp.id, inp.qty));
-  (r.outputs||[]).forEach(out => addItem(state, out.id, out.qty));
-  awardXp(state, r);
-
-  return { id:key, name:r.name };
 }

@@ -16,8 +16,8 @@ import { TREES as _TREES } from '../data/woodcutting.js';
 /* ---------- Safe imports ---------- */
 const ITEMS          = _ITEMS || {};
 const MONSTERS       = Array.isArray(_MONSTERS) ? _MONSTERS : [];
-const COOK_RECIPES   = Array.isArray(_COOK_RECIPES) ? _COOK_RECIPES : [];
-const CRAFT_RECIPES  = Array.isArray(_CRAFT_RECIPES) ? _CRAFT_RECIPES : [];
+const COOK_RECIPES   = _COOK_RECIPES  || {};
+const CRAFT_RECIPES  = _CRAFT_RECIPES || {};
 const FISHING_SPOTS  = Array.isArray(_FISHING_SPOTS) ? _FISHING_SPOTS : [];
 const ROCKS          = Array.isArray(_ROCKS) ? _ROCKS : [];
 const SMELT_RECIPES  = Array.isArray(_SMELT_RECIPES) ? _SMELT_RECIPES : [];
@@ -32,6 +32,14 @@ function humanizeId(id=''){ return id.replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c
 function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 function choice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function uniqById(arr){ const s=new Set(); return arr.filter(x=>!s.has(x.id) && s.add(x.id)); }
+
+function pushRoyalLog(msg){
+  try{
+    state.logs = Array.isArray(state.logs) ? state.logs : [];
+    state.logs.push(`[Royal] ${msg}`);
+    saveState();
+  }catch{}
+}
 
 function safeLevelFromXpFallback(xp){
   const T = XP_TABLE;
@@ -83,18 +91,85 @@ function pickExistingItemId(...candidates){
   return null;
 }
 
-/* ---------- Source pools (levels come from data files) ---------- */
+/* ---------- LEVEL INDEX (from data only; no guesses) ---------- */
+const LEVEL_INDEX = Object.create(null);
+
+function indexLevel(id, level){
+  const bid = baseId(id);
+  const n = Number(level);
+  if (!bid || !Number.isFinite(n) || n <= 0) return;
+  // Keep the minimum seen level for an item id
+  if (!LEVEL_INDEX[bid] || n < LEVEL_INDEX[bid]) LEVEL_INDEX[bid] = n;
+}
+
+(function buildLevelIndex(){
+  try{
+    // Trees → likely log ids
+    for (const tr of TREES){
+      const lvl = levelFromNode(tr);
+      const ids = [tr?.logId, tr?.dropId, tr?.yieldId, tr?.itemId, tr?.id].filter(Boolean);
+      for (const id of ids) indexLevel(id, lvl);
+    }
+    // Rocks → ore ids
+    for (const rk of ROCKS){
+      const lvl = levelFromNode(rk);
+      const ids = [rk?.oreId, rk?.dropId, rk?.yieldId, rk?.itemId, rk?.id].filter(Boolean);
+      for (const id of ids) indexLevel(id, lvl);
+    }
+    // Fishing → raw fish ids
+    for (const sp of FISHING_SPOTS){
+      const lvl = levelFromNode(sp);
+      const ids = [sp?.rawId, sp?.raw, sp?.dropId, sp?.yieldId, sp?.itemId, sp?.id].filter(Boolean);
+      for (const id of ids) indexLevel(id, lvl);
+    }
+    // Craft/Cook/Smelt/Forge → output ids
+    for (const r of Object.values(CRAFT_RECIPES)) {
+      const rawId = r.outputs?.[0]?.id ?? r.output?.id ?? r.output ?? r.result ?? r.product ?? r.id;
+      if (rawId) indexLevel(rawId, levelFromRecipe(r));
+    }
+    for (const r of Object.values(COOK_RECIPES)) {
+      const rawId = r.outputs?.[0]?.id ?? r.output?.id ?? r.output ?? r.result ?? r.product ?? r.id;
+      if (rawId) indexLevel(rawId, levelFromRecipe(r));
+    }
+    for (const r of SMELT_RECIPES){ const id = pickExistingItemId(outIdFromRecipe(r)); if (id) indexLevel(id, levelFromRecipe(r)); }
+    for (const r of FORGE_RECIPES){ const id = pickExistingItemId(outIdFromRecipe(r)); if (id) indexLevel(id, levelFromRecipe(r)); }
+  }catch(e){
+    console.warn('[Royal] Error building LEVEL_INDEX', e);
+  }
+})();
+
+function levelForItemId(id){
+  const v = LEVEL_INDEX[baseId(id)];
+  return Number.isFinite(v) ? v : Infinity; // unknown items are treated as too hard
+}
+
+/* ---------- Source pools (levels come from data) ---------- */
 function poolFromCook(){
-  return COOK_RECIPES.map(r=>{
-    const id = pickExistingItemId(outIdFromRecipe(r));
-    if (!id) return null;
+  return Object.values(COOK_RECIPES).map(r => {
+    const rawId =
+      r.outputs?.[0]?.id ??
+      r.output?.id ??
+      r.output ??
+      r.result ??
+      r.product ??
+      r.id;
+    if (!rawId) return null;
+    const id = baseId(rawId);
     return { id, level: levelFromRecipe(r), label: labelFor(id) };
   }).filter(Boolean);
 }
+
 function poolFromCraft(){
-  return CRAFT_RECIPES.map(r=>{
-    const id = pickExistingItemId(outIdFromRecipe(r));
-    if (!id) return null;
+  return Object.values(CRAFT_RECIPES).map(r => {
+    const rawId =
+      r.outputs?.[0]?.id ??
+      r.output?.id ??
+      r.output ??
+      r.result ??
+      r.product ??
+      r.id;
+    if (!rawId) return null;
+    const id = baseId(rawId);
     return { id, level: levelFromRecipe(r), label: labelFor(id) };
   }).filter(Boolean);
 }
@@ -106,18 +181,15 @@ function poolFromArmorer(){
   }).filter(Boolean);
   if (forge.length) return forge;
 
-  return SMELT_RECIPES.map(r=>{
-    const id = pickExistingItemId(outIdFromRecipe(r));
-    if (!id) return null;
-    return { id, level: levelFromRecipe(r), label: labelFor(id) };
-  }).filter(Boolean);
+  // If no forge recipes exist at all, just return empty; no fallbacks.
+  return [];
 }
 function poolFromQuartermaster(){
   const logs = TREES.map(tr=>{
-    const id = pickExistingItemId(tr?.logId, tr?.dropId, tr?.yieldId, tr?.itemId, tr?.id);
+    const id = pickExistingItemId(tr?.drop); // e.g., 'log_oak'
     if (!id) return null;
     return { id, level: levelFromNode(tr), label: labelFor(id) };
-  }).filter(Boolean);
+  }).filter(Boolean);  
 
   const ores = ROCKS.map(rk=>{
     const id = pickExistingItemId(rk?.oreId, rk?.dropId, rk?.yieldId, rk?.itemId, rk?.id);
@@ -139,27 +211,14 @@ function poolFromWarden(){
   }));
 }
 
-/* ---------- Absolute cap helper (never go above band.max) ---------- */
+/* ---------- Absolute cap helper (strict with LEVEL_INDEX) ---------- */
 function filterCapLevel(pool, bandMax){
-  // Only keep entries with level defined and <= bandMax
-  return (pool || []).filter(x => Number.isFinite(x.level) && (x.level || 1) <= bandMax);
-}
-
-/* ---------- Fallbacks that also HONOR the cap ---------- */
-function deriveItemLevelFromItem(it){
-  if (!it) return 1;
-  const lvl = it.levelReq ?? it.req ?? (it.tier ? (1 + (it.tier-1)*5) : 1);
-  const n = Number(lvl);
-  return Number.isFinite(n) && n > 0 ? n : 1;
-}
-function anyItemsUpTo(max, limit=30){
-  const out = [];
-  for (const [id,it] of Object.entries(ITEMS)){
-    const lvl = deriveItemLevelFromItem(it);
-    if (lvl <= max) out.push({ id, level: lvl, label: it?.name || humanizeId(id) });
-    if (out.length >= limit) break;
-  }
-  return out;
+  return (pool || [])
+    .map(x => {
+      const lvl = Number.isFinite(x.level) ? x.level : levelForItemId(x.id);
+      return { ...x, level: lvl };
+    })
+    .filter(x => Number.isFinite(x.level) && x.level <= bandMax);
 }
 
 /* ---------- Static POOLS (built once from data) ---------- */
@@ -171,50 +230,40 @@ const RAW_POOLS = {
   Warden:        poolFromWarden()
 };
 
-/* ---------- Band-aware pickers (NEVER exceed band.max) ---------- */
+/* ---------- Band-aware pickers (NO FALLBACKS) ---------- */
 function pickDeliverables(patron, band, n){
-  // Start with the patron’s pool
   let cand = filterCapLevel(RAW_POOLS[patron], band.max);
-
-  // If empty, fallback to *any* items but still <= band.max
-  if (!cand.length){
-    cand = anyItemsUpTo(band.max, 50);
-  }
-
-  // Still empty (extremely unlikely)? fabricate a couple level-1 entries
-  if (!cand.length){
-    cand = [{ id: 'log', level: 1, label: 'Log' }, { id: 'ore_copper', level: 1, label: 'Copper Ore' }];
-    cand = cand.filter(x => ITEMS[x.id]); // only if present in ITEMS
-    if (!cand.length){
-      // give up and return a neutral thing with level 1 (UI can still display)
-      cand = [{ id: Object.keys(ITEMS)[0] || 'unknown_item', level: 1, label: 'Supply' }];
-    }
-  }
-
   cand = uniqById(cand);
+
+  if (!cand.length){
+    const msg = `No eligible deliverables for ${patron} in band ${band.min}-${band.max}.`;
+    console.warn('[Royal]', msg, { band, patron });
+    pushRoyalLog(`${msg} Check data levels.`);
+    return [];
+  }
+
   const out = [];
   const bag = cand.slice();
   while (out.length < n && bag.length){
     const idx = Math.floor(Math.random()*bag.length);
     out.push(bag.splice(idx,1)[0]);
+  }
+  if (!out.length){
+    const msg = `Picker produced 0 deliverables for ${patron} (band ${band.min}-${band.max}).`;
+    console.warn('[Royal]', msg);
+    pushRoyalLog(`${msg}`);
   }
   return out;
 }
 
 function pickMonsters(band, n){
-  // Strict cap: only monsters <= band.max
   let cand = (RAW_POOLS.Warden || []).filter(m => (m.level || 1) <= band.max);
+
   if (!cand.length){
-    // fallback: any monster up to band.max (if RAW_POOLS had junk levels)
-    cand = (MONSTERS || []).filter(m => (m.level || 1) <= band.max).map(m=>({
-      monsterId: m.id, name: m.name, level: m.level || 1
-    }));
-  }
-  // If still empty, pick the very easiest monster if exists
-  if (!cand.length){
-    cand = (MONSTERS.length ? [{
-      monsterId: MONSTERS[0].id, name: MONSTERS[0].name, level: MONSTERS[0].level || 1
-    }] : [{ monsterId: 'bog_mite', name: 'Bog Mite', level: 1 }]);
+    const msg = `No eligible monsters in band ${band.min}-${band.max}.`;
+    console.warn('[Royal]', msg, { band });
+    pushRoyalLog(`${msg} Check MONSTERS data.`);
+    return [];
   }
 
   const out = [];
@@ -222,13 +271,18 @@ function pickMonsters(band, n){
   while (out.length < n && bag.length){
     const idx = Math.floor(Math.random()*bag.length);
     out.push(bag.splice(idx,1)[0]);
+  }
+  if (!out.length){
+    const msg = `Picker produced 0 monsters (band ${band.min}-${band.max}).`;
+    console.warn('[Royal]', msg);
+    pushRoyalLog(`${msg}`);
   }
   return out;
 }
 
 /* ---------- Difficulty scaling (qty + #tasks) ---------- */
 function layoutForRoyal(rLvl){
-  if (rLvl <= 5)  return { tasksMin:2, tasksMax:3, qtyMin:4,  qtyMax:10 };
+  if (rLvl <= 5)  return { tasksMin:2, tasksMax:3, qtyMin:2,  qtyMax:6 };   // softened early-game
   if (rLvl <= 10) return { tasksMin:3, tasksMax:4, qtyMin:8,  qtyMax:16 };
   if (rLvl <= 20) return { tasksMin:4, tasksMax:5, qtyMin:12, qtyMax:20 };
   if (rLvl <= 35) return { tasksMin:5, tasksMax:6, qtyMin:18, qtyMax:28 };
@@ -255,7 +309,6 @@ function computeRewardXp(contract){
     if (t.kind === 'deliver'){
       const it   = ITEMS[baseId(t.id)];
       const tier = (it?.tier || 1);
-      // never count harder than the band cap
       const sr   = Math.min(t.serviceLevel || 1, t.bandMax || 1);
       const per  = XP_TUNING.deliverBase
                  + XP_TUNING.deliverPerReq * sr
@@ -320,7 +373,7 @@ function slayCountSince(task){
 
 /* ---------- Public API ---------- */
 export function tryOfferContract(){
-  // Always give a contract (never null)
+  // Always give a contract if we can build tasks
   if (state.royalContract) return state.royalContract;
 
   const rLvl   = royalLevel();
@@ -350,24 +403,18 @@ export function tryOfferContract(){
       kind: 'deliver',
       id: p.id,
       label: p.label,
-      serviceLevel: Math.min(p.level || 1, band.max),
+      serviceLevel: Math.min(p.level || levelForItemId(p.id) || 1, band.max),
       bandMax: band.max,
       qty: randInt(qtyMin, qtyMax)
     }));
   }
 
-  // Ultimate safety: if something went wrong, synthesize 2 easy ≤ band.max items
+  // No fallbacks: if no tasks, do not create a contract
   if (!tasks.length){
-    const easy = anyItemsUpTo(band.max, 10);
-    const picks = easy.slice(0, 2).length ? easy.slice(0, 2) : [{ id: Object.keys(ITEMS)[0], level: 1, label: 'Supply' }];
-    tasks = picks.map(p => ({
-      kind: 'deliver',
-      id: p.id,
-      label: p.label,
-      serviceLevel: Math.min(p.level || 1, band.max),
-      bandMax: band.max,
-      qty: randInt(qtyMin, qtyMax)
-    }));
+    const msg = `No eligible tasks for ${patron} at band ${band.min}-${band.max}. Contract not created.`;
+    console.warn('[Royal]', msg);
+    pushRoyalLog(msg);
+    return null;
   }
 
   const contract = { id: `ctr_${Date.now()}`, patron, tasks, rewardXp: 0 };
@@ -444,4 +491,31 @@ export function abandonContract(){
   state.royalContract = null;
   saveState();
   return true;
+}
+
+// debug in console
+/* ---------- Debug helpers (safe to remove later) ---------- */
+export function royalPoolsSnapshot() {
+  const toRows = (arr, take = 8) =>
+    (Array.isArray(arr) ? arr.slice(0, take) : []).map(x => ({
+      id: x.id ?? x.monsterId ?? '(?)',
+      label: x.label ?? x.name ?? '(?)',
+      level: x.level ?? '(?)',
+    }));
+
+  return {
+    sizes: Object.fromEntries(Object.entries(RAW_POOLS).map(([k, v]) => [k, (v || []).length])),
+    craftsman: toRows(RAW_POOLS.Craftsman),
+    steward: toRows(RAW_POOLS.Steward),
+    armorer: toRows(RAW_POOLS.Armorer),
+    quartermaster: toRows(RAW_POOLS.Quartermaster),
+    warden: toRows(RAW_POOLS.Warden),
+  };
+}
+
+if (typeof window !== 'undefined') {
+  // quick global hooks for your console
+  window.royalPoolsSnapshot = royalPoolsSnapshot;
+  window.royalPatronSizes = () =>
+    Object.fromEntries(Object.entries(RAW_POOLS).map(([k, v]) => [k, (v || []).length]));
 }

@@ -1,12 +1,39 @@
 // /systems/afk.js
 import { ITEMS } from '../data/items.js';
+import { BUILDINGS } from '../data/construction.js'; // data-driven camp effects
+
 import { listRocks, canMine, startMine, finishMine } from './mining.js';
 import { listTrees, canChop, startChop, finishChop } from './woodcutting.js';
 import { listFishingSpots, isSpotUnlocked as fishUnlocked, canFish, startFish, finishFish } from './fishing.js';
 
-// --- Config ---
-export const afkTimeMs = (state)=> Math.max(1000, state.afkTimeMs|0 || 30000);
+// --- Base config ---
 export const setAfkTimeMs = (state, ms)=> { state.afkTimeMs = Math.max(1000, ms|0); };
+export const baseAfkTimeMs = (state)=> Math.max(1000, (state.afkTimeMs|0) || 30000);
+
+// ---- Camp bonuses (data-driven from BUILDINGS) ----
+function sumCampSeconds(state, effectType){
+  const placed = state?.camp?.placed || [];
+  let total = 0;
+  for (const p of placed){
+    const def = BUILDINGS?.[p?.id];
+    const effects = Array.isArray(def?.effects) ? def.effects : [];
+    for (const e of effects){
+      if (e?.type === effectType) total += (e.seconds|0);
+    }
+  }
+  return Math.max(0, total);
+}
+
+function afkBonusMsFromCamp(state){
+  return sumCampSeconds(state, 'afk_extend') * 1000; // e.g., Oak Hut adds seconds here
+}
+
+function autoCookWindowMs(state){
+  return sumCampSeconds(state, 'autocook_window') * 1000; // e.g., Campfire adds window
+}
+
+// Final AFK time including camp bonuses
+export const afkTimeMs = (state)=> baseAfkTimeMs(state) + afkBonusMsFromCamp(state);
 
 // --- Driver registry (plug more skills here anytime) ---
 const DRIVERS = new Map();
@@ -19,7 +46,7 @@ export function registerAfkSkill(skill, driver){
   DRIVERS.set(String(skill), driver);
 }
 
-// -------- Built-in drivers: Forestry & Fishing --------
+// -------- Built-in drivers: Forestry, Fishing, Mining --------
 
 registerAfkSkill('forestry', function forestryDriver(state, treeId, done){
   const trees = listTrees(state) || [];
@@ -67,6 +94,7 @@ registerAfkSkill('mining', (state, veinId, done)=>{
   const r = rocks.find(x=>x.id===veinId) || rocks[0];
   if (!r) return false;
   if (!canMine(state, r)) return false;
+
   return startMine(state, r, ()=>{
     const res = finishMine(state, r);
     done({
@@ -80,9 +108,6 @@ registerAfkSkill('mining', (state, veinId, done)=>{
     });
   });
 });
-
-// Example stub you can add later:
-// registerAfkSkill('mining', (state, veinId, done)=>{ /* startMine/finishMine */ });
 
 // --- Session + loop ---
 let AFK = null;
@@ -99,13 +124,20 @@ export function stopAfk(){
 
 export function startAfk(state, { skill, targetId }){
   const key = String(skill);
-  // Tell UIs/other skills we’re switching
+  // Tell UIs/other systems we’re switching
   try { window.dispatchEvent(new CustomEvent('afk:switch', { detail:{ name:key } })); } catch {}
 
-  const endAt = performance.now() + afkTimeMs(state);
-  AFK = { skill:key, targetId, endAt };
+  const durationMs = afkTimeMs(state);
+  const endAt = performance.now() + durationMs;
+  const bonuses = {
+    autocookMs: autoCookWindowMs(state), // exposed for cooking listeners
+  };
 
-  try { window.dispatchEvent(new CustomEvent('afk:start', { detail:{ ...AFK } })); } catch {}
+  AFK = { skill:key, targetId, endAt, bonuses };
+
+  try {
+    window.dispatchEvent(new CustomEvent('afk:start', { detail:{ ...AFK } }));
+  } catch {}
 
   runLoop(state);
   return true;
@@ -133,12 +165,17 @@ function runLoop(state){
     return;
   }
 
-  // Kick one normal action; on completion, we emit a cycle event and loop again
-  const started = driver(state, AFK.targetId, (detail={})=>{
+  // Kick one normal action; on completion, emit a cycle event and loop again
+  const started = driver(state, AFK.targetId, (detail = {})=>{
     if (!AFK) return; // canceled mid-run
     try {
       window.dispatchEvent(new CustomEvent('afk:cycle', {
-        detail: { ...detail, skill: AFK.skill, targetId: AFK.targetId }
+        detail: {
+          ...detail,
+          skill: AFK.skill,
+          targetId: AFK.targetId,
+          bonuses: { ...(AFK.bonuses || {}) }
+        }
       }));
     } catch {}
     setTimeout(()=>runLoop(state), 0);

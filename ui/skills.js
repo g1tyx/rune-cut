@@ -10,6 +10,7 @@ const SK = [
   { key:'smith',   xp:'smithXp',   id:'#tile-smith',   label:'Smithing' },
   { key:'craft',   xp:'craftXp',   id:'#tile-craft',   label:'Crafting' },
   { key:'enchant', xp:'enchantXp', id:'#tile-enchant', label:'Enchanting' },
+  { key:'construction',xp:'constructionXp', id:'#tile-construct',  label:'constructionBarMini'},
   { key:'cook',    xp:'cookXp',    id:'#tile-cook',    label:'Cooking' },
   { key:'atk',     xp:'atkXp',     id:'#tile-atk',     label:'Attack' },
   { key:'str',     xp:'strXp',     id:'#tile-str',     label:'Strength' },

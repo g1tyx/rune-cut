@@ -1,9 +1,9 @@
-// systems/state.js
+// /systems/state.js
 
 const SAVE_KEY = 'runecut-save';
 const SAVE_VERSION = 2;
 
-// ---- Factory for a fresh state ----
+/* ---------------- Fresh state factory ---------------- */
 export function defaultState(){
   return {
     version: SAVE_VERSION,
@@ -15,6 +15,7 @@ export function defaultState(){
     atkXp: 0, strXp: 0, defXp: 0,
     smithXp: 0, craftXp: 0, cookXp: 0,
     enchantXp: 0,
+    constructionXp: 0,        // ✅ NEW
 
     // Core data
     inventory: {},
@@ -22,13 +23,13 @@ export function defaultState(){
       axe:null, pick:null, weapon:null, shield:null,
       head:null, body:null, legs:null, gloves:null, boots:null,
       amulet:null, ring:null, cape:null,
-      // Optional food slots (kept if you use them elsewhere)
       food:null, foodQty:0,
     },
     equipmentMods: {},
 
     // Royal
     royalXp: 0,
+    royalFavor: 0,
     royalContract: null,
     royalHistory: [],
 
@@ -40,6 +41,9 @@ export function defaultState(){
     logs: [],
     logFilter: 'all',
     ui: {},
+
+    // --- Camp / Construction (PERSISTED) ---
+    camp: { gridW: 36, gridH: 12, placed: [] },
 
     // Selections
     selectedTreeId: 'oak',
@@ -59,13 +63,30 @@ export function defaultState(){
   };
 }
 
-// ---- Live singleton (import { state } from './state.js') ----
+/* ---------------- Live singleton ---------------- */
 export const state = defaultState();
 
-/* ---------------- Persistence helpers ---------------- */
+/* ---------------- Helpers ---------------- */
+function sanitizeCamp(c){
+  const base = { gridW:36, gridH:12, placed:[] };
+  if (!c || typeof c !== 'object') return base;
 
+  const gridW = Number.isFinite(c.gridW) ? c.gridW : 36;
+  const gridH = Number.isFinite(c.gridH) ? c.gridH : 12;
+
+  const placed = Array.isArray(c.placed) ? c.placed.map(p => ({
+    id: String(p?.id || ''),
+    x: Math.max(0, (p?.x|0)),
+    y: Math.max(0, (p?.y|0)),
+    rot: (p?.rot|0) || 0,
+    status: 'active',
+  })) : [];
+
+  return { gridW, gridH, placed };
+}
+
+/* ---------------- Persistence ---------------- */
 function safeToSave(s){
-  // Whitelist explicit shape so we never drop critical maps
   return {
     version: SAVE_VERSION,
 
@@ -75,6 +96,7 @@ function safeToSave(s){
     atkXp: s.atkXp||0, strXp: s.strXp||0, defXp: s.defXp||0,
     smithXp: s.smithXp||0, craftXp: s.craftXp||0, cookXp: s.cookXp||0,
     enchantXp: s.enchantXp||0,
+    constructionXp: s.constructionXp||0,   // ✅ NEW
 
     inventory: s.inventory || {},
     equipment: s.equipment || {},
@@ -82,6 +104,7 @@ function safeToSave(s){
 
     royalXp: s.royalXp||0,
     royalContract: s.royalContract ?? null,
+    royalFavor: s.royalFavor||0,
     royalHistory: Array.isArray(s.royalHistory) ? s.royalHistory : [],
 
     monsterKills: s.monsterKills || {},
@@ -91,12 +114,13 @@ function safeToSave(s){
     logFilter: s.logFilter || 'all',
     ui: s.ui || {},
 
+    camp: sanitizeCamp(s.camp),
+
     selectedTreeId: s.selectedTreeId || 'oak',
     selectedSpotId: s.selectedSpotId || 'pond_shallows',
     selectedRockId: s.selectedRockId || 'copper_rock',
     trainingStyle: s.trainingStyle || 'shared',
 
-    // Runtime (persist current HP/mana; timers will be nulled on hydrate)
     action: s.action || null,
     combat: s.combat || null,
     hpCurrent: s.hpCurrent == null ? null : s.hpCurrent,
@@ -123,46 +147,49 @@ export function loadState(){
   }
 }
 
-// Basic migrator so older saves gain new keys safely
+/* ---------------- Migrator ---------------- */
 function migrateLoaded(loaded){
   if (!loaded || typeof loaded !== 'object') return null;
 
-  // v1 → v2: ensure critical maps/arrays exist
   if (!loaded.version) loaded.version = 1;
 
-  loaded.inventory      = loaded.inventory      || {};
-  loaded.equipment      = loaded.equipment      || {};
-  loaded.equipmentMods  = loaded.equipmentMods  || {};
-  loaded.monsterKills   = loaded.monsterKills   || {};
-  loaded.discoveredDrops= loaded.discoveredDrops|| {};
-  loaded.logs           = Array.isArray(loaded.logs) ? loaded.logs : [];
-  loaded.royalHistory   = Array.isArray(loaded.royalHistory) ? loaded.royalHistory : [];
-  loaded.ui             = loaded.ui || {};
+  loaded.inventory       = loaded.inventory       || {};
+  loaded.equipment       = loaded.equipment       || {};
+  loaded.equipmentMods   = loaded.equipmentMods   || {};
+  loaded.monsterKills    = loaded.monsterKills    || {};
+  loaded.discoveredDrops = loaded.discoveredDrops || {};
+  loaded.logs            = Array.isArray(loaded.logs) ? loaded.logs : [];
+  loaded.royalHistory    = Array.isArray(loaded.royalHistory) ? loaded.royalHistory : [];
+  loaded.ui              = loaded.ui || {};
   delete loaded.lastDamageMs;
 
-  // Normalize equipment slots that might be missing in old saves
+  // Normalize equipment slots
   const eqBase = defaultState().equipment;
   loaded.equipment = { ...eqBase, ...loaded.equipment };
 
-  // Bump to current version (no destructive transforms needed right now)
+  // Ensure constructionXp exists
+  if (typeof loaded.constructionXp !== 'number') loaded.constructionXp = 0;
+
+  if (typeof loaded.royalFavor !== 'number') loaded.royalFavor = 0;
+
+  // Ensure camp exists & normalized
+  loaded.camp = sanitizeCamp(loaded.camp);
+
   loaded.version = SAVE_VERSION;
   return loaded;
 }
 
-// Merge saved data into the live singleton without changing its identity.
-// Call this once at boot (e.g., in ui/app.js) before first render.
+/* ---------------- Hydration ---------------- */
 export function hydrateState(){
   const loadedRaw = loadState();
   const loaded = migrateLoaded(loadedRaw);
   const base = defaultState();
 
   if (!loaded){
-    // fresh boot — ensure baseline shape
     Object.assign(state, base);
     return state;
   }
 
-  // Start from defaults, overlay loaded, and deep-merge important maps
   const merged = {
     ...base,
     ...loaded,
@@ -172,21 +199,18 @@ export function hydrateState(){
     monsterKills:    { ...base.monsterKills,    ...loaded.monsterKills },
     discoveredDrops: { ...base.discoveredDrops, ...loaded.discoveredDrops },
     ui:              { ...base.ui,              ...loaded.ui },
+    camp:            sanitizeCamp(loaded.camp),
   };
 
-  // Arrays already sanitized by migrateLoaded
   merged.lastDamageMs = 0;
   merged.logs = loaded.logs;
   merged.royalHistory = loaded.royalHistory;
 
-  // Never resume half-finished timers after reload
   merged.action = null;
   merged.combat = null;
 
-  // Replace contents of the live singleton (preserve reference)
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, merged);
 
   return state;
 }
-

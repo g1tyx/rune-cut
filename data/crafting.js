@@ -1,31 +1,33 @@
-// data/crafting.js
 export const CRAFT_RECIPES = {
   /* --- existing --- */
   wood_handle: {
     id: 'wood_handle',
     name: 'Wood Handle',
     time: 1800,
+    lvl: 1,
     inputs:  [{ id:'log_oak', qty:1 }],
     outputs: [{ id:'wood_handle', qty:1 }],
-    xp: { skill: 'craft', amount: 6 },
+    xp: [{ skill: 'craft', amount: 6 }],
     speedSkill: 'craft',
   },
   pages_from_oak: {
     id: 'pages_from_oak',
     name: 'Pages',
+    lvl: 1,
     time: 1600,
     inputs:  [{ id:'log_oak', qty:1 }],
     outputs: [{ id:'pages', qty:5 }],
-    xp: { skill: 'craft', amount: 6 },
+    xp: [{ skill: 'craft', amount: 6 }],
     speedSkill: 'craft',
   },
   pages_from_pine: {
     id: 'pages_from_pine',
     name: 'Pages',
+    lvl: 1,
     time: 1600,
     inputs:  [{ id:'log_pine', qty:1 }],
     outputs: [{ id:'pages', qty:10 }],
-    xp: { skill: 'craft', amount: 10 },
+    xp: [{ skill: 'craft', amount: 10 }],
     speedSkill: 'craft',
   },
   pages_from_birch: {
@@ -34,7 +36,7 @@ export const CRAFT_RECIPES = {
     time: 1600,
     inputs:  [{ id:'log_birch', qty:1 }],
     outputs: [{ id:'pages', qty:15 }],
-    xp: { skill: 'craft', amount: 18 },
+    xp: [{ skill: 'craft', amount: 18 }],
     speedSkill: 'craft',
   },
   pages_from_cedar: {
@@ -43,7 +45,7 @@ export const CRAFT_RECIPES = {
     time: 1600,
     inputs:  [{ id:'log_cedar', qty:1 }],
     outputs: [{ id:'pages', qty:25 }],
-    xp: { skill: 'craft', amount: 25 },
+    xp: [{ skill: 'craft', amount: 25 }],
     speedSkill: 'craft',
   },
   pages_from_willow: {
@@ -52,7 +54,7 @@ export const CRAFT_RECIPES = {
     time: 1700,
     inputs:  [{ id:'log_willow', qty:1 }],
     outputs: [{ id:'pages', qty:30 }],
-    xp: { skill: 'craft', amount: 40 },
+    xp: [{ skill: 'craft', amount: 40 }],
     speedSkill: 'craft',
   },
   pages_from_maple: {
@@ -61,7 +63,7 @@ export const CRAFT_RECIPES = {
     time: 1800,
     inputs:  [{ id:'log_maple', qty:1 }],
     outputs: [{ id:'pages', qty:35 }],
-    xp: { skill: 'craft', amount: 60 },
+    xp: [{ skill: 'craft', amount: 60 }],
     speedSkill: 'craft',
   },
   pages_from_yew: {
@@ -70,72 +72,82 @@ export const CRAFT_RECIPES = {
     time: 1900,
     inputs:  [{ id:'log_yew', qty:1 }],
     outputs: [{ id:'pages', qty:40 }],
-    xp: { skill: 'craft', amount: 100 },
+    xp: [{ skill: 'craft', amount: 100 }],
     speedSkill: 'craft',
   },
+
   // --- Planks from logs ---
   planks_from_oak: {
     id:'planks_from_oak', name:'Oak Planks', time: 2000,
     inputs:[{ id:'log_oak', qty:1 }],
     level: 3,
     outputs:[{ id:'plank_oak', qty:1 }],
-    xp:{ skill:'craft', amount: 8 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 8 }], speedSkill:'craft',
   },
   planks_from_pine: {
     id:'planks_from_pine', name:'Pine Planks', time: 2000,
     inputs:[{ id:'log_pine', qty:1 }],
     level: 8,
     outputs:[{ id:'plank_pine', qty:1 }],
-    xp:{ skill:'craft', amount: 15 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 15 }], speedSkill:'craft',
   },
   planks_from_birch: {
     id:'planks_from_birch', name:'Birch Planks', time: 2000,
     inputs:[{ id:'log_birch', qty:1 }],
     level: 18,
     outputs:[{ id:'plank_birch', qty:1 }],
-    xp:{ skill:'craft', amount: 32 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 32 }], speedSkill:'craft',
   },
   planks_from_cedar: {
     id:'planks_from_cedar', name:'Cedar Planks', time: 2100,
     inputs:[{ id:'log_cedar', qty:1 }],
     level: 28,
     outputs:[{ id:'plank_cedar', qty:1 }],
-    xp:{ skill:'craft', amount: 40 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 40 }], speedSkill:'craft',
   },
   planks_from_willow: {
     id:'planks_from_willow', name:'Willow Planks', time: 2100,
     inputs:[{ id:'log_willow', qty:1 }],
     level: 38,
     outputs:[{ id:'plank_willow', qty:4 }],
-    xp:{ skill:'craft', amount: 66 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 66 }], speedSkill:'craft',
   },
   planks_from_maple: {
     id:'planks_from_maple', name:'Maple Planks', time: 2200,
     inputs:[{ id:'log_maple', qty:1 }],
     level: 48,
     outputs:[{ id:'plank_maple', qty:4 }],
-    xp:{ skill:'craft', amount: 100 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 100 }], speedSkill:'craft',
   },
   planks_from_yew: {
     id:'planks_from_yew', name:'Yew Planks', time: 2300,
     inputs:[{ id:'log_yew', qty:1 }],
     level: 63,
     outputs:[{ id:'plank_yew', qty:4 }],
-    xp:{ skill:'craft', amount: 160 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 160 }], speedSkill:'craft',
   },
   planks_from_runewood: {
     id:'planks_from_runewood', name:'Runewood Planks', time: 2400,
     inputs:[{ id:'log_runewood', qty:1 }],
     level: 73,
     outputs:[{ id:'plank_runewood', qty:4 }],
-    xp:{ skill:'craft', amount: 210 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 210 }], speedSkill:'craft',
   },
   planks_from_elderwood: {
     id:'planks_from_elderwood', name:'Elderwood Planks', time: 2500,
     inputs:[{ id:'log_elderwood', qty:1 }],
     level: 83,
     outputs:[{ id:'plank_elderwood', qty:4 }],
-    xp:{ skill:'craft', amount: 375 }, speedSkill:'craft',
+    xp:[{ skill:'craft', amount: 375 }], speedSkill:'craft',
+  },
+
+  nails: {
+    id:'nails', name:'Nails (x5)', time: 2500,
+    inputs:[{ id:'bar_iron', qty:1 }],
+    level: 10,
+    outputs:[{ id:'nails', qty:5 }],
+    xp:[{ skill:'craft', amount: 25 }, { skill:'construction', amount: 5 }],
+    speedSkill:'craft',
   },
 
   book_blank: {
@@ -148,7 +160,7 @@ export const CRAFT_RECIPES = {
     ],
     level: 2,
     outputs: [{ id:'book', qty:1 }],
-    xp: { skill: 'craft', amount: 18 },
+    xp: [{ skill: 'craft', amount: 18 }],
     speedSkill: 'craft',
   },
   fishing_pole: {
@@ -161,7 +173,7 @@ export const CRAFT_RECIPES = {
     ],
     level: 2,
     outputs: [{ id:'fishing_pole', qty:1 }],
-    xp: { skill: 'craft', amount: 18 },
+    xp: [{ skill: 'craft', amount: 18 }],
     speedSkill: 'craft',
   },
   sturdy_pole: {
@@ -174,7 +186,7 @@ export const CRAFT_RECIPES = {
     ],
     level: 12,
     outputs: [{ id:'sturdy_pole', qty:1 }],
-    xp: { skill: 'craft', amount: 40 },
+    xp: [{ skill: 'craft', amount: 40 }],
     speedSkill: 'craft',
   },
   anglers_pride: {
@@ -187,22 +199,19 @@ export const CRAFT_RECIPES = {
     ],
     level: 22,
     outputs: [{ id:'anglers_pride', qty:1 }],
-    xp: { skill: 'craft', amount: 70 },
+    xp: [{ skill: 'craft', amount: 70 }],
     speedSkill: 'craft',
   },
   empty_vial: {
     id: 'empty_vial',
     name: 'Glass Vial',
     time: 2800,
-    inputs: [
-      { id:'glass_glob', qty:1 },
-    ],
+    inputs: [{ id:'glass_glob', qty:1 }],
     level: 5,
     outputs: [{ id:'empty_vial', qty:1 }],
-    xp: { skill: 'craft', amount: 22 },
+    xp: [{ skill: 'craft', amount: 22 }],
     speedSkill: 'craft',
   },
-  
   reinforced_vial: {
     id: 'reinforced_vial',
     name: 'Reinforced Vial',
@@ -213,9 +222,7 @@ export const CRAFT_RECIPES = {
     ],
     level: 11,
     outputs: [{ id:'reinforced_vial', qty:1 }],
-    xp: { skill: 'craft', amount: 38 },
+    xp: [{ skill: 'craft', amount: 38 }],
     speedSkill: 'craft',
   },
-  
-  
 };

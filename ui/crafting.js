@@ -57,6 +57,22 @@ function craftProgressPct(){
   return Math.max(0, Math.min(1, p));
 }
 
+function xpArray(rec){
+  return Array.isArray(rec?.xp)
+    ? rec.xp.map(g => ({ skill:g?.skill, amount:(g?.amount|0) }))
+           .filter(g => g.skill && g.amount > 0)
+    : [];
+}
+function xpTotal(rec){ return xpArray(rec).reduce((s,g)=>s+g.amount,0); }
+function xpTooltip(rec){
+  const parts = xpArray(rec).map(g => `+${g.amount} ${g.skill} xp`);
+  return parts.join(', ');
+}
+function xpLogText(gains){
+  const parts = (Array.isArray(gains) ? gains : []).map(g => `+${g.amount} ${g.skill} xp`);
+  return parts.join(', ');
+}
+
 /* ---------- Pages helpers ---------- */
 const PAGES_VARIANTS = () => asList(CRAFT_RECIPES).filter(r => r.id.startsWith(PAGES_PREFIX));
 function logIdOf(rec){ return inputsOf(rec)[0]?.id || null; }
@@ -117,7 +133,8 @@ export function renderCrafting(){
     const dis      = busy || !ok;
     const isActive = r.id === activeId;
     const lvl      = r.level || 1;
-    const xpAmt    = r?.xp?.amount || 0;
+    const xpAmt = xpTotal(r);
+    const xpTip = xpTooltip(r);
 
     const icon = iconHtmlFromOutput(r);
     const io   = reqStrFromInputs(r.inputs);
@@ -134,7 +151,7 @@ export function renderCrafting(){
           </div>
           <div class="craft-badges">
             <span class="badge level">Lv ${lvl}</span>
-            ${xpAmt ? `<span class="badge xp">+${xpAmt}xp</span>` : ''}
+            ${xpAmt ? `<span class="badge xp" title="${xpTip}">+${xpAmt}xp</span>` : ''}
           </div>
         </div>
         ${isActive ? `
@@ -165,7 +182,8 @@ function renderPagesCard(containerEl){
 
   const baseVar = activeVar || defaultPagesVariant() || vars[0];
   const lvl = baseVar.level || 1;
-  const xpAmt = baseVar?.xp?.amount || 0;
+  const xpAmt = xpTotal(baseVar);
+  const xpTip = xpTooltip(baseVar);
 
   const optionsHtml = vars
     .slice()
@@ -194,7 +212,7 @@ function renderPagesCard(containerEl){
         </div>
         <div class="craft-badges">
           <span class="badge level">Lv ${lvl}</span>
-          ${xpAmt ? `<span class="badge xp">+${xpAmt}xp</span>` : ''}
+          ${xpAmt ? `<span class="badge xp" title="${xpTip}">+${xpAmt}xp</span>` : ''}
         </div>
       </div>
       ${isActive ? `
@@ -231,8 +249,9 @@ on(document, 'click', '#craftList .craft-card', (e, btn) => {
   const ok = startCraft(state, id, () => {
     const res = finishCraft(state, id);
     if (res){
-      const name = res.name || res.id || id;
-      pushCraftLog(`Crafted ${name} → +${xpAmt} ${xpSkill} xp`);
+      const name = res.name || res.id || 'Pages';
+      const gainsText = xpLogText(res.xpGains);
+      pushCraftLog(`Crafted ${name} → ${gainsText || '+0 xp'}`);
       renderInventory(); renderSmithing(); renderEnchanting(); renderSkills();
     }
     saveState(state);
@@ -260,9 +279,14 @@ on(document, 'change', '#pagesLogSelect', (e, sel)=>{
   if (rec && ioEl) ioEl.textContent = pagesIoText(rec);
 
   const lvl = rec?.level || 1;
-  const xp  = rec?.xp?.amount || 0;
   const lvlEl = card.querySelector('.badge.level');
   const xpEl  = card.querySelector('.badge.xp');
+  const xp  = xpTotal(rec);
+  const tip = xpTooltip(rec);
+  if (xpEl){
+    if (xp){ xpEl.textContent = `+${xp}xp`; xpEl.title = tip; }
+    else { xpEl.textContent = ''; xpEl.removeAttribute('title'); }
+}
   if (lvlEl) lvlEl.textContent = `Lv ${lvl}`;
   if (xpEl)  xpEl.textContent  = xp ? `+${xp}xp` : '';
 
@@ -285,8 +309,9 @@ on(document, 'click', '#pagesCraftBtn', (e, btn)=>{
   const ok = startCraft(state, rid, ()=>{
     const res = finishCraft(state, rid);
     if (res){
-      const name = res.name || 'Pages';
-      pushCraftLog(`Crafted ${name} → +${xpAmt} ${xpSkill} xp`);
+      const name = res.name || res.id || 'Pages';
+      const gainsText = xpLogText(res.xpGains);
+      pushCraftLog(`Crafted ${name} → ${gainsText || '+0 xp'}`);
       renderInventory(); renderSmithing(); renderEnchanting(); renderSkills();
     }
     saveState(state);
