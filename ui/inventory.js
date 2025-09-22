@@ -8,9 +8,10 @@ import { hpMaxFor } from '../systems/combat.js';
 import { qs, on } from '../utils/dom.js';
 import { showTip, hideTip } from './tooltip.js';
 import { tomeDurationMsFor, tomeRemainingMs } from '../systems/tomes.js';
+import { drinkPotion } from '../systems/mana.js';                 // <-- unified
+import { renderCharacterEffects } from './character.js';          // <-- draw badges
 
 const elInv = qs('#inventory');
-const elPopover = qs('#popover');
 
 /* ------------- ensure CSS for quick-equip ------------- */
 (function ensureInvEquipCSS(){
@@ -34,38 +35,34 @@ const elPopover = qs('#popover');
     #inventory .inv-slot .sell-btn{
       position:absolute; right:4px; bottom:4px; z-index:2;
     }
+
+    /* tiny pulse when consuming */
+    #inventory .inv-slot.pulse{ animation: inv-pulse 220ms ease-out; }
+    @keyframes inv-pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.97); }
+      100% { transform: scale(1); }
+    }
   `;
   document.head.appendChild(css);
 })();
 
-/* ---------------- equip food helper ----------------- */
-function equipFoodAllFromInventory(id){
-  const base = baseId(id);
-  const have = state.inventory[id] || 0;
-  if (have <= 0) return false;
-
-  if (!state.equipment) state.equipment = {};
-
-  // If a different food is equipped, return its stack to inventory first
-  if (state.equipment.food && state.equipment.food !== base){
-    const prevBase = state.equipment.food;
-    const prevQty  = Math.max(0, state.equipment.foodQty|0);
-    if (prevQty > 0){
-      state.inventory[prevBase] = (state.inventory[prevBase]||0) + prevQty;
+/* ---------------- helpers ---------------- */
+export function findInvIconEl(id){
+  // exact-id match first
+  const tile = document.querySelector(`#inventory .inv-slot[data-id="${CSS.escape(id)}"]`);
+  if (tile) return tile.querySelector('img.icon-img, .icon');
+  // fallback: match by base id (before @quality), pick the first
+  const base = String(id).split('@')[0];
+  const tiles = document.querySelectorAll('#inventory .inv-slot');
+  for (const t of tiles){
+    const tid = t.getAttribute('data-id') || '';
+    if (tid.split('@')[0] === base){
+      return t.querySelector('img.icon-img, .icon');
     }
-    state.equipment.foodQty = 0;
   }
-
-  state.equipment.food    = base;
-  state.equipment.foodQty = (state.equipment.foodQty|0) + have;
-
-  // remove entire stack of this id from inventory
-  removeItem(state, id, have);
-  window.dispatchEvent(new Event('food:change'));
-  return true;
+  return null;
 }
-
-/* ---------------- metal/tint helpers ---------------- */
 function baseId(id){ return String(id).split('@')[0]; }
 
 function metalFromItemId(id=''){
@@ -86,12 +83,10 @@ function tintClassForItem(id=''){
   return m ? ` tint-${m}` : '';
 }
 
-/* ---------------- pricing/consumption helpers ---------------- */
 function qualityPct(id){
   const q = parseInt(String(id).split('@')[1], 10);
   return Number.isFinite(q) ? Math.max(1, Math.min(100, q)) : 100;
 }
-
 function sellPrice(id){
   const base = baseId(id);
   const it = ITEMS[base] || {};
@@ -107,7 +102,6 @@ function sellPrice(id){
   }
   return price;
 }
-
 function healAmountFor(id){
   const base = baseId(id);
   const def = ITEMS[base] || {};
@@ -140,6 +134,7 @@ export function renderInventory(){
     const it      = ITEMS[base] || {};
     const isEquip = it.type === 'equipment';
     const isFood  = (it.type === 'food') || (healAmountFor(id) > 0);
+    const isPotion= (!isFood && (Number(it.mana)>0 || Number(it.accBonus)>0));
 
     // simple material fallback image for ores/bars only; other materials should define their own img
     const isMat   = /^bar_|^ore_/.test(base);
@@ -153,11 +148,17 @@ export function renderInventory(){
 
     const isTome = isEquip && (it.slot === 'tome');
 
+    // keep UI minimal; Shift-click to drink potions (no button)
+    const actionBtnHtml =
+      isFood
+        ? `<button class="use-btn" data-use="${id}" title="Eat">Eat</button>`
+        : '';
+
     return `
-      <div class="inv-slot ${isEquip ? 'equip' : isFood ? 'food' : ''}"
-          data-id="${id}" draggable="true">
+      <div class="inv-slot ${isEquip ? 'equip' : isFood ? 'food' : isPotion ? 'potion' : ''}"
+          data-id="${id}" draggable="true" title="${isPotion ? 'Shift-click to drink' : ''}">
         ${iconHtml}
-        ${isFood ? `<button class="use-btn" data-use="${id}" title="Eat">Eat</button>` : ''}
+        ${actionBtnHtml}
         <button class="sell-btn" data-sell="${id}">Sell</button>
         ${isTome ? `<button class="equip-quick btn-primary" data-equip="${id}" title="Equip">Equip</button>` : ''}
         <span class="qty-badge">${qty}</span>
@@ -165,8 +166,34 @@ export function renderInventory(){
   }).join('');
 }
 
+/* ---------------- equip food quick helper ---------------- */
+function equipFoodAllFromInventory(id){
+  const base = baseId(id);
+  const have = state.inventory[id] || 0;
+  if (have <= 0) return false;
+
+  if (!state.equipment) state.equipment = {};
+
+  if (state.equipment.food && state.equipment.food !== base){
+    const prevBase = state.equipment.food;
+    const prevQty  = Math.max(0, state.equipment.foodQty|0);
+    if (prevQty > 0){
+      state.inventory[prevBase] = (state.inventory[prevBase]||0) + prevQty;
+    }
+    state.equipment.foodQty = 0;
+  }
+
+  state.equipment.food    = base;
+  state.equipment.foodQty = (state.equipment.foodQty|0) + have;
+
+  removeItem(state, id, have);
+  window.dispatchEvent(new Event('food:change'));
+  return true;
+}
+
+/* ---------------- interactions ---------------- */
 on(elInv, 'click', '.inv-slot.food', (e, tile)=>{
-  if (e.target.closest('button')) return; // let Eat/Sell work
+  if (e.target.closest('button')) return;
   const id = tile.getAttribute('data-id');
   if (equipFoodAllFromInventory(id)){
     renderInventory();
@@ -175,7 +202,6 @@ on(elInv, 'click', '.inv-slot.food', (e, tile)=>{
   }
 });
 
-/* ---------------- interactions ---------------- */
 // Eat
 on(elInv, 'click', 'button.use-btn', (e, btn)=>{
   e.stopPropagation();
@@ -183,33 +209,29 @@ on(elInv, 'click', 'button.use-btn', (e, btn)=>{
   if (eatItem(id)){ renderInventory(); saveState(state); }
 });
 
-// Sell popover open
+// Sell open
 on(elInv, 'click', 'button.sell-btn', (e, btn)=>{
-  e.stopPropagation(); // prevent slot click = equip
+  e.stopPropagation();
   openSellPopover(btn, btn.getAttribute('data-sell'));
 });
 
-// Quick-equip for tomes (quantity picker)
+// Quick-equip for tomes
 on(elInv, 'click', 'button.equip-quick', (e, btn)=>{
   e.stopPropagation();
   const id = btn.getAttribute('data-equip');
   openEquipPopover(btn, id);
 });
 
-// Clicking an equipment tile equips it — but ignore if a nested button was clicked
+// Equip equipment
 on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
-  if (e.target.closest('button')) return; // don't equip when pressing Sell/Equip buttons
+  if (e.target.closest('button')) return;
   const id   = tile.getAttribute('data-id');
   const base = baseId(id);
   const it   = ITEMS[base];
   if (!it || it.type !== 'equipment') return;
 
-  const gate = canEquip(state, id); // handles @quality internally
-  if (!gate.ok) {
-    // 3-arg signature: (event, title, body)
-    showTip(e, it.name || base, gate.message);
-    return;
-  }
+  const gate = canEquip(state, id);
+  if (!gate.ok) { showTip(e, it.name || base, gate.message); return; }
 
   equipItem(state, id);
   renderInventory();
@@ -217,19 +239,17 @@ on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   saveState(state);
 });
 
+// Drag
 on(elInv, 'dragstart', '.inv-slot', (e, tile)=>{
   const id  = tile.getAttribute('data-id') || '';
   const qty = state.inventory?.[id] | 0;
   if (!id || qty <= 0) return;
-
-  // standardize drag payload for all systems (equipment, enchanting, etc.)
   if (e.dataTransfer){
     e.dataTransfer.setData('application/x-runecut-item', id);
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'copy';
   }
 });
-
 on(document, 'dragstart', '#inventory .inv-slot', (e, tile)=>{
   const id = tile.getAttribute('data-id') || '';
   if (!id) return;
@@ -238,7 +258,7 @@ on(document, 'dragstart', '#inventory .inv-slot', (e, tile)=>{
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
 });
 
-/* ---------------- tooltip ---------------- */
+/* ---------------- tooltips ---------------- */
 function tomeTooltipLines(base){
   const def = ITEMS[base] || {};
   const lines = [];
@@ -253,7 +273,6 @@ function tomeTooltipLines(base){
   }
   return lines;
 }
-
 on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
   const id = tile.getAttribute('data-id'); 
   if (!id){ hideTip(); return; }
@@ -282,10 +301,8 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     if (def.def) stats.push(`Def: ${Math.round(def.def*mult)}`);
     if (def.hp)  stats.push(`HP: ${Math.round(def.hp*mult)}`);
     if (stats.length) lines.push(stats.join(' · '));
-
     if (isTool && def.speed) lines.push(`Speed: ${Number(def.speed).toFixed(2)}×`);
 
-    // Tome specifics
     if (def.slot === 'tome'){
       lines.push(...tomeTooltipLines(base));
     }
@@ -298,26 +315,33 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     if (heal > 0) lines.push(`Heals: ${heal} HP`);
   }
 
-  if (!isEquip){
-    const qty  = state.inventory?.[id] || 0;
-    const each = sellPrice(id);
-    if (qty > 0){
-      const total = each ? ` · Total: ${each*qty}g` : '';
-      const eaStr = each ? ` · ${each}g ea` : '';
-      lines.push(`Qty: ${qty}${eaStr}${qty>1 ? total : ''}`);
+  if (!isEquip && !isFood){
+    if (Number(def.mana) > 0) lines.push(`Restores: ${def.mana|0} Mana`);
+    if (Number(def.accBonus) > 0){
+      const secs = Math.max(1, (def.durationSec|0) || 300);
+      const pct = Math.round((Number(def.accBonus)||0)*100);
+      lines.push(`Buff: +${pct}% hit chance for ${secs}s`);
     }
+  }
+
+  const qty  = state.inventory?.[id] || 0;
+  if (!isEquip && qty > 0){
+    const each = sellPrice(id);
+    const total = each ? ` · Total: ${each*qty}g` : '';
+    const eaStr = each ? ` · ${each}g ea` : '';
+    lines.push(`Qty: ${qty}${eaStr}${qty>1 ? total : ''}`);
   }
 
   showTip(e, title, lines.join('\n'));
 });
-
 on(elInv, 'mouseout', '.inv-slot', (e, tile)=>{
   const to = e.relatedTarget;
   if (!to || !tile.contains(to)) hideTip();
 });
 elInv?.addEventListener('mouseleave', hideTip);
 
-/* ---------------- sell popover ---------------- */
+/* ---------------- popovers (sell/equip) ---------------- */
+const elPopover = document.querySelector('#popover');
 function openSellPopover(anchorEl, id){
   if (!elPopover) return;
   const base = baseId(id);
@@ -348,7 +372,6 @@ function openSellPopover(anchorEl, id){
 }
 export function closePopover(){ elPopover?.classList.add('hidden'); }
 
-/* ---------------- equip popover (tomes) ---------------- */
 function openEquipPopover(anchorEl, id){
   if(!elPopover) return;
   const base = baseId(id);
@@ -376,24 +399,7 @@ function openEquipPopover(anchorEl, id){
   elPopover.classList.remove('hidden');
 }
 
-export function findInvIconEl(id){
-  // exact-id match first
-  const tile = document.querySelector(`#inventory .inv-slot[data-id="${CSS.escape(id)}"]`);
-  if (tile) return tile.querySelector('img.icon-img, .icon');
-  // fallback: match by base id (before @quality), pick the first
-  const base = String(id).split('@')[0];
-  const tiles = document.querySelectorAll('#inventory .inv-slot');
-  for (const t of tiles){
-    const tid = t.getAttribute('data-id') || '';
-    if (tid.split('@')[0] === base){
-      return t.querySelector('img.icon-img, .icon');
-    }
-  }
-  return null;
-}
-/* ---------------- popover click handling ---------------- */
 elPopover?.addEventListener('click', (e)=>{
-  // SELL mode
   const sellBtn = e.target.closest('button[data-amt]');
   if (sellBtn && elPopover.dataset.mode === 'sell'){
     const id = elPopover.dataset.itemId; if(!id) return;
@@ -412,7 +418,6 @@ elPopover?.addEventListener('click', (e)=>{
     return;
   }
 
-  // EQUIP mode
   const eqBtn = e.target.closest('button[data-eq-amt]');
   if (eqBtn && elPopover.dataset.mode === 'equip'){
     const id = elPopover.dataset.equipId; if(!id) return;
@@ -432,6 +437,26 @@ elPopover?.addEventListener('click', (e)=>{
     closePopover();
     renderInventory(); renderEquipment(); saveState(state);
   }
+});
+
+// Shift-click to DRINK potions (all kinds handled centrally)
+elInv?.addEventListener('click', (e)=>{
+  if (!e.shiftKey) return;
+  const tile = e.target.closest('[data-id]');
+  if (!tile) return;
+  const id  = tile.getAttribute('data-id');   // exact stack id (may include @quality)
+  const bid = baseId(id);
+
+  const res = drinkPotion(state, bid, { sourceId: id });
+  if (!res || !res.ok) return;
+
+  tile.classList.add('pulse');
+  setTimeout(()=> tile.classList.remove('pulse'), 200);
+
+  renderCharacterEffects();     // draw/refresh badges if an effect was applied
+  renderEquipment();            // if anything there depends on effects visuals
+  renderInventory();            // reflect consumed stack
+  saveState(state);
 });
 
 // close popover globally

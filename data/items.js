@@ -1,5 +1,7 @@
 // data/items.js
 export const ITEMS = {
+  raw_dolphin: { id: 'raw_dolphin', name: 'Raw Dolphin', type: 'resource', sell: 90, xp: 250, img: 'assets/food/raw_dolphin.png' },
+  dolphin:     { id: 'dolphin',     name: 'Dolphin',     type: 'food',     heal: 55, sell: 115, img: 'assets/food/dolphin.png' },
   /* ----------------------------- Logs ------------------------------ */
   log_oak:      { id: 'log_oak',       name: 'Oak Logs',        type: 'resource', sell: 1,  img: 'assets/forestry/oak.png' },
   log_pine:     { id: 'log_pine',      name: 'Pine Logs',       type: 'resource', sell: 2,  img: 'assets/forestry/pine.png' },
@@ -68,7 +70,11 @@ export const ITEMS = {
   raw_halibut:    { id: 'raw_halibut',    name: 'Raw Halibut',     type: 'resource', sell: 29, xp: 75,  img: 'assets/food/raw_halibut.png' },
   raw_manta_ray:  { id: 'raw_manta_ray',  name: 'Raw Manta Ray',   type: 'resource', sell: 40, xp: 120, img: 'assets/food/raw_manta-ray.png' },
   raw_angler:     { id: 'raw_angler',     name: 'Raw Angler',      type: 'resource', sell: 65, xp: 175, img: 'assets/food/raw_angler.png' },
-  raw_dolphin:    { id: 'raw_dolphin',    name: 'Raw Dolphin',     type: 'resource', sell: 90, xp: 250, img: 'assets/food/raw_dolphin.png' },
+  raw_bluefin_tuna: { id: 'raw_bluefin_tuna', name: 'Raw Bluefin Tuna', type: 'resource', sell: 90,  xp: 250, img: 'assets/food/raw_bluefin_tuna.png' },
+  raw_sturgeon:     { id: 'raw_sturgeon',     name: 'Raw Sturgeon',     type: 'resource', sell: 125, xp: 350, img: 'assets/food/raw_sturgeon.png' },
+
+  // Rare secondary drop (not cooked)
+  caviar:           { id: 'caviar',           name: 'Caviar',           type: 'resource', sell: 400, xp: 0,   img: 'assets/food/caviar.png', rarity: 'rare' },
 
   /* -------------------------- Cooked foods ------------------------- */
   shrimps:  { id: 'shrimps',  name: 'Shrimp',  type: 'food', heal: 5,  sell: 2,   img: 'assets/food/shrimp.png' },
@@ -78,8 +84,8 @@ export const ITEMS = {
   halibut:  { id: 'halibut',  name: 'Halibut', type: 'food', heal: 38, sell: 36,  img: 'assets/food/halibut.png' },
   manta_ray:{ id: 'manta_ray',name: 'Manta Ray', type: 'food', heal: 45, sell: 52, img: 'assets/food/manta-ray.png' },
   angler:   { id: 'angler',   name: 'Angler',     type: 'food', heal: 50, sell: 82, img: 'assets/food/angler.png' },
-  dolphin:  { id: 'dolphin',  name: 'Dolphin',    type: 'food', heal: 55, sell: 115, img: 'assets/food/dolphin.png' },
-
+  bluefin_tuna: { id: 'bluefin_tuna', name: 'Bluefin Tuna',     type: 'food', heal: 55, sell: 115, img: 'assets/food/bluefin_tuna.png' },
+  sturgeon:     { id: 'sturgeon',     name: 'Sturgeon Steak', type: 'food', heal: 62, sell: 160, img: 'assets/food/sturgeon.png' },
   /* ------------------------------ Ores ----------------------------- */
   ore_copper:    { id: 'ore_copper',    name: 'Copper Ore',   type: 'resource', sell: 2,  img: 'assets/materials/ore.png' },
   ore_tin:       { id: 'ore_tin',       name: 'Tin Ore',      type: 'resource', sell: 4,  img: 'assets/materials/ore.png' },
@@ -210,4 +216,31 @@ export const ITEMS = {
   /* -------------------------- Ingredients ------------------------- */
   briar_oil:     { id: 'briar_oil',     name: 'Briar Oil',     type: 'reagent', sell: 5,  icon: '🛢️' },
   bramble_heart: { id: 'bramble_heart', name: 'Bramble Heart', type: 'reagent', sell: 25, icon: '💚' },
+  bat_teeth:     { id: 'bat_teeth', name: 'Bat Teeth',         type: 'reagent', sell: 20, img: 'assets/materials/bat_teeth.png'},
+
+  potion_mana_small: {
+    id: 'potion_mana_small',
+    name: 'Small Mana Potion',
+    type: 'potion',
+    mana: 5,
+    sell: 10,
+    img: 'assets/potions/mana_potion.png'
+  },
+  potion_mana_med: {
+    id: 'potion_mana_med',
+    name: 'Mana Potion',
+    type: 'potion',
+    mana: 10,
+    sell: 40,
+    img: 'assets/potions/med_mana_potion.png'
+  },
+  potion_accuracy: {
+    id: 'potion_accuracy',
+    name: 'Accuracy Potion',
+    img: 'assets/potions/accuracy_potion.png',
+    type: 'potion',
+    accBonus: 0.08,
+    durationSec: 60,
+    sell: 25
+  },
 };

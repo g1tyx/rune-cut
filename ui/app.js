@@ -16,6 +16,7 @@ import { renderPanelLogs, wireLogFilters, pushLog } from './logs.js';
 import { setTab, wireRoutes } from './router.js';
 import { updateBar, resetBar } from './actionbars.js';
 import { qs } from '../utils/dom.js';
+import { renderAlchemy } from './alchemy.js';
 
 import './royal_service.js';
 import { renderRoyal } from './royal_service.js';
@@ -93,6 +94,7 @@ function loadSaveObject(nextObj) {
   renderEquipment();
   renderPanelLogs();
   renderRoyal();
+  renderAlchemy();
 }
 
 function importSaveFromFile(file) {
@@ -165,6 +167,7 @@ function initialPaint(){
   renderEquipment();
   renderPanelLogs();
   renderRoyal();
+  renderAlchemy();
   initCamp();
   renderCamp();
 }
@@ -179,6 +182,8 @@ export function renderAllSkillingPanels(){
   renderCooking?.();
   renderMining?.();
   renderInventory?.();
+  renderAlchemy?.();
+  renderCamp?.();
   renderEquipment?.();
   renderSkills?.();
   renderRoyal?.();
@@ -188,7 +193,7 @@ window.addEventListener('inventory:change', () => {
   renderAllSkillingPanels();
 });
 
-// ---- RAF loop (unchanged) ----
+// ---- RAF loop (unchanged except new verbs) ----
 let rafId = 0;
 let last = performance.now();
 let regenCarry = 0;
@@ -197,13 +202,15 @@ const REGEN_COOLDOWN_MS = 2000;
 
 function verbFor(type){
   switch(type){
-    case 'chop':  return 'Chopping';
-    case 'fish':  return 'Fishing';
-    case 'mine':  return 'Mining';
-    case 'smith': return 'Smithing';
-    case 'craft': return 'Crafting';
-    case 'cook':  return 'Cooking';
-    default:      return 'Working';
+    case 'chop':      return 'Chopping';
+    case 'fish':      return 'Fishing';
+    case 'mine':      return 'Mining';
+    case 'smith':     return 'Smithing';
+    case 'craft':     return 'Crafting';
+    case 'cook':      return 'Cooking';
+    case 'alch':      return 'Brewing';    // ✅ new
+    case 'construct': return 'Building';   // ✅ new (if/when used)
+    default:          return 'Working';
   }
 }
 
@@ -223,6 +230,8 @@ function tick(){
     if (act.type === 'smith')  updateBar(el.smithBar,   el.smithLabel,  v, frac);
     if (act.type === 'craft')  updateBar(el.craftBar,   el.craftLabel,  v, frac);
     if (act.type === 'cook')   updateBar(el.cookBar,    null,           v, frac);
+    // Note: Alchemy progress is handled inside /ui/alchemy.js with its own bar.
+    // Construction may have its own UI (camp/building); no central bar here unless added later.
   }else{
     resetBar(el.actionBar, el.actionLabel);
     resetBar(el.fishBar,   el.fishLabel);

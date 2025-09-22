@@ -19,13 +19,23 @@ const el = {
   status:      qs('#royalStatus')
 };
 
+const FAVOR_BONUSES = [
+  {
+    id: 'autobattle',
+    name: 'Autobattle',
+    need: 25,
+    desc: 'Adds a checkbox in the combat card. When enabled, you will automatically re-engage the selected monster for 3 minutes until you are defeated, flee, or close the combat screen.'
+  },
+  // future: more bonuses here...
+];
+
 /* ------------------------ helpers ------------------------ */
 function baseId(id){ return String(id || '').split('@')[0]; }
 function iconForItem(id){
-    const bid = baseId(id);
-    const it  = ITEMS?.[bid];
-    return it?.img || '';
-  }
+  const bid = baseId(id);
+  const it  = ITEMS?.[bid];
+  return it?.img || '';
+}
 function ensureRoyalCss(){
   if (document.getElementById('royal-css')) return;
   const css = document.createElement('style');
@@ -68,6 +78,25 @@ function ensureRoyalCss(){
   document.head.appendChild(css);
 }
 ensureRoyalCss();
+
+function ensureRoyalBonusCss(){
+  if (document.getElementById('royal-bonus-css')) return;
+  const css = document.createElement('style');
+  css.id = 'royal-bonus-css';
+  css.textContent = `
+    #royalBonusesWrap { margin-top: 14px; }
+    #royalBonuses { display:grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin:8px 0; }
+    .bonus-card { position:relative; border:1px solid rgba(0,0,0,0.1); border-radius:10px; padding:10px; background:#0d1117; color:#e6edf3; }
+    .bonus-card.locked { opacity:0.6; filter:saturate(0.6); }
+    .bonus-card .title { font-weight:700; margin-bottom:4px; }
+    .bonus-card .req   { font-size:12px; opacity:0.8; }
+    .bonus-card .pill  { position:absolute; top:8px; right:8px; font-size:11px; padding:2px 6px; border-radius:999px; background:#222c; }
+    .bonus-card.unlocked .pill { background:#22c55e; color:#0a0; }
+  `;
+  document.head.appendChild(css);
+}
+ensureRoyalBonusCss();
+
 
 function celebrateComplete(){
   const n = document.createElement('div');
@@ -196,10 +225,53 @@ function renderHeader(){
   el.status.innerHTML = `<strong>Royal Service</strong> — Favor <b>${favor}</b>`;
 }
 
+/* ---------- Favor bonuses BELOW the contract ---------- */
+function ensureBonusContainer(){
+  if (!el.panel) return null;
+  let wrap = document.getElementById('royalBonusesWrap');
+  if (!wrap){
+    wrap = document.createElement('div');
+    wrap.id = 'royalBonusesWrap';
+    wrap.innerHTML = `<div class="muted" style="margin:6px 0 2px;">Favor Bonuses</div><div id="royalBonuses"></div>`;
+    // ⬇️ place AFTER the contract box
+    if (el.contractBox && el.contractBox.parentNode){
+      el.contractBox.insertAdjacentElement('afterend', wrap);
+    } else {
+      el.panel.appendChild(wrap);
+    }
+  }
+  return wrap.querySelector('#royalBonuses');
+}
+
+function renderBonuses(){
+  const box = ensureBonusContainer(); if (!box) return;
+  const favor = state.royalFavor || 0;
+
+  const cards = FAVOR_BONUSES.map(b => {
+    const unlocked = favor >= b.need;
+    // persist unlock flag (once unlocked, keep it)
+    if (unlocked && !state.unlocks?.[b.id]) {
+      state.unlocks = state.unlocks || {};
+      state.unlocks[b.id] = true;
+    }
+    const cls = `bonus-card ${unlocked ? 'unlocked' : 'locked'}`;
+    const pill = unlocked ? 'Unlocked' : `Needs ${b.need} Favor`;
+    return `<div class="${cls}" title="${b.desc.replace(/"/g,'&quot;')}">
+      <div class="title">${b.name}</div>
+      <div class="req">${unlocked ? 'Available now' : `Unlocks at ${b.need} Favor`}</div>
+      <div class="pill">${pill}</div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = cards;
+}
+
+/* Ensure contract renders first, then bonuses appear below */
 export function renderRoyal(){
   if (!el.panel) return;
   renderHeader();
-  renderContract();
+  renderContract();  // ⬅️ contract first
+  renderBonuses();   // ⬅️ bonuses below the contract
 }
 
 /* ------------------------ wire up ------------------------ */
@@ -233,6 +305,7 @@ export function renderRoyal(){
 
   window.addEventListener('kills:change', renderRoyal);
   window.addEventListener('royal:complete', ()=>{
+    renderRoyal();
     celebrateComplete();
     renderRoyal();
   });

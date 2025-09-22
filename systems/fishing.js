@@ -44,9 +44,32 @@ export function isSpotUnlocked(state, spotOrId){
   return lvl >= requiredLevel(spot);
 }
 
+/* ---------- bonus drop support ---------- */
+function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function awardPrimary(state, spot){
+  const qty = Math.max(1, spot.qty || 1);
+  addItem(state, spot.drop, qty);
+  return [{ id: spot.drop, qty }];
+}
+
+function awardBonus(state, spot){
+  const awarded = [];
+  const list = Array.isArray(spot.bonusDrops) ? spot.bonusDrops : [];
+  for (const b of list){
+    const p = Math.max(0, Math.min(1, b.chance ?? 0));
+    if (Math.random() < p){
+      const qty = randInt(b.min ?? 1, b.max ?? (b.min ?? 1));
+      addItem(state, b.id, qty);
+      awarded.push({ id: b.id, qty });
+    }
+  }
+  return awarded;
+}
+
 /* ---------- ui-facing api ---------- */
 export function canFish(state, spotOrId){
-  //if (state.action) return false;
+  // if (state.action) return false;
   const spot = resolveSpot(state, spotOrId);
   if (!spot) return false;
   return isSpotUnlocked(state, spot);
@@ -86,11 +109,38 @@ export function finishFish(state, spotOrId){
   const spot = resolveSpot(state, spotOrId) || FISHING_SPOTS.find(s=>s.id===state.action?.spotId);
   if (!spot){ state.action = null; return 0; }
 
-  addItem(state, spot.drop, 1);
-  const essence = Math.random() < 0.10;
-  if (essence) addItem(state, SEA_ESSENCE_ID, 1);
+  const drops = [];
+  drops.push(...awardPrimary(state, spot));   // primary fish
+  drops.push(...awardBonus(state, spot));     // rare extras (e.g., caviar)
 
+  // Essence roll
+  const essence = Math.random() < 0.10;
+  if (essence) { addItem(state, SEA_ESSENCE_ID, 1); drops.push({ id: SEA_ESSENCE_ID, qty: 1 }); }
+
+  // XP
   state.fishXp = (state.fishXp || 0) + (spot.xp || 0);
+
+  // clear action
   state.action = null;
-  return { qty: 1, essence };
+
+  return { drops, essence, xp: (spot.xp || 0) };
+}
+
+/* ---------- save migration ---------- */
+// Call this once on load after state is available
+export function migrateFishingItemsV1(state){
+  // Replace legacy dolphin items with bluefin tuna equivalents
+  const rawD = state.inventory?.['raw_dolphin'] || 0;
+  if (rawD > 0){
+    delete state.inventory['raw_dolphin'];
+    state.inventory['raw_bluefin_tuna'] = (state.inventory['raw_bluefin_tuna'] || 0) + rawD;
+  }
+  const cookedD = state.inventory?.['dolphin'] || 0;
+  if (cookedD > 0){
+    delete state.inventory['dolphin'];
+    state.inventory['bluefin_tuna'] = (state.inventory['bluefin_tuna'] || 0) + cookedD;
+  }
+
+  // Ensure inventory object exists
+  if (!state.inventory) state.inventory = {};
 }

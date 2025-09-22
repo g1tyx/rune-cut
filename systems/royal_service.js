@@ -300,7 +300,7 @@ const XP_TUNING = {
   contractMaxPct:   0.22,
   contractBaseAdd:  60,
   contractMinAbs:   40,
-  contractMaxAbs:   600
+  contractMaxAbs:   6000
 };
 
 function computeRewardXp(contract){

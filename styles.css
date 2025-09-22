@@ -21,7 +21,6 @@
   --font-mono: "Red Hat Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; font-family: var(--font-title), serif; }
 h1, h2, h3, .monster-title, .panel-title {
   font-family: var(--font-title);
   letter-spacing: .02em;
@@ -130,10 +129,6 @@ button:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 footer { margin-top: 10px; color: var(--text-dim); font-size: 12px; text-align: center; }
 .kbd { font-family: var(--mono); background: #0e132c; border: 1px solid #2a3162; padding: 1px 6px; border-radius: 6px; }
 
-/* Old list-style equipment slots (kept for backwards compat if present) */
-.equip-slot { display: grid; grid-template-columns: 80px 1fr; gap: 5px; align-items: center; border: 1px dashed #394281; border-radius: 12px; padding: 5px; background: #0c1030; }
-.equip-slot .label { color: var(--text-dim); font-size: 12px; }
-
 /* Tabs */
 .tabs{
   display: grid;
@@ -175,27 +170,12 @@ footer { margin-top: 10px; color: var(--text-dim); font-size: 12px; text-align: 
 .skill-tile .tile-header { display:flex; align-items:center; gap:6px; font-weight:700; margin-bottom:6px; }
 .skill-tile .tile-level { font-size:12px; color:var(--text-dim); margin-bottom:4px; }
 
-/* Equipment grid */
-.equip-grid { display: grid; grid-template-columns: repeat(3, 72px); column-gap: 10px; row-gap: 6px; padding: 6px 2px; justify-content: center; }
-.equip-cell { display: grid; gap: 4px; justify-items: center; }
-.equip-cell .slot { position: relative; width: 72px; height: 72px; border: 1px dashed #394281; border-radius: 12px; display: grid; place-items: center; background: #0c1030; box-shadow: inset 0 0 0 1px #121739; }
-.equip-cell .slot:hover { border-color: #6270d9; box-shadow: inset 0 0 0 1px #2b3aa0; }
-.equip-cell .slot.empty .icon { opacity: .35; }
-.equip-cell .icon { font-size: 28px; line-height: 1; }
-.equip-cell .slot-label { font-size: 12px; color: var(--text-dim); text-align: center; }
-.unequip-x { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 999px; border: 1px solid #2a3162; background: #0e132c; color: var(--text); font-weight: 700; display: none; align-items: center; justify-content: center; }
-.equip-cell .slot.has-item .unequip-x { display: grid; }
-.unequip-x:hover { border-color: #3a4290; }
-
 /* items icons */
 .icon-img{
-  width:40px; height:40px;
+  width:48px; height:48px;
   image-rendering:auto;
   display:block; pointer-events:none;
 }
-/* a bit larger inside equipment slots */
-.equip-cell .slot .icon-img{ width:44px; height:44px; }
-
 
 /* Compact inventory slots */
 .inv-slot { position: relative; height: 72px; border:1px solid #2a3162; background: linear-gradient(180deg,#0f1431,#0b1028); border-radius:12px; display:grid; place-items:center; padding:6px; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; box-shadow: inset 0 0 0 1px #121739; }
@@ -219,6 +199,99 @@ footer { margin-top: 10px; color: var(--text-dim); font-size: 12px; text-align: 
 }
 .inv-slot:hover .sell-btn { opacity:1; transform: translateY(0); }
 .inv-slot.equip { cursor: pointer; }
+
+/* ========== Equipment (compact + clean) ========== */
+
+/* Panel container (optional) */
+#equipmentCard {
+  --slot: 72px;            /* slot box size */
+  --gap: 8px;              /* grid gap */
+  --radius: 10px;          /* rounding */
+  --bd: #2a3162;           /* border color */
+  --bg: #0f1431;           /* surface */
+  --bg2: #0e132c;          /* controls */
+  --muted: #a9b0d3;        /* label text */
+}
+
+/* 3 columns on wide, auto-fit on narrow */
+.equip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--slot));
+  gap: var(--gap);
+  justify-content: center;
+}
+
+/* Slot cell: icon + label stacked */
+.equip-cell {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+/* The slot box */
+.equip-cell .slot {
+  position: relative;
+  inline-size: var(--slot);
+  block-size: var(--slot);
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+/* Subtle hover only (no shadows) */
+.equip-cell .slot:hover { border-color: #3a4290; }
+
+/* Item icon */
+.equip-cell .slot .icon-img {
+  inline-size: 48px;
+  block-size: 48px;
+}
+
+/* Empty state: dim icon */
+.equip-cell .slot.empty .icon-img { opacity: .35; }
+
+/* Slot label */
+.equip-cell .slot-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Unequip (small, only when a real item exists) */
+.unequip-x{
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 18px; height: 18px;
+  display: flex;                /* replace grid */
+  align-items: center;          /* vertical center */
+  justify-content: center;      /* horizontal center */
+  border-radius: 50%;
+  border: 1px solid var(--bd);
+  background: var(--bg2);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 18px;            /* = height for perfect centering */
+  text-align: center;
+  padding: 0;
+  color: #e8ecff;
+}
+.equip-cell .slot.has-item .unequip-x { display: grid; }
+
+/* Drag target (kept, but lighter) */
+.equip-cell.drag-target .slot { outline: 2px dashed rgba(255,255,255,.25); outline-offset: -2px; }
+
+/* Responsive: shrink to fit available width */
+@media (max-width: 900px) {
+  #equipmentCard { --slot: 52px; }
+  .equip-grid { grid-template-columns: repeat(auto-fit, minmax(var(--slot), 1fr)); }
+}
+@media (max-width: 520px) {
+  #equipmentCard { --slot: 48px; }
+}
+
+
 
 /* Eat button (top-left) */
 .inv-slot .use-btn{
@@ -500,15 +573,6 @@ html, body {            /* let the page grow; don't lock height to viewport */
   image-rendering: pixelated;
 }
 
-/* Locked overlay */
-.forge-overlay {
-  position: absolute; inset: 0;
-  border-radius: 14px;
-  background: repeating-linear-gradient(45deg, rgba(0,0,0,.0), rgba(0,0,0,.0) 6px, rgba(0,0,0,.15) 6px, rgba(0,0,0,.15) 12px);
-  pointer-events: none;
-}
-
-
 /* Tooltips never intercept clicks */
 #tooltip { pointer-events: none !important; }
 
@@ -582,19 +646,6 @@ html, body {            /* let the page grow; don't lock height to viewport */
 
 .shake { animation: shake .25s ease-in-out; }
 .flash-dmg { animation: flashRed .3s ease-out; }
-
-/* floating damage numbers appear inside the progress host (which is already position:relative) */
-.floating-dmg{
-  position: absolute;
-  right: 8px;
-  top: -6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffb3b3;
-  text-shadow: 0 1px 2px rgba(0,0,0,.4);
-  pointer-events: none;
-  animation: riseFade .6s ease-out forwards;
-}
 
 /* attack cooldown look */
 #attackTurnBtn.cooldown {
@@ -695,8 +746,6 @@ img.icon-img.tint-iron {
 }
 .floating-dmg.miss{ color:#a9b0d3; font-size:20px; opacity:.9; }
 .floating-dmg.block{ color:#45d483; font-size:20px; opacity:.95; }
-.floating-dmg.miss{ color:#a9b0d3; }
-.floating-dmg.block{ color:#45d483; }
 
 @keyframes dmgPopSlow{
   0%   { opacity: 0; transform: translateX(-50%) translateY(8px)  scale(.6); }
@@ -930,7 +979,6 @@ img.icon-img.tint-iron {
 }
 
 /* ---- Crafting cards (compact, like smithing) ---- */
-#craftList { display: grid; gap: 8px; }
 
 #craftList .craft-card {
   display: grid;
@@ -1152,3 +1200,22 @@ body.camp-mode header { display:none !important; }
 #camp .camp-back:hover{ background:rgba(0,0,0,.55); box-shadow:0 4px 14px rgba(0,0,0,.3); }
 #camp .camp-back:active{ transform: translateY(1px) scale(0.99); }
 #camp .camp-back:focus{ outline:2px solid #fff; outline-offset:2px; }
+
+#inventory [data-id].pulse { outline: 2px solid rgba(96,165,250,.7); outline-offset: 2px; }
+
+.equip-cell .slot.empty .icon {
+  font-size: 36px;
+  line-height: 1;
+  opacity: 35%;
+}
+
+.effect-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #45d483;                 /* your --accent-2 */
+  border: 1px solid rgba(69,212,131,.35);
+  border-radius: 999px;
+  background: rgba(69,212,131,.10);
+}

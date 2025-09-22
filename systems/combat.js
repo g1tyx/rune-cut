@@ -38,6 +38,15 @@ const BALANCE = {
 
 function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
 
+/* ------------------- Timed buff helpers (Accuracy Potion) ------------------- */
+function accBuffActive(state){
+  return Date.now() < (Number(state.accPotionUntilMs) || 0);
+}
+function hitChanceBonus(state){
+  // Accuracy Potion grants +8% hit chance while active.
+  return accBuffActive(state) ? 0.08 : 0;
+}
+
 function dropKey(d){
   if (!d) return null;
   if (d.id)   return `item:${d.id}`;
@@ -94,9 +103,10 @@ export function derivePlayerStats(state, mon){
   const defRating = defLvl*BALANCE.defLevelWeight + defBonus*BALANCE.defGearWeight;
   const strRating = strLvl*BALANCE.strLevelWeight + strBonus*BALANCE.strGearWeight;
 
-  // Accuracy vs selected monster
+  // Accuracy vs selected monster (+ timed accuracy buff)
   const targetDef = ((mon?.defense ?? mon?.level ?? 1) * 1.3) + 10;
-  const acc = clamp(BALANCE.accBase + (atkRating/(atkRating + targetDef))*BALANCE.accScale, 0.05, 0.95);
+  let acc = BALANCE.accBase + (atkRating/(atkRating + targetDef))*BALANCE.accScale;
+  acc = clamp(acc + hitChanceBonus(state), 0.05, 0.99);
 
   // Max hit — driven by Strength, lightly by Attack level
   const maxHit = Math.max(1, Math.floor(1 + strRating + atkLvl*BALANCE.maxHitAtkWeight));

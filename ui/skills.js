@@ -4,18 +4,24 @@ import { XP_TABLE, levelFromXp } from '../systems/xp.js';
 import { showTip, hideTip } from './tooltip.js';
 
 const SK = [
-  { key:'wc',      xp:'wcXp',      id:'#tile-wc',      label:'Woodcutting' },
-  { key:'fish',    xp:'fishXp',    id:'#tile-fish',    label:'Fishing' },
-  { key:'min',     xp:'minXp',     id:'#tile-min',     label:'Mining' },
-  { key:'smith',   xp:'smithXp',   id:'#tile-smith',   label:'Smithing' },
-  { key:'craft',   xp:'craftXp',   id:'#tile-craft',   label:'Crafting' },
-  { key:'enchant', xp:'enchantXp', id:'#tile-enchant', label:'Enchanting' },
-  { key:'construction',xp:'constructionXp', id:'#tile-construct',  label:'constructionBarMini'},
-  { key:'cook',    xp:'cookXp',    id:'#tile-cook',    label:'Cooking' },
-  { key:'atk',     xp:'atkXp',     id:'#tile-atk',     label:'Attack' },
-  { key:'str',     xp:'strXp',     id:'#tile-str',     label:'Strength' },
-  { key:'def',     xp:'defXp',     id:'#tile-def',     label:'Defense' },
-  { key:'royal', xp:'royalXp', id:'#tile-royal', label:'Royal Service' },
+  { key:'wc',      xp:'wcXp',      id:'#tile-wc',        label:'Woodcutting' },
+  { key:'fish',    xp:'fishXp',    id:'#tile-fish',      label:'Fishing' },
+  { key:'min',     xp:'minXp',     id:'#tile-min',       label:'Mining' },
+  { key:'smith',   xp:'smithXp',   id:'#tile-smith',     label:'Smithing' },
+  { key:'craft',   xp:'craftXp',   id:'#tile-craft',     label:'Crafting' },
+  { key:'enchant', xp:'enchantXp', id:'#tile-enchant',   label:'Enchanting' },
+
+  // ✅ Construction: correct friendly label for hover
+  { key:'construction', xp:'constructionXp', id:'#tile-construct', label:'Construction' },
+
+  // ✅ Alchemy: included so hover shows XP like others
+  { key:'alch',    xp:'alchXp',    id:'#tile-alch',      label:'Alchemy' },
+
+  { key:'cook',    xp:'cookXp',    id:'#tile-cook',      label:'Cooking' },
+  { key:'atk',     xp:'atkXp',     id:'#tile-atk',       label:'Attack' },
+  { key:'str',     xp:'strXp',     id:'#tile-str',       label:'Strength' },
+  { key:'def',     xp:'defXp',     id:'#tile-def',       label:'Defense' },
+  { key:'royal',   xp:'royalXp',   id:'#tile-royal',     label:'Royal Service' },
 ];
 
 // Helpers around your XP table (assumed cumulative thresholds by level)
@@ -110,10 +116,11 @@ function attachHoversOnce(){
 // Utility used by app.js (or anywhere) to detect XP changes cheaply
 export function skillsXpSignature(){
   return (
-    (state.wcXp|0)     + (state.fishXp|0)   + (state.minXp|0)    +
-    (state.smithXp|0)  + (state.craftXp|0)  + (state.enchantXp|0) +
-    (state.cookXp|0)   + (state.atkXp|0)    + (state.strXp|0)    +
-    (state.defXp|0)
+    (state.wcXp|0)       + (state.fishXp|0)     + (state.minXp|0) +
+    (state.smithXp|0)    + (state.craftXp|0)    + (state.enchantXp|0) +
+    (state.constructionXp|0) + (state.alchXp|0) +
+    (state.cookXp|0)     + (state.atkXp|0)      + (state.strXp|0) +
+    (state.defXp|0)      + (state.royalXp|0)
   );
 }
 

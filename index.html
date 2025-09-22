@@ -84,18 +84,20 @@
             <div class="tile-level">Lvl <b id="cookLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="cookBarMini"></div></div>
           </div>
-          <!-- Enchanting tile -->
           <div class="skill-tile" id="tile-enchant">
             <div class="tile-header">🪄 <span>Enchanting</span></div>
             <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="enchantBarMini"></div></div>
           </div>
-
-          <!-- Construction tile -->
           <div class="skill-tile" id="tile-construct">
             <div class="tile-header">🏕️ <span>Construction</span></div>
             <div class="tile-level">Lvl <b id="constructionLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="constructionBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-alch">
+            <div class="tile-header">🧪 <span>Alchemy</span></div>
+            <div class="tile-level">Lvl <b id="alchemyLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="alchemyBarMini"></div></div>
           </div>
           <div class="skill-tile" id="tile-atk">
             <div class="tile-header">⚔️ <span>Attack</span></div>
@@ -136,6 +138,7 @@
           <button class="tab" data-tab="mining">⛏️ Mining</button>
           <button class="tab" data-tab="smithing">⚒️ Smithing</button>
           <button class="tab" data-tab="enchanting">Enchanting</button>
+          <button class="tab" data-tab="alchemy">Alchemy</button>
           <button class="tab" data-tab="combat">⚔️ Combat</button>
           <!-- NEW: Royal Service tab -->
           <button class="tab" data-tab="royal">👑 Royal Service</button>
@@ -255,7 +258,7 @@
           <div class="card" style="padding:10px; margin-bottom:10px;">
             <h3 style="margin:0 0 8px;">🛠️ Upgrade Gear</h3>
             <p class="small muted">
-              Spend <b>1× Copper Upgrade Bar</b> to improve quality by <b>+10–25%</b> (higher Smithing skews higher).
+              Spend <b>1× Upgrade Bar</b> to improve quality by <b>+10–25%</b> (higher Smithing skews higher).
             </p>
 
             <div class="row" style="gap:8px; margin-bottom:8px; flex-wrap:wrap;">
@@ -297,7 +300,20 @@
             <div id="forgeList" class="shop"></div>
           </div>
         </div>
-
+        <!-- /ui: Alchemy panel (recipe grid is empty; JS fills it at runtime) -->
+        <div class="tabpanel hidden" id="tab-alchemy">
+          <div class="panel-head">
+            <h2>Alchemy</h2>
+            <div class="muted small">Craft potions from gathered reagents. Higher Alchemy level speeds brewing.</div>
+          </div>
+        
+          <div id="alchemyRecipes" class="recipe-list"></div>
+        
+          <div class="progress" style="margin-top:8px;">
+            <div class="bar" id="alchBar"></div>
+            <div class="label" id="alchLabel">Idle</div>
+          </div>
+        </div>
         <!-- Enchanting panel -->
         <div class="tabpanel hidden" id="tab-enchanting">
           <h2>🪄 Enchanting</h2>
@@ -360,72 +376,57 @@
         <div id="equipmentGrid" class="equip-grid">
           <div class="equip-cell" data-slot="cape">
             <div class="slot empty"><span class="icon">🧣</span><button class="unequip-x" data-unequip="cape" title="Unequip">✕</button></div>
-            <div class="slot-label">Cape</div>
           </div>
           <div class="equip-cell" data-slot="head">
             <div class="slot empty"><span class="icon">🪖</span><button class="unequip-x" data-unequip="head" title="Unequip">✕</button></div>
-            <div class="slot-label">Head</div>
           </div>
           <div class="equip-cell" data-slot="amulet">
             <div class="slot empty"><span class="icon">📿</span><button class="unequip-x" data-unequip="amulet" title="Unequip">✕</button></div>
-            <div class="slot-label">Amulet</div>
           </div>
 
           <div class="equip-cell" data-slot="weapon">
             <div class="slot empty"><span class="icon">🗡️</span><button class="unequip-x" data-unequip="weapon" title="Unequip">✕</button></div>
-            <div class="slot-label">Weapon</div>
           </div>
           <div class="equip-cell" data-slot="body">
             <div class="slot empty"><span class="icon">🧥</span><button class="unequip-x" data-unequip="body" title="Unequip">✕</button></div>
-            <div class="slot-label">Body</div>
           </div>
           <div class="equip-cell" data-slot="shield">
             <div class="slot empty"><span class="icon">🛡️</span><button class="unequip-x" data-unequip="shield" title="Unequip">✕</button></div>
-            <div class="slot-label">Shield</div>
           </div>
 
           <div class="equip-cell" data-slot="gloves">
             <div class="slot empty"><span class="icon">🧤</span><button class="unequip-x" data-unequip="gloves" title="Unequip">✕</button></div>
-            <div class="slot-label">Gloves</div>
           </div>
           <div class="equip-cell" data-slot="legs">
             <div class="slot empty"><span class="icon">👖</span><button class="unequip-x" data-unequip="legs" title="Unequip">✕</button></div>
-            <div class="slot-label">Legs</div>
           </div>
           <div class="equip-cell" data-slot="boots">
             <div class="slot empty"><span class="icon">🥾</span><button class="unequip-x" data-unequip="boots" title="Unequip">✕</button></div>
-            <div class="slot-label">Boots</div>
           </div>
 
           <div class="equip-cell" data-slot="ring">
             <div class="slot empty"><span class="icon">💍</span><button class="unequip-x" data-unequip="ring" title="Unequip">✕</button></div>
-            <div class="slot-label">Ring</div>
           </div>
           <div class="equip-cell" data-slot="axe">
             <div class="slot empty"><span class="icon">🪓</span><button class="unequip-x" data-unequip="axe" title="Unequip">✕</button></div>
-            <div class="slot-label">Axe</div>
           </div>
           <div class="equip-cell" data-slot="pick">
             <div class="slot empty"><span class="icon">⛏️</span><button class="unequip-x" data-unequip="pick" title="Unequip">✕</button></div>
-            <div class="slot-label">Pickaxe</div>
           </div>
           <div class="equip-cell" data-slot="fishing">
             <div class="slot empty">
               <span class="icon">🎣</span>
               <button class="unequip-x" data-unequip="fishing" title="Unequip">✕</button>
             </div>
-            <div class="slot-label">Rod</div>
           </div>
           <div class="equip-cell" data-slot="tome">
             <div class="slot empty">
               <span class="icon">📖</span>
               <button class="unequip-x" data-unequip="tome" title="Unequip">✕</button>
             </div>
-            <div class="slot-label">Tome</div>
           </div>
           <div class="equip-cell" data-slot="food">
             <div class="slot empty"><span class="icon">🍖</span><button class="unequip-x" data-unequip="food" title="Unequip">✕</button></div>
-            <div class="slot-label">Food</div>
           </div>
           <div class="equip-cell spacer"></div>
         </div>

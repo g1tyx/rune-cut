@@ -104,7 +104,7 @@ export const MONSTERS = [
   { id:'charred_bat', name:'Charred Bat', level:11, time:3400,
     zone:'Volcano', hp:70, attack:15, defense:11, maxHit:9,
     xp:{attack:110,strength:110,defense:110},
-    drops:[{gold:12, chance:0.7}],
+    drops:[{gold:12, chance:0.7}, { id:'bat_teeth', chance:0.22, min:1, max:1 }],
     img:'assets/monsters/charred_bat.png'
   },
   { id:'magma_goblin', name:'Magma Goblin', level:16, time:3800,
@@ -148,7 +148,7 @@ export const MONSTERS = [
   { id:'crypt_bat', name:'Crypt Bat', level:13, time:3600,
     zone:'Crypts', hp:95, attack:18, defense:14, maxHit:11,
     xp:{attack:130,strength:130,defense:130},
-    drops:[{gold:16, chance:0.7}],
+    drops:[{gold:16, chance:0.7},{ id:'bat_teeth', chance:0.22, min:1, max:1 }],
     img:'assets/monsters/crypt_bat.png'
   },
   { id:'grave_ghoul', name:'Grave Ghoul', level:18, time:4000,
