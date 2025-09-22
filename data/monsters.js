@@ -90,7 +90,7 @@ export const MONSTERS = [
   { id:'dune_titan', name:'Dune Titan', level:36, time:5600,
     zone:'Wastes', hp:340, attack:44, defense:36, maxHit:30,
     xp:{attack:360,strength:360,defense:360},
-    drops:[{gold:46, chance:0.7}],
+    drops:[{gold:46, chance:0.7}, {id: 'sandreaver', chance: 0.05}],
     img:'assets/monsters/dune_titan.png'
   },
 
@@ -134,7 +134,7 @@ export const MONSTERS = [
   { id:'inferno_colossus', name:'Inferno Colossus', level:44, time:5800,
     zone:'Volcano', hp:440, attack:58, defense:48, maxHit:38,
     xp:{attack:440,strength:440,defense:440},
-    drops:[{gold:62, chance:0.7}],
+    drops:[{gold:62, chance:0.7}, {id: 'obsidian_maul', chance: .04}],
     img:'assets/monsters/inferno_colossus.png'
   },
 
@@ -154,7 +154,7 @@ export const MONSTERS = [
   { id:'grave_ghoul', name:'Grave Ghoul', level:18, time:4000,
     zone:'Crypts', hp:140, attack:25, defense:19, maxHit:16,
     xp:{attack:180,strength:180,defense:180},
-    drops:[{gold:24, chance:0.7}],
+    drops:[{gold:24, chance:0.7},{ id:'ghoul_eye', chance:0.20 }],
     img:'assets/monsters/grave_ghoul.png'
   },
   { id:'tomb_knight', name:'Tomb Knight', level:24, time:4400,

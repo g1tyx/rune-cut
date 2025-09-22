@@ -90,7 +90,7 @@ export function startBrew(state, recipeId, qty=1, onDone){
   }
 
   const lvl = playerAlchLevel(state);
-  const speedBonus = 1 + 0.02 * (lvl-1); // +2% per Alchemy level
+  const speedBonus = 1 + 0.03 * (lvl-1); // +2% per Alchemy level
   const perUnit = Math.max(150, Math.floor((r.time || 3000) / speedBonus));
   const total = perUnit * check.qty;
   const now = performance.now();

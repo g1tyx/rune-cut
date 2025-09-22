@@ -1,4 +1,3 @@
-// /ui/inventory.js
 import { ITEMS } from '../data/items.js';
 import { saveState, state } from '../systems/state.js';
 import { removeItem, addGold } from '../systems/inventory.js';
@@ -8,12 +7,12 @@ import { hpMaxFor } from '../systems/combat.js';
 import { qs, on } from '../utils/dom.js';
 import { showTip, hideTip } from './tooltip.js';
 import { tomeDurationMsFor, tomeRemainingMs } from '../systems/tomes.js';
-import { drinkPotion } from '../systems/mana.js';                 // <-- unified
-import { renderCharacterEffects } from './character.js';          // <-- draw badges
+import { drinkPotion } from '../systems/mana.js';
+import { renderCharacterEffects } from './character.js';
+import { applyEffect } from '../systems/effects.js';
 
 const elInv = qs('#inventory');
 
-/* ------------- ensure CSS for quick-equip ------------- */
 (function ensureInvEquipCSS(){
   if (document.getElementById('invEquipCSS')) return;
   const css = document.createElement('style');
@@ -21,7 +20,6 @@ const elInv = qs('#inventory');
   css.textContent = `
     #inventory .icon-img.glow{ filter: drop-shadow(0 0 6px rgba(116,255,255,.85)) drop-shadow(0 0 16px rgba(116,255,255,.45)); }
     #inventory .inv-slot{ position:relative; }
-    /* show small action buttons only on hover */
     #inventory .inv-slot .equip-quick,
     #inventory .inv-slot .use-btn{
       position:absolute; left:4px; bottom:4px; z-index:2;
@@ -30,13 +28,9 @@ const elInv = qs('#inventory');
     }
     #inventory .inv-slot:hover .equip-quick,
     #inventory .inv-slot:hover .use-btn{ opacity:1; pointer-events:auto; }
-
-    /* keep sell in bottom-right */
     #inventory .inv-slot .sell-btn{
       position:absolute; right:4px; bottom:4px; z-index:2;
     }
-
-    /* tiny pulse when consuming */
     #inventory .inv-slot.pulse{ animation: inv-pulse 220ms ease-out; }
     @keyframes inv-pulse {
       0% { transform: scale(1); }
@@ -47,12 +41,9 @@ const elInv = qs('#inventory');
   document.head.appendChild(css);
 })();
 
-/* ---------------- helpers ---------------- */
 export function findInvIconEl(id){
-  // exact-id match first
   const tile = document.querySelector(`#inventory .inv-slot[data-id="${CSS.escape(id)}"]`);
   if (tile) return tile.querySelector('img.icon-img, .icon');
-  // fallback: match by base id (before @quality), pick the first
   const base = String(id).split('@')[0];
   const tiles = document.querySelectorAll('#inventory .inv-slot');
   for (const t of tiles){
@@ -117,12 +108,11 @@ function eatItem(id){
   return true;
 }
 
-/* ---------------- render ---------------- */
 export function renderInventory(){
   if (!elInv) return;
 
   const entries = Object.entries(state.inventory || {})
-    .filter(([, qty]) => (qty|0) > 0); // ignore empty stacks
+    .filter(([, qty]) => (qty|0) > 0);
 
   if (!entries.length){
     elInv.innerHTML = '<div class="muted">No items yet. Gather or fight to earn loot.</div>';
@@ -134,9 +124,7 @@ export function renderInventory(){
     const it      = ITEMS[base] || {};
     const isEquip = it.type === 'equipment';
     const isFood  = (it.type === 'food') || (healAmountFor(id) > 0);
-    const isPotion= (!isFood && (Number(it.mana)>0 || Number(it.accBonus)>0));
-
-    // simple material fallback image for ores/bars only; other materials should define their own img
+    const isPotion= (!isFood && (Number(it.mana)>0 || Number(it.accBonus)>0 || Number(it.dmgReduce)>0));
     const isMat   = /^bar_|^ore_/.test(base);
     const imgSrc  = it.img || (isMat ? 'assets/materials/ore.png' : null);
 
@@ -148,7 +136,6 @@ export function renderInventory(){
 
     const isTome = isEquip && (it.slot === 'tome');
 
-    // keep UI minimal; Shift-click to drink potions (no button)
     const actionBtnHtml =
       isFood
         ? `<button class="use-btn" data-use="${id}" title="Eat">Eat</button>`
@@ -166,7 +153,6 @@ export function renderInventory(){
   }).join('');
 }
 
-/* ---------------- equip food quick helper ---------------- */
 function equipFoodAllFromInventory(id){
   const base = baseId(id);
   const have = state.inventory[id] || 0;
@@ -191,7 +177,6 @@ function equipFoodAllFromInventory(id){
   return true;
 }
 
-/* ---------------- interactions ---------------- */
 on(elInv, 'click', '.inv-slot.food', (e, tile)=>{
   if (e.target.closest('button')) return;
   const id = tile.getAttribute('data-id');
@@ -202,27 +187,23 @@ on(elInv, 'click', '.inv-slot.food', (e, tile)=>{
   }
 });
 
-// Eat
 on(elInv, 'click', 'button.use-btn', (e, btn)=>{
   e.stopPropagation();
   const id = btn.getAttribute('data-use');
   if (eatItem(id)){ renderInventory(); saveState(state); }
 });
 
-// Sell open
 on(elInv, 'click', 'button.sell-btn', (e, btn)=>{
   e.stopPropagation();
   openSellPopover(btn, btn.getAttribute('data-sell'));
 });
 
-// Quick-equip for tomes
 on(elInv, 'click', 'button.equip-quick', (e, btn)=>{
   e.stopPropagation();
   const id = btn.getAttribute('data-equip');
   openEquipPopover(btn, id);
 });
 
-// Equip equipment
 on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   if (e.target.closest('button')) return;
   const id   = tile.getAttribute('data-id');
@@ -239,7 +220,6 @@ on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   saveState(state);
 });
 
-// Drag
 on(elInv, 'dragstart', '.inv-slot', (e, tile)=>{
   const id  = tile.getAttribute('data-id') || '';
   const qty = state.inventory?.[id] | 0;
@@ -258,7 +238,6 @@ on(document, 'dragstart', '#inventory .inv-slot', (e, tile)=>{
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
 });
 
-/* ---------------- tooltips ---------------- */
 function tomeTooltipLines(base){
   const def = ITEMS[base] || {};
   const lines = [];
@@ -322,6 +301,11 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
       const pct = Math.round((Number(def.accBonus)||0)*100);
       lines.push(`Buff: +${pct}% hit chance for ${secs}s`);
     }
+    if (Number(def.dmgReduce) > 0){
+      const secs = Math.max(1, (def.durationSec|0) || 300);
+      const flat = Number(def.dmgReduce)|0;
+      lines.push(`Buff: -${flat} enemy damage for ${secs}s`);
+    }
   }
 
   const qty  = state.inventory?.[id] || 0;
@@ -340,7 +324,6 @@ on(elInv, 'mouseout', '.inv-slot', (e, tile)=>{
 });
 elInv?.addEventListener('mouseleave', hideTip);
 
-/* ---------------- popovers (sell/equip) ---------------- */
 const elPopover = document.querySelector('#popover');
 function openSellPopover(anchorEl, id){
   if (!elPopover) return;
@@ -439,27 +422,41 @@ elPopover?.addEventListener('click', (e)=>{
   }
 });
 
-// Shift-click to DRINK potions (all kinds handled centrally)
 elInv?.addEventListener('click', (e)=>{
   if (!e.shiftKey) return;
   const tile = e.target.closest('[data-id]');
   if (!tile) return;
-  const id  = tile.getAttribute('data-id');   // exact stack id (may include @quality)
+  const id  = tile.getAttribute('data-id');
   const bid = baseId(id);
+  const def = ITEMS[bid] || {};
 
-  const res = drinkPotion(state, bid, { sourceId: id });
-  if (!res || !res.ok) return;
+  if (Number(def.mana) > 0){
+    const res = drinkPotion(state, bid);
+    if (!res || !res.ok) return;
+  } else if (Number(def.accBonus) > 0){
+    const durMs = Math.max(1000, (def.durationSec|0) * 1000 || 300000);
+    applyEffect(state, { id: bid, name: def.name || 'Accuracy', durationMs: durMs, data: { accBonus: Number(def.accBonus)||0 } });
+    removeItem(state, id, 1);
+  } else if (Number(def.dmgReduce) > 0){
+    const durMs = Math.max(1000, (def.durationSec|0) * 1000 || 300000);
+    applyEffect(state, { id: bid, name: def.name || 'Defense', durationMs: durMs, data: { dmgReduce: Number(def.dmgReduce)||0 } });
+    removeItem(state, id, 1);
+  } else {
+    return;
+  }
 
   tile.classList.add('pulse');
   setTimeout(()=> tile.classList.remove('pulse'), 200);
 
-  renderCharacterEffects();     // draw/refresh badges if an effect was applied
-  renderEquipment();            // if anything there depends on effects visuals
-  renderInventory();            // reflect consumed stack
+  renderCharacterEffects();
+  renderEquipment();
+  renderInventory();
   saveState(state);
+
+  try { window.dispatchEvent(new Event('inventory:change')); } catch {}
+  try { window.dispatchEvent(new Event('effects:tick')); } catch {}
 });
 
-// close popover globally
 document.addEventListener('click', (e)=>{
   const inside = e.target.closest('#popover');
   const isSell = e.target.closest('button.sell-btn');

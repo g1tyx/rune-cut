@@ -91,11 +91,21 @@ export function startChop(state, treeOrId, onDone){
 export function finishChop(state, treeOrId){
   const t = resolveTree(state, treeOrId) || TREES.find(x => x.id === state.action?.treeId);
   if (!t){ state.action = null; return 0; }
-
   addItem(state, t.drop, 1);
+  const bonuses = [];
+  const list = Array.isArray(t.bonusDrops) ? t.bonusDrops : [];
+  for (const b of list){
+    const chance = Number(b?.chance ?? 0);
+    if (chance > 0 && Math.random() < chance){
+      const qty = Math.max(1, (b?.qty|0) || 1);
+      addItem(state, b.id, qty);
+      bonuses.push({ id: b.id, qty });
+    }
+  }
   const essence = Math.random() < 0.10;
   if (essence) addItem(state, FOREST_ESSENCE_ID, 1);
   state.wcXp = (state.wcXp || 0) + (t.xp || 0);
   state.action = null;
-  return { qty: 1, essence };
+
+  return { qty: 1, essence, bonuses };
 }

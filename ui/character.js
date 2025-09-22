@@ -1,10 +1,6 @@
-// Renders the green, non-stacking effect badges next to "Max Hit".
-// Hover shows time left (live). Works for multiple simultaneous effects.
-// Listens to 'effects:tick' to keep countdown fresh.
-
 import { state } from '../systems/state.js';
 import { getActiveEffects, remainingMs, ensureEffectsTicker } from '../systems/effects.js';
-import { qs, on } from '../utils/dom.js';
+import { qs } from '../utils/dom.js';
 
 const elRow = () => qs('#charMaxHit')?.closest('.row');
 
@@ -36,7 +32,6 @@ function fmt(ms){
 export function renderCharacterEffects(){
   const row = elRow();
   if (!row) return;
-  // Remove existing badges
   row.querySelectorAll('.pill.effect').forEach(n => n.remove());
 
   const active = getActiveEffects(state);
@@ -67,14 +62,12 @@ function refreshTimesOnly(){
   });
 }
 
-// Wire updates
 window.addEventListener('effects:tick', refreshTimesOnly);
 document.addEventListener('DOMContentLoaded', () => {
   ensureEffectsTicker();
   renderCharacterEffects();
 });
 
-// Export a helper if other panels re-render the character section
 export function onCharacterPanelRerender(){
   renderCharacterEffects();
   ensureEffectsTicker();

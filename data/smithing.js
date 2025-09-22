@@ -118,7 +118,7 @@ export const FORGE_RECIPES = [
   { id:'blacksteel_shield', metal:'blacksteel', name:'Blacksteel Shield',     barId:'bar_blacksteel', bars:3, time:4600, xp:270, level:44 },
   { id:'blacksteel_dagger', metal:'blacksteel', name:'Blacksteel Dagger',     barId:'bar_blacksteel', bars:1, time:3300, xp:99,  extras:[{ id:'wood_handle', qty:1 }], level:40 }, // 90 *1.1
   { id:'blacksteel_sword',  metal:'blacksteel', name:'Blacksteel Sword',      barId:'bar_blacksteel', bars:3, time:4100, xp:297, extras:[{ id:'wood_handle', qty:1 }], level:43 }, // 270 *1.1
-  { id:'blacksteel_axe',    metal:'blacksteel', name:'Blacksteel Axe (Wpn)',  barId:'bar_blacksteel', bars:3, time:4100, xp:297, extras:[{ id:'wood_handle', qty:1 }], level:45 }, // 270 *1.1
+  { id:'blacksteel_axe',    metal:'blacksteel', name:'Blacksteel Axe',  barId:'bar_blacksteel', bars:3, time:4100, xp:297, extras:[{ id:'wood_handle', qty:1 }], level:45 }, // 270 *1.1
   { id:'axe_blacksteel',    metal:'blacksteel', name:'Blacksteel Axe',        barId:'bar_blacksteel', bars:2, time:3300, xp:198, extras:[{ id:'wood_handle', qty:1 }], quality:false, level:40 }, // 180 *1.1
   { id:'pick_blacksteel',   metal:'blacksteel', name:'Blacksteel Pickaxe',    barId:'bar_blacksteel', bars:2, time:3600, xp:198, extras:[{ id:'wood_handle', qty:1 }], quality:false, level:40 }, // 180 *1.1
 

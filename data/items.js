@@ -4,14 +4,14 @@ export const ITEMS = {
   dolphin:     { id: 'dolphin',     name: 'Dolphin',     type: 'food',     heal: 55, sell: 115, img: 'assets/food/dolphin.png' },
   /* ----------------------------- Logs ------------------------------ */
   log_oak:      { id: 'log_oak',       name: 'Oak Logs',        type: 'resource', sell: 1,  img: 'assets/forestry/oak.png' },
-  log_pine:     { id: 'log_pine',      name: 'Pine Logs',       type: 'resource', sell: 2,  img: 'assets/forestry/pine.png' },
-  log_birch:    { id: 'log_birch',     name: 'Birch Logs',      type: 'resource', sell: 3,  img: 'assets/forestry/birch.png' },
-  log_cedar:    { id: 'log_cedar',     name: 'Cedar Logs',      type: 'resource', sell: 5,  img: 'assets/forestry/cedar.png' },
-  log_willow:   { id: 'log_willow',    name: 'Willow Logs',     type: 'resource', sell: 8,  img: 'assets/forestry/willow.png' },
-  log_maple:    { id: 'log_maple',     name: 'Maple Logs',      type: 'resource', sell: 12, img: 'assets/forestry/maple.png' },
-  log_yew:      { id: 'log_yew',       name: 'Yew Logs',        type: 'resource', sell: 18, img: 'assets/forestry/yew.png' },
-  log_runewood: { id: 'log_runewood',  name: 'Runewood Logs',   type: 'resource', sell: 30, img: 'assets/forestry/runewood.png' },
-  log_elder:    { id: 'log_elderwood', name: 'Elderwood Logs',  type: 'resource', sell: 50, img: 'assets/forestry/elder.png' },
+  log_pine:     { id: 'log_pine',      name: 'Pine Logs',       type: 'resource', sell: 3,  img: 'assets/forestry/pine.png' },
+  log_birch:    { id: 'log_birch',     name: 'Birch Logs',      type: 'resource', sell: 7,  img: 'assets/forestry/birch.png' },
+  log_cedar:    { id: 'log_cedar',     name: 'Cedar Logs',      type: 'resource', sell: 12,  img: 'assets/forestry/cedar.png' },
+  log_willow:   { id: 'log_willow',    name: 'Willow Logs',     type: 'resource', sell: 19,  img: 'assets/forestry/willow.png' },
+  log_maple:    { id: 'log_maple',     name: 'Maple Logs',      type: 'resource', sell: 31, img: 'assets/forestry/maple.png' },
+  log_yew:      { id: 'log_yew',       name: 'Yew Logs',        type: 'resource', sell: 49, img: 'assets/forestry/yew.png' },
+  log_runewood: { id: 'log_runewood',  name: 'Runewood Logs',   type: 'resource', sell: 80, img: 'assets/forestry/runewood.png' },
+  log_elder:    { id: 'log_elderwood', name: 'Elderwood Logs',  type: 'resource', sell: 125, img: 'assets/forestry/elder.png' },
 
   /* ---------------------------- Planks ----------------------------- */
   plank_oak:       { id: 'plank_oak',       name: 'Oak Plank',       type: 'resource', sell: 2,  img: 'assets/forestry/oak_plank.png' },
@@ -160,6 +160,9 @@ export const ITEMS = {
   blacksteel_sword:  { id: 'blacksteel_sword',  name: 'Blacksteel Sword',   type: 'equipment', slot: 'weapon', atk: 30, str: 22, sell: 280, img: 'assets/equipment/sword.png',  tint: 'blacksteel', reqAtk: 35 },
   blacksteel_axe:    { id: 'blacksteel_axe',    name: 'Blacksteel Axe',     type: 'equipment', slot: 'weapon', atk: 20, str: 40, sell: 280, img: 'assets/equipment/axe.png',   tint: 'blacksteel', reqAtk: 35 },
 
+  sandreaver:    { id: 'sandreaver',    name: 'Sandreaver',     type: 'equipment', slot: 'weapon', atk: 25, str: 45, sell: 400, img: 'assets/equipment/sandreaver.png', reqAtk: 38 },
+  obsidian_maul:    { id: 'obsidian_maul',    name: 'Obsidian Maul',     type: 'equipment', slot: 'weapon', atk: 31, str: 52, sell: 600, img: 'assets/equipment/ob_maul.png', reqAtk: 42 },
+
   /* --------------------------- Enchanting -------------------------- */
   tome_forest_novice: {
     id: 'tome_forest_novice',
@@ -217,6 +220,9 @@ export const ITEMS = {
   briar_oil:     { id: 'briar_oil',     name: 'Briar Oil',     type: 'reagent', sell: 5,  icon: '🛢️' },
   bramble_heart: { id: 'bramble_heart', name: 'Bramble Heart', type: 'reagent', sell: 25, icon: '💚' },
   bat_teeth:     { id: 'bat_teeth', name: 'Bat Teeth',         type: 'reagent', sell: 20, img: 'assets/materials/bat_teeth.png'},
+  ghoul_eye:     { id: 'ghoul_eye', name: 'Ghoul Eye',         type: 'reagent', sell: 30, img: 'assets/materials/ghoul_eye.png'},
+  birch_resin: { id: 'birch_resin', name: 'Birch Bark Resin', type: 'reagent', sell: 25, img: 'assets/materials/resin.png'},
+  cedar_resin: { id: 'cedar_resin', name: 'Cedar Bark Resin', type: 'reagent', sell: 45, img: 'assets/materials/cedar_resin.png'},
 
   potion_mana_small: {
     id: 'potion_mana_small',
@@ -240,6 +246,33 @@ export const ITEMS = {
     img: 'assets/potions/accuracy_potion.png',
     type: 'potion',
     accBonus: 0.08,
+    durationSec: 60,
+    sell: 25
+  },
+  potion_advanced_accuracy: {
+    id: 'potion_advanced_accuracy',
+    name: 'Advanced Accuracy',
+    img: 'assets/potions/accuracy_advanced.png',
+    type: 'potion',
+    accBonus: 0.12,
+    durationSec: 75,
+    sell: 60
+  },
+  potion_advanced_defense: {
+    id: 'potion_advanced_defense',
+    name: 'Advanced Defense',
+    img: 'assets/potions/defense_advanced.png',
+    type: 'potion',
+    dmgReduce: 5,
+    durationSec: 75,
+    sell: 80
+  },
+  potion_defense: {
+    id: 'potion_defense',
+    name: 'Defense Potion',
+    img: 'assets/potions/defense_potion.png',
+    type: 'potion',
+    dmgReduce: 2,
     durationSec: 60,
     sell: 25
   },

@@ -30,7 +30,7 @@ h1, h2, h3, .monster-title, .panel-title {
   font-variant-numeric: tabular-nums; /* aligned numbers for HP/DMG */
 }
 *, *::before, *::after {
-  font-family: inherit !important;
+  font-family: inherit;
 }
 body {
   margin: 0; background: radial-gradient(1200px 800px at 20% 10%, #141834, #0d1020) no-repeat, var(--bg);
