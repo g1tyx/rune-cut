@@ -13,30 +13,34 @@ const speedFromLevel = (lvl)=> 1 + 0.03*(lvl-1);  // same curve as manual
 // award to your existing short-key pools
 function addSkillXp(state, skillKey, amt){
   if (!amt) return;
-  if (skillKey === 'wc')       state.wcXp    = (state.wcXp||0)    + amt;
-  else if (skillKey === 'fish')state.fishXp  = (state.fishXp||0)  + amt;
-  else if (skillKey === 'min') state.minXp   = (state.minXp||0)   + amt;
-  else if (skillKey === 'smith')state.smithXp= (state.smithXp||0) + amt;
-  else if (skillKey === 'craft')state.craftXp= (state.craftXp||0) + amt;
-  else if (skillKey === 'cook') state.cookXp = (state.cookXp||0)  + amt;
-  else if (skillKey === 'atk')  state.atkXp  = (state.atkXp||0)   + amt;
-  else if (skillKey === 'str')  state.strXp  = (state.strXp||0)   + amt;
-  else if (skillKey === 'def')  state.defXp  = (state.defXp||0)   + amt;
+  if (skillKey === 'wc')        state.wcXp     = (state.wcXp||0)     + amt;
+  else if (skillKey === 'fish') state.fishXp   = (state.fishXp||0)   + amt;
+  else if (skillKey === 'min')  state.minXp    = (state.minXp||0)    + amt;
+  else if (skillKey === 'smith')state.smithXp  = (state.smithXp||0)  + amt;
+  else if (skillKey === 'craft')state.craftXp  = (state.craftXp||0)  + amt;
+  else if (skillKey === 'cook') state.cookXp   = (state.cookXp||0)   + amt;
+  else if (skillKey === 'atk')  state.atkXp    = (state.atkXp||0)    + amt;
+  else if (skillKey === 'str')  state.strXp    = (state.strXp||0)    + amt;
+  else if (skillKey === 'def')  state.defXp    = (state.defXp||0)    + amt;
   else if (skillKey === 'enchant') state.enchantXp = (state.enchantXp||0) + amt;
 }
 
 // equipment speed lookups (match your manual panels)
 function axeSpeedFromState(state){
   const id = state.equipment?.axe;
-  return (id && ITEMS[id]?.speed) || 1;
+  const base = id ? String(id).split('@')[0] : null;
+  return (base && ITEMS[base]?.speed) || 1;
 }
 function rodSpeedFromState(state){
-  const id = state.equipment?.rod;
-  return (id && ITEMS[id]?.speed) || 1;
+  // your fishing tools use slot 'fishing'
+  const id = state.equipment?.fishing;
+  const base = id ? String(id).split('@')[0] : null;
+  return (base && ITEMS[base]?.speed) || 1;
 }
 function pickSpeedFromState(state){
   const id = state.equipment?.pick;
-  return (id && ITEMS[id]?.speed) || 1;
+  const base = id ? String(id).split('@')[0] : null;
+  return (base && ITEMS[base]?.speed) || 1;
 }
 
 const itemXp = (id) => {
@@ -58,23 +62,29 @@ const itemBaseMs = (id, fallbackMs) => {
 const XP_KEYS = { forestry:'wc', fishing:'fish', mining:'min' };
 
 /* -------------------- resolvers -------------------- */
-// Keep resolvers tiny: compute dropId, xpPer, tickMs using the same inputs as manual.
+// Forestry: treat resourceId as a *log id* (e.g., 'log_pine'), then find the tree by drop.
+// No silent fallback to oak.
 const RESOLVERS = {
   forestry(state, _baseId, meta){
     const wcLvl  = levelFromXp(state.wcXp||0, XP);
-    const treeId = meta?.resourceId || meta?.sourceId || 'oak';
-    const tree   = TREES.find(t=>t.id===treeId) || TREES.find(t=>t.id==='oak') || { baseTime:3000, drop:'log_oak', xp:5 };
-    const dropId = meta?.dropId || tree.drop || 'log_oak';
-    const baseMs = tree.baseTime || 3000; // identical to manual woodcutting
+    const logId  = meta?.resourceId; // expected: 'log_*'
+    if (!logId || !/^log_/.test(logId)) return null;
+
+    const tree = TREES.find(t => t.drop === logId) || null;
+    if (!tree) return null; // unknown log → do not run
+
+    const dropId = logId;
+    const baseMs = tree.baseTime || 3000;
     const tickMs = clampMs(baseMs / (axeSpeedFromState(state) * speedFromLevel(wcLvl)));
     const xpPer  = Number.isFinite(meta?.xpPer) ? meta.xpPer : (itemXp(dropId) || tree.xp || 0);
-    return { activity:'forestry', xpSkill:XP_KEYS.forestry, sourceId:treeId, dropId, xpPer, tickMs };
+    return { activity:'forestry', xpSkill:XP_KEYS.forestry, sourceId:tree.id, dropId, xpPer, tickMs };
   },
 
   fishing(state, _baseId, meta){
     const fishLvl = levelFromXp(state.fishXp||0, XP);
-    const dropId  = meta?.dropId || meta?.resourceId || 'raw_shrimps';
-    // Use item base time if provided so it matches your panel; else sensible default
+    const dropId  = meta?.resourceId; // expected: e.g., 'raw_trout'
+    if (!dropId) return null;
+
     const baseMs  = itemBaseMs(dropId, 2800);
     const tickMs  = clampMs(baseMs / (rodSpeedFromState(state) * speedFromLevel(fishLvl)));
     const xpPer   = Number.isFinite(meta?.xpPer) ? meta.xpPer : (itemXp(dropId) || 4);
@@ -83,7 +93,9 @@ const RESOLVERS = {
 
   mining(state, _baseId, meta){
     const minLvl = levelFromXp(state.minXp||0, XP);
-    const dropId = meta?.dropId || meta?.resourceId || 'ore_copper';
+    const dropId = meta?.resourceId; // expected: e.g., 'ore_tin'
+    if (!dropId) return null;
+
     const baseMs = itemBaseMs(dropId, 3200);
     const tickMs = clampMs(baseMs / (pickSpeedFromState(state) * speedFromLevel(minLvl)));
     const xpPer  = Number.isFinite(meta?.xpPer) ? meta.xpPer : (itemXp(dropId) || 5);
@@ -116,7 +128,7 @@ function ensureLoop(state){
   TICK = setInterval(()=>{
     const now = performance.now();
 
-    // --- Tome run (unchanged) ---
+    // --- Tome run ---
     const t = state.activeTome;
     if (t){
       while (now >= t.nextTickAt && now < t.endsAt){
@@ -145,7 +157,7 @@ function ensureLoop(state){
       }
     }
 
-    // --- AFK auto run (NEW) ---
+    // --- AFK auto run (kept from your original) ---
     const a = state.activeAuto;
     if (a){
       while (now >= a.nextTickAt && now < a.endsAt){
@@ -171,8 +183,9 @@ export function startTomeRun(state, tomeId){
 
   // Route by tome.skill directly (forestry | fishing | mining)
   const skill = String(meta.skill || 'forestry').toLowerCase().trim();
-  const resolver = RESOLVERS[skill] || RESOLVERS.forestry;
-  const spec = resolver(state, base, meta);
+  const resolver = RESOLVERS[skill];
+  const spec = resolver ? resolver(state, base, meta) : null;
+  if (!spec || !spec.dropId) return false; // strict: do not run without a valid target
 
   const now = performance.now();
   const dur = tomeDurationMsFor(state, tomeId);
@@ -195,6 +208,11 @@ export function startTomeRun(state, tomeId){
 }
 
 export function ensureTomeEngine(state){
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  if (state && state._tomeDisabledUntil && now < state._tomeDisabledUntil) {
+    return true;
+  }
+
   ensureLoop(state);
   const equipped = state.equipment?.tome;
   if (equipped && !state.activeTome){
@@ -203,77 +221,82 @@ export function ensureTomeEngine(state){
 }
 
 export function stopTomeRun(state){
+  // mark that 1 tome should be consumed if the player unequips now
+  state._tomeConsumeOnUnequip = true;
+
+  // briefly prevent auto-restart during the unequip click
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  state._tomeDisabledUntil = now + 800; // 0.8s guard
+
   state.activeTome = null;
 }
-
 /* ------------- AFK Logic ------------------- */
 // ----- AFK helpers -----
 export function afkTimeMs(state){ return Math.max(1000, state.afkTimeMs|0 || 30000); } // default 30s
 export function setAfkTimeMs(state, ms){ state.afkTimeMs = Math.max(1000, ms|0); }
 
 function resolveAutoSpec(state, { skill, resourceId }){
-    const s = String(skill||'forestry').toLowerCase();
-  
-    if (s === 'forestry'){
-      const wcLvl  = levelFromXp(state.wcXp||0, XP);
-      const treeId = resourceId || 'oak';
-      const tree   = TREES.find(t=>t.id===treeId) || TREES.find(t=>t.id==='oak') || { baseTime:3000, drop:'log_oak', xp:5 };
-      const dropId = tree.drop || 'log_oak';
-      const xpPer  = tree.xp|0; // logs don’t have xp on the item; use tree.xp
-      const tickMs = clampMs((tree.baseTime||3000) / ((state.equipment?.axe && ITEMS[state.equipment.axe]?.speed)||1 * (1+0.03*(levelFromXp(state.wcXp||0, XP)-1))));
-      return { activity:'wc', xpSkill:'wc', sourceId:treeId, dropId, xpPer, tickMs };
-    }
-  
-    if (s === 'fishing'){
-      const fishLvl = levelFromXp(state.fishXp||0, XP);
-      const dropId  = resourceId || 'raw_shrimps';
-      const baseMs  = itemBaseMs(dropId, 2800);
-      const rodSpd  = (state.equipment?.fishing && ITEMS[state.equipment.fishing]?.speed) || (state.equipment?.rod && ITEMS[state.equipment.rod]?.speed) || 1;
-      const tickMs  = clampMs(baseMs / (rodSpd * (1+0.03*(fishLvl-1))));
-      const xpPer   = itemXp(dropId) || 4;
-      return { activity:'fish', xpSkill:'fish', sourceId:'shore', dropId, xpPer, tickMs };
-    }
-  
-    // mining
-    const minLvl = levelFromXp(state.minXp||0, XP);
-    const dropId = resourceId || 'ore_copper';
-    const baseMs = itemBaseMs(dropId, 3200);
-    const pickSp = (state.equipment?.pick && ITEMS[state.equipment.pick]?.speed) || 1;
-    const tickMs = clampMs(baseMs / (pickSp * (1+0.03*(minLvl-1))));
-    const xpPer  = itemXp(dropId) || 5;
-    return { activity:'min', xpSkill:'min', sourceId:'copper', dropId, xpPer, tickMs };
+  const s = String(skill||'forestry').toLowerCase();
+  if (s === 'forestry'){
+    const wcLvl  = levelFromXp(state.wcXp||0, XP);
+    const logId  = resourceId;
+    if (!logId || !/^log_/.test(logId)) return null;
+    const tree   = TREES.find(t=>t.drop === logId) || null;
+    if (!tree) return null;
+    const dropId = logId;
+    const tickMs = clampMs((tree.baseTime||3000) / (axeSpeedFromState(state) * speedFromLevel(wcLvl)));
+    const xpPer  = tree.xp|0;
+    return { activity:'wc', xpSkill:'wc', sourceId:tree.id, dropId, xpPer, tickMs };
   }
+  if (s === 'fishing'){
+    const fishLvl = levelFromXp(state.fishXp||0, XP);
+    const dropId  = resourceId;
+    if (!dropId) return null;
+    const baseMs  = itemBaseMs(dropId, 2800);
+    const tickMs  = clampMs(baseMs / (rodSpeedFromState(state) * speedFromLevel(fishLvl)));
+    const xpPer   = itemXp(dropId) || 4;
+    return { activity:'fish', xpSkill:'fish', sourceId:'shore', dropId, xpPer, tickMs };
+  }
+  // mining
+  const minLvl = levelFromXp(state.minXp||0, XP);
+  const dropId = resourceId;
+  if (!dropId) return null;
+  const baseMs = itemBaseMs(dropId, 3200);
+  const tickMs = clampMs(baseMs / (pickSpeedFromState(state) * speedFromLevel(minLvl)));
+  const xpPer  = itemXp(dropId) || 5;
+  return { activity:'min', xpSkill:'min', sourceId:'copper', dropId, xpPer, tickMs };
+}
 
-  export function startAutoRun(state, { skill, resourceId }){
-    if (state.activeAuto) return false;
-    const spec = resolveAutoSpec(state, { skill, resourceId });
-    const now  = performance.now();
-    const dur  = afkTimeMs(state);
-  
-    state.activeAuto = {
-      kind: 'auto',
-      id: `${skill}:${resourceId||''}`,
-      activity: spec.activity,
-      xpSkill:  spec.xpSkill,   // 'wc' | 'fish' | 'min'
-      sourceId: spec.sourceId,
-      dropId:   spec.dropId,
-      xpPer:    spec.xpPer|0,
-      tickMs:   spec.tickMs,
-      startedAt: now,
-      endsAt:    now + dur,
-      nextTickAt:now + spec.tickMs,
-    };
-  
-    try { window.dispatchEvent(new CustomEvent('auto:start', { detail:{ id:state.activeAuto.id, endsAt:state.activeAuto.endsAt } })); } catch{}
-  
-    ensureLoop(state);
-    return true;
+export function startAutoRun(state, { skill, resourceId }){
+  if (state.activeAuto) return false;
+  const spec = resolveAutoSpec(state, { skill, resourceId });
+  if (!spec) return false;
+  const now  = performance.now();
+  const dur  = afkTimeMs(state);
+
+  state.activeAuto = {
+    kind: 'auto',
+    id: `${skill}:${resourceId||''}`,
+    activity: spec.activity,
+    xpSkill:  spec.xpSkill,   // 'wc' | 'fish' | 'min'
+    sourceId: spec.sourceId,
+    dropId:   spec.dropId,
+    xpPer:    spec.xpPer|0,
+    tickMs:   spec.tickMs,
+    startedAt: now,
+    endsAt:    now + dur,
+    nextTickAt:now + spec.tickMs,
+  };
+
+  try { window.dispatchEvent(new CustomEvent('auto:start', { detail:{ id:state.activeAuto.id, endsAt:state.activeAuto.endsAt } })); } catch{}
+
+  ensureLoop(state);
+  return true;
+}
+
+export function stopAutoRun(state){
+  if (state.activeAuto){
+    state.activeAuto = null;
+    try { window.dispatchEvent(new CustomEvent('auto:end')); } catch{}
   }
-  
-  export function stopAutoRun(state){
-    if (state.activeAuto){
-      state.activeAuto = null;
-      try { window.dispatchEvent(new CustomEvent('auto:end')); } catch{}
-    }
-  }
-  
+}

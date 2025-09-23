@@ -111,8 +111,21 @@ function eatItem(id){
 export function renderInventory(){
   if (!elInv) return;
 
-  const entries = Object.entries(state.inventory || {})
-    .filter(([, qty]) => (qty|0) > 0);
+  let entries = Object.entries(state.inventory || {})
+  .filter(([, qty]) => (qty|0) > 0);
+
+  if (state.ui?.invSortUse) {
+    entries = entries.sort((a, b) => {
+      const abase = String(a[0]).split('@')[0];
+      const bbase = String(b[0]).split('@')[0];
+      const au = invUseOf(abase), bu = invUseOf(bbase);
+      const ur = useRank(au) - useRank(bu);
+      if (ur !== 0) return ur;
+      const an = ITEMS[abase]?.name || abase;
+      const bn = ITEMS[bbase]?.name || bbase;
+      return an.localeCompare(bn);
+    });
+  }
 
   if (!entries.length){
     elInv.innerHTML = '<div class="muted">No items yet. Gather or fight to earn loot.</div>';
@@ -381,6 +394,71 @@ function openEquipPopover(anchorEl, id){
   elPopover.style.top = (rect.top - 4 + window.scrollY) + 'px';
   elPopover.classList.remove('hidden');
 }
+
+
+ /*--------- Sorting -------------- */
+ const USE_ORDER = ['tool','gear','tome','potion','food','essence','wood','orebar','material','resource','misc'];
+ const useRank = u => { const i = USE_ORDER.indexOf(u); return i === -1 ? USE_ORDER.length : i; };
+ const invUseOf = (base) => {
+   const it = ITEMS[base] || {};
+   if (it.invUse) return it.invUse;                     // optional override
+   if (it.slot === 'tome') return 'tome';
+   if (it.type === 'food') return 'food';
+   if (it.type === 'potion' || it.mana || it.accBonus || it.dmgReduce) return 'potion';
+   if (it.type === 'equipment') {
+     if (it.slot === 'axe' || it.slot === 'pick' || it.slot === 'fishing' || it.speed) return 'tool';
+     return 'gear';
+   }
+   const id = String(base);
+   if (/_essence$/.test(id)) return 'essence';
+   if (id.startsWith('log_') || id.startsWith('plank_')) return 'wood';
+   if (id.startsWith('ore_') || id.startsWith('bar_')) return 'orebar';
+   if (it.type === 'material') return 'material';
+   if (it.type === 'resource') return 'resource';
+   return 'misc';
+ };
+ 
+ (function ensureInvSortBtn(){
+   if (!elInv || document.getElementById('inv-sort-btn')) return;
+   const btn = document.createElement('button');
+   btn.id = 'inv-sort-btn';
+   btn.textContent = 'Sort';
+   btn.className = 'btn';
+   btn.style.margin = '0 0 8px 0';
+   btn.style.background = 'rgb(28, 18, 139)';
+   btn.style.color = '#eaf2ff';
+   btn.style.border = '1px solid rgba(255,255,255,0.12)';
+   btn.style.boxShadow = '0 6px 14px rgba(59,130,246,.25), inset 0 1px 0 rgba(255,255,255,.15)';
+   btn.style.fontWeight = '700';
+   btn.addEventListener('mouseenter', () => { btn.style.filter = 'brightness(1.25)'; });
+   btn.addEventListener('mouseleave', () => { btn.style.filter = ''; });
+ 
+   const host = elInv.parentElement || document.body;
+   host.insertBefore(btn, elInv);
+ 
+   btn.addEventListener('click', ()=>{
+     state.ui = state.ui || {};
+     state.ui.invSortUse = !state.ui.invSortUse;
+     btn.classList.toggle('active', !!state.ui.invSortUse);
+     renderInventory();
+     saveState(state);
+   });
+   function syncSortBtnVis(){
+    btn.style.display = (state.unlocks && state.unlocks.sort_inventory) ? '' : 'none';
+  }
+  syncSortBtnVis();
+  window.addEventListener('favor:update', syncSortBtnVis);
+   // visual hint when active
+   const css = document.createElement('style');
+   css.textContent = `
+     #inv-sort-btn.active{ background:#1b2333; border:1px solid rgba(255,255,255,.2); }
+   `;
+   document.head.appendChild(css);
+ 
+   // restore toggle style on load
+   if (state.ui?.invSortUse) btn.classList.add('active');
+ })();
+ 
 
 elPopover?.addEventListener('click', (e)=>{
   const sellBtn = e.target.closest('button[data-amt]');

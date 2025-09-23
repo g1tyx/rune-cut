@@ -21,6 +21,12 @@ const el = {
 
 const FAVOR_BONUSES = [
   {
+    id: 'sort_inventory',
+    name: 'Inventory Sort',
+    need: 10,
+    desc: 'Unlocks the Sort button in the inventory to auto-organize items by use.'
+  },
+  {
     id: 'autobattle',
     name: 'Autobattle',
     need: 25,
@@ -85,13 +91,13 @@ function ensureRoyalBonusCss(){
   css.id = 'royal-bonus-css';
   css.textContent = `
     #royalBonusesWrap { margin-top: 14px; }
-    #royalBonuses { display:grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin:8px 0; }
+    #royalBonuses { display:grid; grid-template-columns: repeat(auto-fill,1fr); gap:10px; margin:8px 0; }
     .bonus-card { position:relative; border:1px solid rgba(0,0,0,0.1); border-radius:10px; padding:10px; background:#0d1117; color:#e6edf3; }
     .bonus-card.locked { opacity:0.6; filter:saturate(0.6); }
     .bonus-card .title { font-weight:700; margin-bottom:4px; }
     .bonus-card .req   { font-size:12px; opacity:0.8; }
     .bonus-card .pill  { position:absolute; top:8px; right:8px; font-size:11px; padding:2px 6px; border-radius:999px; background:#222c; }
-    .bonus-card.unlocked .pill { background:#22c55e; color:#0a0; }
+    .bonus-card.unlocked .pill { background:#15714b; color: #e6edf3; font-weight:600 }
   `;
   document.head.appendChild(css);
 }
@@ -264,6 +270,7 @@ function renderBonuses(){
   }).join('');
 
   box.innerHTML = cards;
+  try { window.dispatchEvent(new Event('favor:update')); } catch {}
 }
 
 /* Ensure contract renders first, then bonuses appear below */

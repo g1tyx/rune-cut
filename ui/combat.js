@@ -314,6 +314,26 @@ export function renderCombat(){
   paintHud();
 }
 
+function enableCombatLogAutoScroll(){
+  const log = overlayEls.log;
+  if (!log || log._autoScrollReady) return;
+  log._autoScrollReady = true;
+
+  const toBottom = ()=> { log.scrollTop = log.scrollHeight; };
+
+  // Scroll on new entries
+  const mo = new MutationObserver(toBottom);
+  mo.observe(log, { childList: true });
+
+  // Also catch size changes just in case
+  const ro = new ResizeObserver(toBottom);
+  ro.observe(log);
+
+  // Initial snap
+  toBottom();
+}
+
+
 /* ---------------- Auto-fight loop ---------------- */
 let fightLoop = null;
 function stopFightLoop(){
@@ -363,12 +383,7 @@ function runCombatTurn(){
   const result = turnFight(state);
   const logs = result?.log || [];
 
-  logs.forEach(line => {
-    const div = document.createElement('div');
-    div.textContent = line;
-    overlayEls.log.appendChild(div);
-    overlayEls.log.scrollTop = overlayEls.log.scrollHeight;
-  });
+  // don't log per-hit lines anymore, but DO play the damage/heal FX
   applyTurnFx(logs);
 
   atkCooldownUntil = nowMs() + ATK_COOLDOWN_MS;
@@ -384,13 +399,12 @@ function runCombatTurn(){
         textContent: `Victory! XP — Atk +${xp.atk||0}, Str +${xp.str||0}, Def +${xp.def||0}.`
       }));
       if (loot.length) overlayEls.log.appendChild(Object.assign(document.createElement('div'),{
+        className: 'loot-line',
         textContent: `Loot: ${loot.join(', ')}`
       }));
 
-      // After a win, repaint the monster card drops so newly discovered items appear
       paintMonsterDrops(currentMonster());
 
-      // --- Autobattle re-engage (3-minute session; only if overlay still open) ---
       const mon = currentMonster();
       const overlayOpen = !overlayEls.overlay?.classList.contains('hidden');
       if (mon && overlayOpen && autoActive(mon.id)){
@@ -405,7 +419,6 @@ function runCombatTurn(){
           startFightLoop();
         }, 350);
       } else if (mon && isAutobattleUnlocked() && getAuto(mon.id) && state.autobattleMonId === mon.id) {
-        // session expired
         overlayEls.log.appendChild(Object.assign(document.createElement('div'),{
           textContent:`Autobattle: 3-minute session ended.`
         }));
@@ -413,7 +426,7 @@ function runCombatTurn(){
       }
     } else {
       overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent: `You were defeated.`}));
-      clearAutoSession(); // stop session on death
+      clearAutoSession();
     }
     saveState(state);
     renderInventory();
@@ -450,6 +463,7 @@ function openCombat(mon){
   }
 
   if (overlayEls.log) overlayEls.log.innerHTML = '';
+  enableCombatLogAutoScroll();
 
   overlayEls.overlay.classList.remove('hidden');
   renderCombat();
@@ -516,6 +530,7 @@ overlayEls.fleeBtn?.addEventListener('click', ()=>{
     /* Always show item names in drops (gold stays icon-only) */
     #monsterDrops .drop-chip .name { display:inline !important; }
     #monsterDrops .drop-chip.gold .name { display:none !important; }
+    #combatLog .loot-line { color:#eab308; font-weight:700; }
   `;
   document.head.appendChild(css);
 })();

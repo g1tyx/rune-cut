@@ -8,8 +8,15 @@ const XP = buildXpTable();
 const clampMs = (ms)=> Math.max(300, ms);
 
 function getRec(id){ return ENCHANT_RECIPES?.[id] || null; }
-function lvlOf(state){ return levelFromXp(state.enchantXp||0, XP); }
-
+function lvlOf(state){
+  // Try common homes for Enchant XP; fall back to 0 safely.
+  const xp =
+    (state && state.enchantXp != null ? state.enchantXp : null) ??
+    (state && state.skills && state.skills.enchantXp != null ? state.skills.enchantXp : null) ??
+    (state && state.skills && state.skills.enchant != null ? state.skills.enchant : null) ??
+    0;
+  return levelFromXp(xp, XP);
+}
 // normalize r.inputs (array) and also allow r.cost-style objects (just in case)
 function listInputs(r){
   if (Array.isArray(r?.inputs)) return r.inputs;
@@ -42,24 +49,28 @@ function findApplyTarget(state, r){
 }
 
 export function canEnchant(state, id){
-  const r = getRec(id); if(!r) return false;
+  const r = getRec(id); 
+  if (!r) return false;
 
-  // level gate (support level or lvl)
-  const need = (r.level ?? r.lvl ?? 1);
-  if ((lvlOf(state)) < need) return false;
+  // Level gate
+  const needLevel = (r.level != null ? r.level : (r.lvl != null ? r.lvl : 1));
+  if (lvlOf(state) < needLevel) return false;
 
-  // mana gate
-  if ((state.manaCurrent||0) < (r.mana||0)) return false;
+  // Mana gate
+  const curMana = Number((state && state.manaCurrent) || 0);
+  const needMana = Number(r.mana || 0);
+  if (curMana < needMana) return false;
 
-  // inputs gate
+  // Inputs gate
+  const inv = (state && state.inventory) ? state.inventory : {};
   const ins = listInputs(r);
-  const okInputs = ins.every(inp => (state.inventory[inp.id]||0) >= inp.qty);
+  const okInputs = ins.every(inp => Number(inv[inp.id] || 0) >= Number(inp.qty || 0));
   if (!okInputs) return false;
 
-  // apply-to-tool gate (if applicable)
+  // Apply-to-tool gate (only for apply recipes)
   if (r.apply){
     const tgt = findApplyTarget(state, r);
-    if (!tgt) return false; // nothing valid equipped OR already has #swift
+    if (!tgt) return false;
   }
 
   return true;

@@ -199,6 +199,7 @@ function effectLine(eff){
   switch (eff.type){
     case 'afk_extend': return `AFK +${eff.seconds || 0}s`;
     case 'auto_cook':  return `Auto-cook +${eff.seconds || 0}s`;
+    case 'craft_batch_max': return `Batch Craft up to ${eff.max === Infinity ? '∞' : eff.max}`;
     default: return '';
   }
 }

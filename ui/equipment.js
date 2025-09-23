@@ -9,7 +9,7 @@ import { getConsumableEffect } from '../data/enchant_effects.js';
 import { renderInventory } from './inventory.js';
 import { removeItem } from '../systems/inventory.js';
 import { ensureMana, manaMaxFor, startManaRegen, onManaChange } from '../systems/mana.js';
-import { ensureTomeEngine, tomeRemainingMs, tomeDurationMsFor } from '../systems/tomes.js';
+import { ensureTomeEngine, tomeRemainingMs, tomeDurationMsFor, stopTomeRun } from '../systems/tomes.js';
 
 // ---------- DOM roots ----------
 const grid = qs('#equipmentGrid');
@@ -235,7 +235,7 @@ on(grid, 'click', '.eat-btn[data-eat-food]', ()=>{
   saveState(state);
 });
 
-// ---------- unequip (single handler; no duplicates) ----------
+// ---------- unequip (single handler; tome-safe) ----------
 on(grid, 'click', '.unequip-x', (e, btn)=>{
   const slot = btn.getAttribute('data-unequip');
   if (!slot) return;
@@ -258,14 +258,19 @@ on(grid, 'click', '.unequip-x', (e, btn)=>{
     return;
   }
 
-  // Normal slots (tome-safe handled in systems/equipment.js)
-  const ok = unequipItem(state, slot);
-  if (!ok && slot === 'tome') {
-    // optional toast that tomes can’t be unequipped while active
+  // Tome: stop the engine before unequipping so it doesn't restart
+  if (slot === 'tome'){
+    try { stopTomeRun(state); } catch {}
   }
+
+  // Normal slots (plus tome after it's been stopped)
+  const ok = unequipItem(state, slot);
   saveState(state);
   renderInventory();
   renderEquipment();
+
+  // Re-evaluate tome engine after changes (won't restart immediately due to stop guard)
+  ensureTomeEngine(state);
 });
 
 // ---------- apply consumable to a slot (generic & tiered) ----------
@@ -411,9 +416,8 @@ on(grid, 'mousemove', '.slot', (e, slotDiv)=>{
     const resId   = def.tome.dropId || def.tome.resourceId;
     const resName = ITEMS[resId]?.name || resId || 'Unknown';
     lines.push(`Auto-gathers: ${resName}`);
-    lines.push(`Duration per tome: ${baseSec}–${maxSec}s (scales with Enchanting)`);
+    lines.push(`Duration per tome: ${baseSec}–${maxSec}s`);
 
-    // live timing (if you want it)
     try {
       const remMs = tomeRemainingMs(state);
       const perMs = tomeDurationMsFor(state, base);

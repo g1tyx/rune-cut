@@ -24,6 +24,7 @@ export function defaultState(){
       head:null, body:null, legs:null, gloves:null, boots:null,
       amulet:null, ring:null, cape:null,
       food:null, foodQty:0,
+      tome:null, tomeQty:0
     },
     equipmentMods: {},
 

@@ -384,29 +384,40 @@ export function tryOfferContract(){
   const want   = randInt(layout.tasksMin, layout.tasksMax);
   const qtyMin = layout.qtyMin, qtyMax = layout.qtyMax;
 
+  const reduceQty = (qty, factor) => Math.max(1, Math.floor(qty * factor));
+
   let tasks = [];
 
   if (patron === 'Warden'){
     const mons = pickMonsters(band, want);
-    tasks = mons.map(m => ({
-      kind: 'slay',
-      monsterId: m.monsterId,
-      name: m.name,
-      level: Math.min(m.level || 1, band.max),
-      bandMax: band.max,
-      qty: randInt(qtyMin, qtyMax),
-      baseKills: currentKills(m.monsterId) // progress starts from now
-    }));
+    tasks = mons.map(m => {
+      const baseQty = randInt(qtyMin, qtyMax);
+      const scaled  = reduceQty(baseQty, 0.4);
+      return {
+        kind: 'slay',
+        monsterId: m.monsterId,
+        name: m.name,
+        level: Math.min(m.level || 1, band.max),
+        bandMax: band.max,
+        qty: scaled,
+        baseKills: currentKills(m.monsterId) // progress starts from now
+      };
+    });
   } else {
     const pool = pickDeliverables(patron, band, want);
-    tasks = pool.map(p => ({
-      kind: 'deliver',
-      id: p.id,
-      label: p.label,
-      serviceLevel: Math.min(p.level || levelForItemId(p.id) || 1, band.max),
-      bandMax: band.max,
-      qty: randInt(qtyMin, qtyMax)
-    }));
+    const isHalfQty = (patron === 'Armorer' || patron === 'Craftsman'); // ← 50% fewer items
+    tasks = pool.map(p => {
+      const baseQty = randInt(qtyMin, qtyMax);
+      const scaled  = isHalfQty ? reduceQty(baseQty, 0.3) : baseQty;
+      return {
+        kind: 'deliver',
+        id: p.id,
+        label: p.label,
+        serviceLevel: Math.min(p.level || levelForItemId(p.id) || 1, band.max),
+        bandMax: band.max,
+        qty: scaled
+      };
+    });
   }
 
   // No fallbacks: if no tasks, do not create a contract

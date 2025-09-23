@@ -11,7 +11,7 @@ export const ITEMS = {
   log_maple:    { id: 'log_maple',     name: 'Maple Logs',      type: 'resource', sell: 31, img: 'assets/forestry/maple.png' },
   log_yew:      { id: 'log_yew',       name: 'Yew Logs',        type: 'resource', sell: 49, img: 'assets/forestry/yew.png' },
   log_runewood: { id: 'log_runewood',  name: 'Runewood Logs',   type: 'resource', sell: 80, img: 'assets/forestry/runewood.png' },
-  log_elder:    { id: 'log_elderwood', name: 'Elderwood Logs',  type: 'resource', sell: 125, img: 'assets/forestry/elder.png' },
+  log_elderwood:    { id: 'log_elderwood', name: 'Elderwood Logs',  type: 'resource', sell: 125, img: 'assets/forestry/elder.png' },
 
   /* ---------------------------- Planks ----------------------------- */
   plank_oak:       { id: 'plank_oak',       name: 'Oak Plank',       type: 'resource', sell: 2,  img: 'assets/forestry/oak_plank.png' },
@@ -31,9 +31,9 @@ export const ITEMS = {
   book:         { id: 'book',         name: 'Book',         type: 'resource', sell: 10, img: 'assets/materials/book.png' },
   silica_sand:  { id: 'silica_sand',  name: 'Silica Sand',  type: 'resource', sell: 1,  img: 'assets/materials/silica_sand.png' },
   glass_glob:   { id: 'glass_glob',   name: 'Glass Glob',   type: 'resource', sell: 4,  img: 'assets/materials/glass_glob.png' },
-  empty_vial:      { id: 'empty_vial',      name: 'Glass Vial',       type: 'vial', tier: 1, sell: 2, img: 'assets/potions/empty_vial.png' },
-  reinforced_vial: { id: 'reinforced_vial', name: 'Reinforced Vial',  type: 'vial', tier: 2, sell: 5, img: 'assets/potions/reinforced_vial.png' },
-  arcane_phial:    { id: 'arcane_phial',    name: 'Arcane Phial',     type: 'vial', tier: 3, sell: 9, img: 'assets/potions/arcane_phial.png' },
+  empty_vial:      { id: 'empty_vial',      name: 'Glass Vial',       type: 'vial', tier: 1, sell: 4, img: 'assets/potions/empty_vial.png' },
+  reinforced_vial: { id: 'reinforced_vial', name: 'Reinforced Vial',  type: 'vial', tier: 2, sell: 14, img: 'assets/potions/reinforced_vial.png' },
+  arcane_phial:    { id: 'arcane_phial',    name: 'Arcane Phial',     type: 'vial', tier: 3, sell: 50, img: 'assets/potions/arcane_phial.png' },
 
   forest_essence: { id: 'forest_essence', name: 'Forest Essence', type: 'resource', sell: 12, img: 'assets/materials/forest-essence.png' },
   sea_essence:    { id: 'sea_essence',    name: 'Sea Essence',   type: 'resource', sell: 12, img: 'assets/materials/sea-essence.png' },
@@ -45,6 +45,7 @@ export const ITEMS = {
   wire_coil:   { id: 'wire_coil',   name: 'Wire Coil',   type: 'resource', sell: 2, img: 'assets/materials/wire-coil.png' },
   silk_coil:   { id: 'silk_coil',   name: 'Silk Coil',   type: 'resource', sell: 6, img: 'assets/materials/silk-coil.png' },
   nylon_coil:  { id: 'nylon_coil',  name: 'Nylon Coil',  type: 'resource', sell: 12, img: 'assets/materials/nylon-coil.png' },
+  crypt_cord:  { id: 'crypt_cord',  name: 'Crypt Cord',  type: 'resource', sell: 30, img: 'assets/materials/crypt_cord.png' },
   nails:       { id: 'nails',       name: 'Nails',       type: 'resource', sell: 1, img: 'assets/materials/nails.png' },
 
   /* ----------------------------- Tools ----------------------------- */
@@ -61,10 +62,10 @@ export const ITEMS = {
   fishing_pole:     { id: 'fishing_pole',     name: 'Fishing Pole',   type: 'equipment', slot: 'fishing', speed: 1.25, img: 'assets/equipment/fishing-pole.png' },
   sturdy_pole:      { id: 'sturdy_pole',      name: 'Sturdy Pole',    type: 'equipment', slot: 'fishing', speed: 1.35, img: 'assets/equipment/sturdy-pole.png' },
   anglers_pride:    { id: 'anglers_pride',    name: 'Anglers Pride',  type: 'equipment', slot: 'fishing', speed: 1.50, img: 'assets/equipment/anglers-pride.png' },
-
+  shadowline_rod:    { id: 'shadowline_rod',    name: 'Shadowline Rod',  type: 'equipment', slot: 'fishing', speed: 1.75, img: 'assets/equipment/shadowline_rod.png' },
   /* ----------------------- Fishing resources ----------------------- */
   raw_shrimps:    { id: 'raw_shrimps',    name: 'Raw Shrimp',      type: 'resource', sell: 1,  xp: 10,  img: 'assets/food/raw_shrimp.png' },
-  raw_trout:      { id: 'raw_trout',      name: 'Raw Trout',       type: 'resource', sell: 2,  xp: 15,  img: 'assets/food/raw_trout.png' },
+  raw_trout:      { id: 'raw_trout',      name: 'Raw Trout',       type: 'resource', sell: 3,  xp: 15,  img: 'assets/food/raw_trout.png' },
   raw_eel:        { id: 'raw_eel',        name: 'Raw Eel',         type: 'resource', sell: 8,  xp: 24,  img: 'assets/food/raw_eel.png' },
   raw_salmon:     { id: 'raw_salmon',     name: 'Raw Salmon',      type: 'resource', sell: 15, xp: 50,  img: 'assets/food/raw_salmon.png' },
   raw_halibut:    { id: 'raw_halibut',    name: 'Raw Halibut',     type: 'resource', sell: 29, xp: 75,  img: 'assets/food/raw_halibut.png' },
@@ -213,6 +214,55 @@ export const ITEMS = {
       minLevel: 1,
       baseSec: 25,
       maxSec: 45,
+    },
+  },
+  tome_forest_apprentice: {
+    id: 'tome_forest_apprentice',
+    name: 'Apprentice Forest Tome',
+    type: 'equipment',
+    slot: 'tome',
+    img: 'assets/materials/forest_tome.png',
+    sell: 25,
+    tome: {
+      kind: 'auto_gather',
+      skill: 'forestry',
+      resourceId: 'log_pine',
+      minLevel: 15,
+      baseSec: 35,
+      maxSec: 55,
+    },
+  },
+  
+  tome_sea_apprentice: {
+    id: 'tome_sea_apprentice',
+    name: 'Apprentice Sea Tome',
+    type: 'equipment',
+    slot: 'tome',
+    img: 'assets/materials/sea_tome.png',
+    sell: 25,
+    tome: {
+      kind: 'auto_gather',
+      skill: 'fishing',
+      resourceId: 'raw_trout',
+      minLevel: 15,
+      baseSec: 35,
+      maxSec: 55,
+    },
+  },
+  tome_rock_apprentice: {
+    id: 'tome_rock_apprentice',
+    name: 'Apprentice Rock Tome',
+    type: 'equipment',
+    slot: 'tome',
+    img: 'assets/materials/rock_tome.png',
+    sell: 25,
+    tome: {
+      kind: 'auto_gather',
+      skill: 'mining',
+      resourceId: 'ore_tin',
+      minLevel: 15,
+      baseSec: 35,
+      maxSec: 55,
     },
   },
 

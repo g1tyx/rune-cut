@@ -9,6 +9,7 @@ import { renderInventory } from './inventory.js';
 import { renderSkills } from './skills.js';
 import { ITEMS } from '../data/items.js';
 import { renderEnchanting } from './enchanting.js';
+import { craftBatchOptions } from '../data/construction.js';
 
 const el = {
   craftList:  qs('#craftList'),
@@ -101,10 +102,110 @@ function pagesIoText(rec){
   return `${inp.qty}× ${prettyItemName(inp.id)} → ${out.qty}× ${prettyItemName(out.id)}`;
 }
 
+function getBatchOpts(){ return craftBatchOptions(state); }
+function getBatchChoice(){
+  const def = getBatchOpts()[0] || 1;
+  const v = state.ui?.craftBatch;
+  return (v == null || !getBatchOpts().includes(v)) ? def : v;
+}
+function setBatchChoice(v){
+  state.ui = state.ui || {};
+  state.ui.craftBatch = v;
+  saveState(state);
+}
+
+function maxCraftableFor(rec){
+  const ins = inputsOf(rec);
+  if (!ins.length) return Infinity;
+  let m = Infinity;
+  for (const inp of ins){
+    const have = state.inventory[String(inp.id)] || 0;
+    m = Math.min(m, Math.floor(have / Math.max(1, inp.qty|0)));
+  }
+  return Math.max(0, m);
+}
+
+// Chain crafts one after another, honoring the action timer
+function craftMany(id, count, onDone){
+  const rec = CRAFT_RECIPES[id]; if (!rec) return;
+  const doOne = ()=>{
+    if (!canCraft(state, id)) { onDone?.(); renderCrafting(); return; }
+    const ok = startCraft(state, id, ()=>{
+      const res = finishCraft(state, id);
+      if (res){
+        const name = res.name || res.id || 'Item';
+        const gainsText = xpLogText(res?.xpGains);
+        pushCraftLog(`Crafted ${name} → ${gainsText || '+0 xp'}`);
+        renderInventory(); renderSmithing(); renderEnchanting(); renderSkills();
+      }
+      saveState(state);
+      if (count === 'X'){
+        // re-evaluate max each round
+        if (maxCraftableFor(rec) > 0) { requestAnimationFrame(doOne); }
+        else { onDone?.(); renderCrafting(); }
+      } else {
+        count -= 1;
+        if (count > 0) { requestAnimationFrame(doOne); }
+        else { onDone?.(); renderCrafting(); }
+      }
+    });
+    if (ok && el.craftLabel) el.craftLabel.textContent = (rec?.name || id);
+    renderCrafting();
+  };
+  doOne();
+}
+
+function ensureBatchCss(){
+  if (document.getElementById('craft-batch-css')) return;
+  const css = document.createElement('style');
+  css.id = 'craft-batch-css';
+  css.textContent = `
+    #craftBatchRow{ display:flex; gap:6px; align-items:center; margin:0 0 8px; flex-wrap:wrap; }
+    #craftBatchRow .batch-btn{ padding:4px 8px; border-radius:8px; font-size:12px; background:#1b2333; color:#cfe3ff; border:1px solid rgba(255,255,255,.06); }
+    #craftBatchRow .batch-btn.active{ background:#14351f; color:#22c55e; border-color:#1b3b25; }
+    #craftBatchRow .batch-btn:disabled{ opacity:.6; cursor:not-allowed; }
+  `;
+  document.head.appendChild(css);
+}
+ensureBatchCss();
+
+function renderBatchRow(){
+  const parent = el.craftList?.parentElement;
+  if (!parent) return;
+  let row = document.getElementById('craftBatchRow');
+  if (!row){
+    row = document.createElement('div');
+    row.id = 'craftBatchRow';
+    parent.insertBefore(row, el.craftList);
+  }
+
+  const busy = isBusyCraft();
+  const opts = getBatchOpts();
+  const choice = getBatchChoice();
+
+  row.innerHTML = `
+    <span class="muted">Batch:</span>
+    ${opts.map(v=>{
+      const label = (v === 'X') ? 'Max' : v;
+      const active = (v === choice) ? 'active' : '';
+      return `<button class="batch-btn ${active}" data-batch="${v}" ${busy?'disabled':''}>${label}</button>`;
+    }).join('')}
+  `;
+}
+
+// click handler
+on(document,'click','#craftBatchRow .batch-btn',(e,btn)=>{
+  const v = btn.getAttribute('data-batch');
+  const val = (v === 'X') ? 'X' : parseInt(v,10);
+  setBatchChoice(val);
+  renderBatchRow();
+});
+
 /* ---------------- render ---------------- */
 export function renderCrafting(){
   const busy = isBusyCraft();
   const activeId = activeCraftId();
+  renderBatchRow();
 
   // Label
   if (el.craftLabel){
@@ -238,31 +339,25 @@ function renderPagesCard(containerEl){
 // Click a normal craft card → craft 1
 on(document, 'click', '#craftList .craft-card', (e, btn) => {
   if (btn.querySelector('#pagesCraftBtn')) return; // Pages card uses its own button
-  //if (state.action) return;
   const id = btn.dataset.id; if (!id) return;
   if (!canCraft(state, id)) return;
 
-  const r = CRAFT_RECIPES[id] || {};
-  const xpAmt = r?.xp?.amount || 0;
-  const xpSkill = r?.xp?.skill || 'craft';
+  const batch = getBatchChoice();
+  const count = (batch === 'X') ? 'X' : Math.max(1, batch | 0);
 
-  const ok = startCraft(state, id, () => {
-    const res = finishCraft(state, id);
-    if (res){
-      const name = res.name || res.id || 'Pages';
-      const gainsText = xpLogText(res.xpGains);
-      pushCraftLog(`Crafted ${name} → ${gainsText || '+0 xp'}`);
-      renderInventory(); renderSmithing(); renderEnchanting(); renderSkills();
-    }
+  craftMany(id, count, () => {
     saveState(state);
+    renderInventory();
+    renderSmithing();
+    renderEnchanting();
+    renderSkills();
     renderCrafting();
   });
 
-  if (ok){
-    if (el.craftLabel) el.craftLabel.textContent = (CRAFT_RECIPES[id]?.name || id);
-    renderCrafting();
-  }
+  if (el.craftLabel) el.craftLabel.textContent = (CRAFT_RECIPES[id]?.name || id);
+  renderCrafting();
 });
+
 
 // Pages selector changed
 on(document, 'change', '#pagesLogSelect', (e, sel)=>{
@@ -301,6 +396,9 @@ on(document, 'click', '#pagesCraftBtn', (e, btn)=>{
   const sel  = card?.querySelector('#pagesLogSelect');
   const rid  = sel?.value;
   if (!rid || !canCraft(state, rid)) return;
+  const batch = getBatchChoice();
+  const count = (batch === 'X') ? 'X' : Math.max(1, batch|0);
+  craftMany(rid, count, ()=>{ renderCrafting(); });
 
   const r = CRAFT_RECIPES[rid] || {};
   const xpAmt   = r?.xp?.amount || 0;

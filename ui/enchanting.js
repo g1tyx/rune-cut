@@ -25,7 +25,8 @@ function pretty(id){
   if (item?.name) return item.name;
 
   // Format tome IDs like: tome_<element>_<tier>
-  const m = baseId.match(/^tome_(forest|sea|rock)_(novice|adept|master)$/i);
+  // Support novice/apprentice/adept/master
+  const m = baseId.match(/^tome_(forest|sea|rock)_(novice|apprentice|adept|master)$/i);
   if (m){
     const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
     return `${cap(m[2])} ${cap(m[1])} Tome`;
@@ -74,6 +75,12 @@ function iconHtml(id){
   return src
     ? `<img src="${src}" class="icon-img${tint}" alt="${def.name||base}">`
     : `<span class="icon">${def.icon || '✨'}</span>`;
+}
+function outputIdOf(r){
+  // Prefer explicit outputs[0].id; fall back to outId; then r.id
+  if (Array.isArray(r.outputs) && r.outputs[0]?.id) return r.outputs[0].id;
+  if (r.outId) return r.outId;
+  return r.id || null;
 }
 
 // ---------- animation utilities ----------
@@ -205,7 +212,7 @@ function flyInputsToCenterMerge(srcEls = [], { travelMs = 700, mergeMs = 550, sc
       setTimeout(() => {
         const GLOW_SIZE = 120;
         const cx = center2.x + center2.w / 2 - GLOW_SIZE / 2;
-        const cy = center2.y + center2.h / 2 - GLOW_SIZE / 2;
+        const cy = center2.y + center2.w / 2 - GLOW_SIZE / 2;
 
         const glow = document.createElement('div');
         Object.assign(glow.style, {
@@ -287,6 +294,25 @@ function spawnOutputAtCenterAndFly(outImgSrc, centerRect, dstEl, { travelMs = 70
   return flyFromTo(ghost, dstEl, { scale: 1.2 }).then(() => ghost.remove());
 }
 
+// ---------- list CSS (once) ----------
+(function ensureEnchantCSS(){
+  if (document.getElementById('enchantCSS')) return;
+  const css = document.createElement('style');
+  css.id = 'enchantCSS';
+  css.textContent = `
+    #enchantList .enchant-row{ display:flex; align-items:center; gap:.65rem; }
+    #enchantList .enchant-row .thumb{ width:32px; height:32px; flex:0 0 32px; display:grid; place-items:center; }
+    #enchantList .enchant-row .thumb img.icon-img{ width:28px; height:28px; image-rendering:pixelated; }
+    #enchantList .enchant-row .left{ flex:1 1 auto; min-width:0; }
+    #enchantList .enchant-row .title{ font-weight:600; }
+    #enchantList .enchant-row .io{ color:#fff; font-size:.92em; }
+    #enchantList .enchant-row .right{ margin-left:.5rem; display:flex; gap:.35rem; }
+    #enchantList .enchant-row .badge{ background:#2234; border:1px solid #fff2; padding:.1rem .4rem; border-radius:.4rem; font-size:.85em; }
+    #enchantList .craft-item.disabled{ opacity:.6; }
+  `;
+  document.head.appendChild(css);
+})();
+
 // ---------- render ----------
 function recipeRows(){
   return recipesList()
@@ -309,12 +335,17 @@ export function renderEnchanting(){
     const lvl  = r.level || 1;
     const xp   = r?.xp?.amount || 0;
 
-    // hidden anchors for fallback icons if inventory icons aren't visible
+    // icons for inputs (hidden offscreen, used for animation fallback)
     const inputsIcons = (r.inputs||[]).map(i => iconHtml(i.id)).join('');
+
+    // Output icon for the row
+    const outId = outputIdOf(r);
+    const outIcon = outId ? iconHtml(outId) : '<span class="icon">✨</span>';
 
     return `
       <button class="craft-item enchant-row ${dis ? 'disabled':''} ${busyId===rid?'active':''}"
               data-id="${rid}" ${dis?'disabled':''}>
+        <div class="thumb" aria-hidden="true">${outIcon}</div>
         <div class="left">
           <div class="title">${r.name || pretty(rid)}</div>
           <div class="io">${ioText(r) || '&nbsp;'}</div>
@@ -385,7 +416,7 @@ on(document, 'click', '#enchantList .craft-item', async (e, row)=>{
       try { c.clone.style.transition='opacity 180ms ease'; c.clone.style.opacity='0'; setTimeout(()=>c.clone.remove(), 180); } catch{}
     });
 
-    // Logs
+    // Logs (duplicate-safe)
     pushLog(`Enchanted ${pretty(outId || rid)} → +${rec?.xp?.amount||0} Enchanting xp`, 'enchanting');
     if (rec?.mana) pushLog(`Mana spent: ${rec.mana}`, 'enchanting');
     (rec.inputs||[]).forEach(inp=> pushLog(`Consumed ${inp.qty}× ${pretty(inp.id)}`, 'enchanting'));

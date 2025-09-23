@@ -110,7 +110,7 @@ export const MONSTERS = [
   { id:'magma_goblin', name:'Magma Goblin', level:16, time:3800,
     zone:'Volcano', hp:115, attack:22, defense:17, maxHit:14,
     xp:{attack:160,strength:160,defense:160},
-    drops:[{gold:20, chance:0.7},{ id:'nylon_coil', chance:0.10 }],
+    drops:[{gold:20, chance:0.7},{ id:'nylon_coil', chance:0.15 }],
     img:'assets/monsters/magma_goblin.png'
   },
   { id:'lava_hound', name:'Lava Hound', level:21, time:4200,
@@ -160,7 +160,7 @@ export const MONSTERS = [
   { id:'tomb_knight', name:'Tomb Knight', level:24, time:4400,
     zone:'Crypts', hp:200, attack:32, defense:26, maxHit:21,
     xp:{attack:240,strength:240,defense:240},
-    drops:[{gold:34, chance:0.7}],
+    drops:[{gold:34, chance:0.7}, {id: 'crypt_cord', chance: 0.15}],
     img:'assets/monsters/tomb_knight.png'
   },
   { id:'shadow_wraith', name:'Shadow Wraith', level:32, time:5000,

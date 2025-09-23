@@ -202,6 +202,19 @@ export const CRAFT_RECIPES = {
     xp: [{ skill: 'craft', amount: 70 }],
     speedSkill: 'craft',
   },
+  shadowline_rod: {
+    id: 'shadowline_rod',
+    name: 'Shadowline Rod',
+    time: 6800,
+    inputs: [
+      { id:'log_maple',  qty:1 },
+      { id:'crypt_cord', qty:1 },
+    ],
+    level: 38,
+    outputs: [{ id:'shadowline_rod', qty:1 }],
+    xp: [{ skill: 'craft', amount: 200 }],
+    speedSkill: 'craft',
+  },
   empty_vial: {
     id: 'empty_vial',
     name: 'Glass Vial',
