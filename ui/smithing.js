@@ -63,7 +63,7 @@ function qStr(q){ return q!=null ? `qty: ${q}%` : ''; }
 function metalOfRecipe(rec){
   if (rec?.metal) return rec.metal;                             // preferred
   const m = String(rec?.id||'').split('_')[0];                  // infer from id
-  return ['copper','bronze','iron', 'steel', 'blacksteel'].includes(m) ? m : 'copper';
+  return ['copper','bronze','iron', 'steel', 'blacksteel', 'starsteel'].includes(m) ? m : 'copper';
 }
 function barForRecipe(rec){
   return rec?.barId || (rec?.metal ? `bar_${rec.metal}` : 'bar_copper');
@@ -166,6 +166,19 @@ function updateSmeltButtons(){
   el.smeltAllBtn && (el.smeltAllBtn.disabled = !(maxN > 0) || smithBusy);
 }
 
+function ensureForgeMetalOptions(){
+  if (!el.forgeMetal) return;
+  const metals = ['copper','bronze','iron','steel','blacksteel','starsteel'];
+  const have = new Set(Array.from(el.forgeMetal.options).map(o => o.value));
+  metals.forEach(m => {
+    if (!have.has(m)) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+      el.forgeMetal.appendChild(opt);
+    }
+  });
+}
 
 // ---------- forge progress loop ----------
 let RAF = null;
@@ -280,6 +293,7 @@ export function renderSmithing(){
 
   ensureSmeltDropdown();
   updateSmeltButtons();
+  ensureForgeMetalOptions();
 
   renderForgeList();
   renderUpgradeDropdown();

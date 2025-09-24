@@ -397,7 +397,7 @@ function openEquipPopover(anchorEl, id){
 
 
  /*--------- Sorting -------------- */
- const USE_ORDER = ['tool','gear','tome','potion','food','essence','wood','orebar','material','resource','misc'];
+ const USE_ORDER = ['tool','gear','tome','potion','food','essence','wood','plank','orebar','material','resource','misc'];
  const useRank = u => { const i = USE_ORDER.indexOf(u); return i === -1 ? USE_ORDER.length : i; };
  const invUseOf = (base) => {
    const it = ITEMS[base] || {};

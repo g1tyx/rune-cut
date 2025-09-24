@@ -42,6 +42,8 @@ export function defaultState(){
     monsterKills: {},
     discoveredDrops: {},
 
+    pets: { cheeken: true },
+
     // UI/logging
     logs: [],
     logFilter: 'all',

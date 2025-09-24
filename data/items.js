@@ -14,15 +14,15 @@ export const ITEMS = {
   log_elderwood:    { id: 'log_elderwood', name: 'Elderwood Logs',  type: 'resource', sell: 125, img: 'assets/forestry/elder.png' },
 
   /* ---------------------------- Planks ----------------------------- */
-  plank_oak:       { id: 'plank_oak',       name: 'Oak Plank',       type: 'resource', sell: 2,  img: 'assets/forestry/oak_plank.png' },
-  plank_pine:      { id: 'plank_pine',      name: 'Pine Plank',      type: 'resource', sell: 4,  img: 'assets/forestry/pine_plank.png' },
-  plank_birch:     { id: 'plank_birch',     name: 'Birch Plank',     type: 'resource', sell: 6,  img: 'assets/forestry/birch_plank.png' },
-  plank_cedar:     { id: 'plank_cedar',     name: 'Cedar Plank',     type: 'resource', sell: 10, img: 'assets/forestry/cedar_plank.png' },
-  plank_willow:    { id: 'plank_willow',    name: 'Willow Plank',    type: 'resource', sell: 16, img: 'assets/forestry/willow_plank.png' },
-  plank_maple:     { id: 'plank_maple',     name: 'Maple Plank',     type: 'resource', sell: 24, img: 'assets/forestry/maple_plank.png' },
-  plank_yew:       { id: 'plank_yew',       name: 'Yew Plank',       type: 'resource', sell: 36, img: 'assets/forestry/yew_plank.png' },
-  plank_runewood:  { id: 'plank_runewood',  name: 'Runewood Plank',  type: 'resource', sell: 60, img: 'assets/forestry/runewood_plank.png' },
-  plank_elderwood: { id: 'plank_elderwood', name: 'Elderwood Plank', type: 'resource', sell: 90, img: 'assets/forestry/elderwood_plank.png' },
+  plank_oak:       { id: 'plank_oak',       name: 'Oak Plank',       type: 'resource', invUse: 'plank', sell: 2,  img: 'assets/forestry/oak_plank.png' },
+  plank_pine:      { id: 'plank_pine',      name: 'Pine Plank',      type: 'resource', invUse: 'plank', sell: 4,  img: 'assets/forestry/pine_plank.png' },
+  plank_birch:     { id: 'plank_birch',     name: 'Birch Plank',     type: 'resource', invUse: 'plank', sell: 6,  img: 'assets/forestry/birch_plank.png' },
+  plank_cedar:     { id: 'plank_cedar',     name: 'Cedar Plank',     type: 'resource', invUse: 'plank', sell: 10, img: 'assets/forestry/cedar_plank.png' },
+  plank_willow:    { id: 'plank_willow',    name: 'Willow Plank',    type: 'resource', invUse: 'plank', sell: 16, img: 'assets/forestry/willow_plank.png' },
+  plank_maple:     { id: 'plank_maple',     name: 'Maple Plank',     type: 'resource', invUse: 'plank', sell: 24, img: 'assets/forestry/maple_plank.png' },
+  plank_yew:       { id: 'plank_yew',       name: 'Yew Plank',       type: 'resource', invUse: 'plank', sell: 36, img: 'assets/forestry/yew_plank.png' },
+  plank_runewood:  { id: 'plank_runewood',  name: 'Runewood Plank',  type: 'resource', invUse: 'plank', sell: 60, img: 'assets/forestry/runewood_plank.png' },
+  plank_elderwood: { id: 'plank_elderwood', name: 'Elderwood Plank', type: 'resource', invUse: 'plank', sell: 90, img: 'assets/forestry/elderwood_plank.png' },
 
   /* --------------------------- Materials --------------------------- */
   wood_handle:  { id: 'wood_handle',  name: 'Wood Handle',  type: 'material', sell: 2,  img: 'assets/materials/handle.png' },
@@ -74,7 +74,7 @@ export const ITEMS = {
   raw_bluefin_tuna: { id: 'raw_bluefin_tuna', name: 'Raw Bluefin Tuna', type: 'resource', sell: 90,  xp: 250, img: 'assets/food/raw_bluefin_tuna.png' },
   raw_sturgeon:     { id: 'raw_sturgeon',     name: 'Raw Sturgeon',     type: 'resource', sell: 125, xp: 350, img: 'assets/food/raw_sturgeon.png' },
 
-  // Rare secondary drop (not cooked)
+  // Rare secondary drop
   caviar:           { id: 'caviar',           name: 'Caviar',           type: 'resource', sell: 400, xp: 0,   img: 'assets/food/caviar.png', rarity: 'rare' },
 
   /* -------------------------- Cooked foods ------------------------- */
@@ -93,6 +93,7 @@ export const ITEMS = {
   ore_iron:      { id: 'ore_iron',      name: 'Iron Ore',     type: 'resource', sell: 8,  img: 'assets/materials/ore.png' },
   ore_coal:      { id: 'ore_coal',      name: 'Coal',         type: 'resource', sell: 16,  img: 'assets/materials/coal.png' },
   ore_nightiron: { id: 'ore_nightiron', name: 'Nightiron Ore', type: 'resource', sell: 32, img: 'assets/materials/nightiron.png' },
+  ore_asterium: { id: 'ore_asterium', name: 'Asterium Ore', type: 'resource', sell: 60, img: 'assets/materials/asterium.png' },
 
   /* ------------------------ Smithing resources --------------------- */
   bar_copper:            { id: 'bar_copper',            name: 'Copper Bar',       type: 'resource', sell: 3,   img: 'assets/materials/bar.png' },
@@ -100,11 +101,13 @@ export const ITEMS = {
   bar_iron:              { id: 'bar_iron',              name: 'Iron Bar',         type: 'resource', sell: 20,   img: 'assets/materials/bar.png' },
   bar_steel:             { id: 'bar_steel',             name: 'Steel Bar',        type: 'resource', sell: 40,  img: 'assets/materials/bar.png' },
   bar_blacksteel:        { id: 'bar_blacksteel',        name: 'Blacksteel Bar',   type: 'resource', sell: 90,  img: 'assets/materials/bar_nightiron.png' },
+  bar_starsteel:         { id: 'bar_starsteel',         name: 'Starsteel Bar',    type: 'resource', sell: 200,  img: 'assets/materials/starsteel_bar.png' },
   copper_upgrade_bar:    { id: 'copper_upgrade_bar',    name: 'Copper Upgrade Bar',   type: 'material', sell: 10,  icon: '➕', img: 'assets/equipment/armor-upgrade.png' },
   bronze_upgrade_bar:    { id: 'bronze_upgrade_bar',    name: 'Bronze Upgrade Bar',   type: 'material', sell: 28, icon: '➕', img: 'assets/equipment/armor-upgrade.png', tint: 'bronze' },
   iron_upgrade_bar:      { id: 'iron_upgrade_bar',      name: 'Iron Upgrade Bar',     type: 'material', sell: 70, icon: '➕', img: 'assets/equipment/armor-upgrade.png', tint: 'iron' },
   steel_upgrade_bar:     { id: 'steel_upgrade_bar',     name: 'Steel Upgrade Bar',    type: 'material', sell: 140, icon: '➕', img: 'assets/equipment/armor-upgrade.png', tint: 'steel' },
   blacksteel_upgrade_bar:{ id: 'blacksteel_upgrade_bar',name: 'Blacksteel Upgrade Bar',type: 'material', sell: 300, icon: '➕', img: 'assets/equipment/upgrade_nightiron.png', tint: 'steel' },
+  starsteel_upgrade_bar:{ id: 'starsteel_upgrade_bar',name: 'Starsteel Upgrade Bar',type: 'material', sell: 600, icon: '➕', img: 'assets/equipment/star_upgrade.png', tint: 'steel' },
 
   /* --------------------------- Copper set -------------------------- */
   copper_helm:   { id: 'copper_helm',   name: 'Copper Helm',     type: 'equipment', slot: 'head',   def: 3,  sell: 6,  img: 'assets/equipment/bronze-helm.png',   reqDef: 1 },
@@ -160,6 +163,36 @@ export const ITEMS = {
   blacksteel_dagger: { id: 'blacksteel_dagger', name: 'Blacksteel Dagger',  type: 'equipment', slot: 'weapon', atk: 24, str: 12, sell: 160, img: 'assets/equipment/dagger.png', tint: 'blacksteel', reqAtk: 35 },
   blacksteel_sword:  { id: 'blacksteel_sword',  name: 'Blacksteel Sword',   type: 'equipment', slot: 'weapon', atk: 30, str: 22, sell: 280, img: 'assets/equipment/sword.png',  tint: 'blacksteel', reqAtk: 35 },
   blacksteel_axe:    { id: 'blacksteel_axe',    name: 'Blacksteel Axe',     type: 'equipment', slot: 'weapon', atk: 20, str: 40, sell: 280, img: 'assets/equipment/axe.png',   tint: 'blacksteel', reqAtk: 35 },
+  /* ------------------------ Starsteel set ------------------------- */
+  starsteel_helm:   { id: 'starsteel_helm',   name: 'Starsteel Helm',    type: 'equipment', slot: 'head',   def: 25, sell: 440, img: 'assets/equipment/starhelm.png',   tint: 'starsteel', reqDef: 45 },
+  starsteel_plate:  { id: 'starsteel_plate',  name: 'Starsteel Plate',   type: 'equipment', slot: 'body',   def: 50, sell: 550, img: 'assets/equipment/starplate.png',  tint: 'starsteel', reqDef: 45 },
+  starsteel_legs:   { id: 'starsteel_legs',   name: 'Starsteel Greaves', type: 'equipment', slot: 'legs',   def: 35, sell: 660, img: 'assets/equipment/starlegs.png',   tint: 'starsteel', reqDef: 45 },
+  starsteel_gloves: { id: 'starsteel_gloves', name: 'Starsteel Gloves',  type: 'equipment', slot: 'gloves', def: 17, sell: 220, img: 'assets/equipment/stargloves.png', tint: 'starsteel', reqDef: 45 },
+  starsteel_boots:  { id: 'starsteel_boots',  name: 'Starsteel Boots',   type: 'equipment', slot: 'boots',  def: 17, sell: 220, img: 'assets/equipment/starboots.png',  tint: 'starsteel', reqDef: 45 },
+  starsteel_shield: { id: 'starsteel_shield', name: 'Starsteel Shield',  type: 'equipment', slot: 'shield', def: 39, sell: 660, img: 'assets/equipment/starshield.png', tint: 'starsteel', reqDef: 45 },
+
+  /* Rare (+10%) */
+  starsteel_helm_rare:   { id: 'starsteel_helm_rare',   name: 'Rare Starsteel Helm',    type: 'equipment', slot: 'head',   def: 28, sell: 600, img: 'assets/equipment/rare_starhelm.png',   tint: 'starsteel', reqDef: 45 },
+  starsteel_plate_rare:  { id: 'starsteel_plate_rare',  name: 'Rare Starsteel Plate',   type: 'equipment', slot: 'body',   def: 55, sell: 700, img: 'assets/equipment/rare_star_plate.png',  tint: 'starsteel', reqDef: 45 },
+  starsteel_legs_rare:   { id: 'starsteel_legs_rare',   name: 'Rare Starsteel Greaves', type: 'equipment', slot: 'legs',   def: 39, sell: 800, img: 'assets/equipment/rare_starlegs.png',   tint: 'starsteel', reqDef: 45 },
+  starsteel_gloves_rare: { id: 'starsteel_gloves_rare', name: 'Rare Starsteel Gloves',  type: 'equipment', slot: 'gloves', def: 19, sell: 300, img: 'assets/equipment/rare_stargloves.png', tint: 'starsteel', reqDef: 45 },
+  starsteel_boots_rare:  { id: 'starsteel_boots_rare',  name: 'Rare Starsteel Boots',   type: 'equipment', slot: 'boots',  def: 19, sell: 300, img: 'assets/equipment/rare_starboots.png',  tint: 'starsteel', reqDef: 45 },
+  starsteel_shield_rare: { id: 'starsteel_shield_rare', name: 'Rare Starsteel Shield',  type: 'equipment', slot: 'shield', def: 43, sell: 800, img: 'assets/equipment/rare_starshield.png', tint: 'starsteel', reqDef: 45 },
+
+  /* Weapons */
+  starsteel_dagger: { id: 'starsteel_dagger', name: 'Starsteel Dagger',  type: 'equipment', slot: 'weapon', atk: 32, str: 16, sell: 220, img: 'assets/equipment/stardagger.png', tint: 'starsteel', reqAtk: 45 },
+  starsteel_sword:  { id: 'starsteel_sword',  name: 'Starsteel Sword',   type: 'equipment', slot: 'weapon', atk: 40, str: 30, sell: 660, img: 'assets/equipment/starsword.png',  tint: 'starsteel', reqAtk: 45 },
+  starsteel_axe:    { id: 'starsteel_axe',    name: 'Starsteel Axe',     type: 'equipment', slot: 'weapon', atk: 29, str: 55, sell: 660, img: 'assets/equipment/starhammer.png',   tint: 'starsteel', reqAtk: 45 },
+
+  /* Rare weapons (+10%) */
+  starsteel_dagger_rare: { id: 'starsteel_dagger_rare', name: 'Rare Starsteel Dagger',  type: 'equipment', slot: 'weapon', atk: 35, str: 18, sell: 350, img: 'assets/equipment/rare_stardagger.png', tint: 'starsteel', reqAtk: 45 },
+  starsteel_sword_rare:  { id: 'starsteel_sword_rare',  name: 'Rare Starsteel Sword',   type: 'equipment', slot: 'weapon', atk: 44, str: 33, sell: 750, img: 'assets/equipment/rare_starsword.png',  tint: 'starsteel', reqAtk: 45 },
+  starsteel_axe_rare:    { id: 'starsteel_axe_rare',    name: 'Rare Starsteel Axe',     type: 'equipment', slot: 'weapon', atk: 32, str: 50, sell: 750, img: 'assets/equipment/rare_staraxe.png',   tint: 'starsteel', reqAtk: 45 },
+
+  /* ----------------------------- Tools ----------------------------- */
+  pick_starsteel: { id: 'pick_starsteel', name: 'Starsteel Pick', type: 'equipment', slot: 'pick', speed: 2.25, img: 'assets/equipment/starpick.png', tint: 'starsteel' },
+  axe_starsteel: { id: 'axe_starsteel', name: 'Starsteel Axe', type: 'equipment', slot: 'axe', speed: 2.25, img: 'assets/equipment/staraxe.png', tint: 'starsteel' },
+
 
   sandreaver:    { id: 'sandreaver',    name: 'Sandreaver',     type: 'equipment', slot: 'weapon', atk: 25, str: 45, sell: 400, img: 'assets/equipment/sandreaver.png', reqAtk: 38 },
   obsidian_maul:    { id: 'obsidian_maul',    name: 'Obsidian Maul',     type: 'equipment', slot: 'weapon', atk: 31, str: 52, sell: 600, img: 'assets/equipment/ob_maul.png', reqAtk: 42 },
@@ -265,6 +298,57 @@ export const ITEMS = {
       maxSec: 55,
     },
   },
+  tome_forest_advanced: {
+    id: 'tome_forest_advanced',
+    name: 'Advanced Forest Tome',
+    type: 'equipment',
+    slot: 'tome',
+    img: 'assets/materials/adv-forest.png',
+    sell: 65,
+    tome: {
+      kind: 'auto_gather',
+      skill: 'forestry',
+      resourceId: 'log_birch',
+      minLevel: 25,
+      baseSec: 45,
+      maxSec: 65,
+    },
+  },
+  
+  tome_sea_advanced: {
+    id: 'tome_sea_advanced',
+    name: 'Advanced Sea Tome',
+    type: 'equipment',
+    slot: 'tome',
+    img: 'assets/materials/adv-sea.png',
+    sell: 65,
+    tome: {
+      kind: 'auto_gather',
+      skill: 'fishing',
+      resourceId: 'raw_eel',
+      minLevel: 25,
+      baseSec: 45,
+      maxSec: 65,
+    },
+  },
+  
+  tome_rock_advanced: {
+    id: 'tome_rock_advanced',
+    name: 'Advanced Rock Tome',
+    type: 'equipment',
+    slot: 'tome',
+    img: 'assets/materials/adv-rock.png',
+    sell: 65,
+    tome: {
+      kind: 'auto_gather',
+      skill: 'mining',
+      resourceId: 'ore_iron',
+      minLevel: 25,
+      baseSec: 45,
+      maxSec: 65,
+    },
+  },
+  
 
   /* -------------------------- Ingredients ------------------------- */
   briar_oil:     { id: 'briar_oil',     name: 'Briar Oil',     type: 'reagent', sell: 5,  icon: '🛢️' },

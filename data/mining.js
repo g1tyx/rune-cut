@@ -5,6 +5,7 @@ export const ROCKS = [
     { id:'tin_rock',    name:'Tin Seam',     level:10,  baseTime:3200, xp:25, drop:'ore_tin' },
     { id:'iron_rock',   name:'Iron Deposit', level:20, baseTime:4000, xp:40, drop:'ore_iron' },
     { id:'coal_rock',     name:'Coal Bed',  level:30,  baseTime: 4200, xp: 60, drop:'ore_coal' },
-    { id:'nightiron_vein',name:'Nightiron Vein', level:40,  baseTime: 5600, xp: 90, drop:'ore_nightiron' }
+    { id:'nightiron_vein',name:'Nightiron Vein', level:40,  baseTime: 5600, xp: 90, drop:'ore_nightiron' },
+    { id:'asterium_cluster',name:'Asterium Cluster', level:52,  baseTime: 6000, xp: 135, drop:'ore_asterium' }
   ];
   

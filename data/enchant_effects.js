@@ -15,6 +15,12 @@ export const ENCHANT_CONSUMABLES = {
     // quicksilver_e_III:{ group:'swift', tier:3, addSpeed:0.75, slots:['axe','pick','fishing'], badge:'III' },
   };
   
+
+  export const GEAR_ENCHANTS = {
+    hp: { stat: 'hp'}
+  }
+
+
   export function getConsumableEffect(itemId){
     const base = String(itemId||'').split('@')[0];
     return ENCHANT_CONSUMABLES[base] || null;

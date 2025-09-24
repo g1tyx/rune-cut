@@ -17,7 +17,6 @@ import { setTab, wireRoutes } from './router.js';
 import { updateBar, resetBar } from './actionbars.js';
 import { qs } from '../utils/dom.js';
 import { renderAlchemy } from './alchemy.js';
-
 import './royal_service.js';
 import { renderRoyal } from './royal_service.js';
 
@@ -26,6 +25,7 @@ import { initCamp, renderCamp } from './camp.js';
 // 🔥 Auto-cook UI + logic (no boot-starts)
 import { initAutoCook } from '../systems/autocook.js';
 import { initAutoCookUI } from './autocook.js';
+import { initPets, renderPetsPanel } from './pets.js';
 
 // ---- hydrate first ----
 hydrateState();
@@ -168,9 +168,14 @@ function initialPaint(){
   renderPanelLogs();
   renderRoyal();
   renderAlchemy();
+
+  // camp + pets init AFTER other panels are painted
   initCamp();
+  initPets();         
   renderCamp();
+  renderPetsPanel();
 }
+
 
 // Combined re-render helper
 export function renderAllSkillingPanels(){
@@ -187,6 +192,7 @@ export function renderAllSkillingPanels(){
   renderEquipment?.();
   renderSkills?.();
   renderRoyal?.();
+  renderPetsPanel?.();
 }
 
 window.addEventListener('inventory:change', () => {

@@ -13,7 +13,8 @@
 <script src="core.js"></script>
   <header>
     <div class="brand">Rune<b>Cut</b> · <span class="muted">Incremental</span></div>
-    <button id="tabCamp">Camp</button>
+    <button id="tabCamp" class="tab-btn" type="button">Camp</button>
+    <button id="tabPets" type="button">Pets 🔒</button>
   
     <div class="row">
       <button id="saveBtn" class="btn-success">Save</button>
@@ -84,21 +85,22 @@
             <div class="tile-level">Lvl <b id="cookLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="cookBarMini"></div></div>
           </div>
-          <div class="skill-tile" id="tile-enchant">
-            <div class="tile-header">🪄 <span>Enchanting</span></div>
-            <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
-            <div class="progress xs"><div class="bar" id="enchantBarMini"></div></div>
-          </div>
-          <div class="skill-tile" id="tile-construct">
-            <div class="tile-header">🏕️ <span>Construction</span></div>
-            <div class="tile-level">Lvl <b id="constructionLevelMini">1</b></div>
-            <div class="progress xs"><div class="bar" id="constructionBarMini"></div></div>
-          </div>
           <div class="skill-tile" id="tile-alch">
             <div class="tile-header">🧪 <span>Alchemy</span></div>
             <div class="tile-level">Lvl <b id="alchemyLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="alchemyBarMini"></div></div>
           </div>
+          <div class="skill-tile" id="tile-construct">
+            <div class="tile-header">🏕️ <span>Construct</span></div>
+            <div class="tile-level">Lvl <b id="constructionLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="constructionBarMini"></div></div>
+          </div>
+          <div class="skill-tile" id="tile-enchant">
+            <div class="tile-header">🪄 <span>Enchanting</span></div>
+            <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="enchantBarMini"></div></div>
+          </div>
+          
           <div class="skill-tile" id="tile-atk">
             <div class="tile-header">⚔️ <span>Attack</span></div>
             <div class="tile-level">Lvl <b id="atkLevelMini">1</b></div>
@@ -117,7 +119,7 @@
 
           <!-- NEW: Royal Service mini tile -->
           <div class="skill-tile" id="tile-royal">
-            <div class="tile-header">👑 <span>Royal Service</span></div>
+            <div class="tile-header">👑 <span>Service</span></div>
             <div class="tile-level">Lvl <b id="royalLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="royalBarMini"></div></div>
           </div>
@@ -270,6 +272,7 @@
                 <option value="iron">Iron</option>
                 <option value="steel">Steel</option>
                 <option value="blacksteel">Blacksteel</option>
+                <option value="starsteel">Starsteel</option>
               </select>
 
               <select id="upgradeTarget" style="min-width:220px;">
@@ -449,7 +452,7 @@
       </section>
     </div>
     <footer>
-      Version: 1.5.16
+      Version: 1.5.22
     </footer>
   </div>
   
@@ -533,6 +536,14 @@
     <aside class="camp-inspector" id="campInspector"></aside>
     <div class="camp-hud" id="campHud">
       <button id="campBackBtn" class="camp-back" type="button" aria-label="Back">← Back</button>
+    </div>
+  </section>
+
+  <section id="petsOverlay" class="pets-overlay hidden" aria-modal="true" role="dialog">
+    <div class="pets-box" id="petsBox">
+      <button id="petsBackBtn" class="close-btn" aria-label="Close pets overlay">×</button>
+      <h2>Pets</h2>
+      <div id="petsPanel" class="pets-panel"></div>
     </div>
   </section>
 

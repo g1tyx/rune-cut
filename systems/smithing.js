@@ -2,12 +2,27 @@
 import { SMELT_RECIPES, FORGE_RECIPES } from '../data/smithing.js';
 import { addItem, removeItem } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
+import { ITEMS } from '../data/items.js';
 
 const XP_TABLE = buildXpTable();
 const speedFromLevel = lvl => 1 + 0.02*(lvl-1);
 const clampMs = (ms)=> Math.max(100, ms);
 
-export const UPGRADE_METALS = ['copper','bronze','iron', 'steel', 'blacksteel'];
+const RARE_FORGE_CHANCE = 0.10;
+
+function maybeRareForgeId(baseId){
+  const base = ITEMS[baseId];
+  if (!base || base.type !== 'equipment') return baseId;
+  const slot = base.slot;
+  const allow = new Set(['head','body','legs','gloves','boots','shield','weapon']);
+  if (!allow.has(slot)) return baseId;
+
+  const rareId = `${baseId}_rare`;
+  if (!ITEMS[rareId]) return baseId;
+  return Math.random() < RARE_FORGE_CHANCE ? rareId : baseId;
+}
+
+export const UPGRADE_METALS = ['copper','bronze','iron', 'steel', 'blacksteel', 'starsteel'];
 
 export const upgradeBarIdForMetal = (metal='copper') => `${metal}_upgrade_bar`;
 
@@ -183,8 +198,14 @@ export function finishForge(state){
   spendExtras(state, rec);
 
   const lvl = levelFromXp(state.smithXp || 0, XP_TABLE);
+
+  // Roll rare on the OUTPUT base id
+  const baseOutId = maybeRareForgeId(rec.id);
+
   const giveQuality = (rec.kind !== 'material') && (rec.quality !== false);
-  const outId = giveQuality ? `${rec.id}@${rollQuality(lvl, rec.level || 1)}` : rec.id;
+  const outId = giveQuality
+    ? `${baseOutId}@${rollQuality(lvl, rec.level || 1)}`
+    : baseOutId;
 
   addItem(state, outId, 1);
   const gain = rec.xp || 0;

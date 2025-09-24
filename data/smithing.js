@@ -53,7 +53,18 @@ export const SMELT_RECIPES = {
       { id: 'ore_nightiron', qty: 2 },
       { id: 'ore_coal', qty: 1 }
     ]
-  }
+  },
+  bar_starsteel: {
+    id: 'bar_starsteel',
+    name: 'Starsteel Bar',
+    level: 50,
+    time: 3000,
+    xp: 90,
+    inputs: [
+      { id: 'ore_asterium', qty: 2 },
+      { id: 'ore_coal', qty: 2 }
+    ]
+  },
 };
 
 export const FORGE_RECIPES = [
@@ -119,8 +130,24 @@ export const FORGE_RECIPES = [
   { id:'blacksteel_dagger', metal:'blacksteel', name:'Blacksteel Dagger',     barId:'bar_blacksteel', bars:1, time:3300, xp:99,  extras:[{ id:'wood_handle', qty:1 }], level:40 }, // 90 *1.1
   { id:'blacksteel_sword',  metal:'blacksteel', name:'Blacksteel Sword',      barId:'bar_blacksteel', bars:3, time:4100, xp:297, extras:[{ id:'wood_handle', qty:1 }], level:43 }, // 270 *1.1
   { id:'blacksteel_axe',    metal:'blacksteel', name:'Blacksteel Axe',  barId:'bar_blacksteel', bars:3, time:4100, xp:297, extras:[{ id:'wood_handle', qty:1 }], level:45 }, // 270 *1.1
-  { id:'axe_blacksteel',    metal:'blacksteel', name:'Blacksteel Axe',        barId:'bar_blacksteel', bars:2, time:3300, xp:198, extras:[{ id:'wood_handle', qty:1 }], quality:false, level:40 }, // 180 *1.1
-  { id:'pick_blacksteel',   metal:'blacksteel', name:'Blacksteel Pickaxe',    barId:'bar_blacksteel', bars:2, time:3600, xp:198, extras:[{ id:'wood_handle', qty:1 }], quality:false, level:40 }, // 180 *1.1
+  { id:'axe_blacksteel',    metal:'blacksteel', name:'Blacksteel Axe',        barId:'bar_blacksteel', bars:2, time:3300, xp:198, extras:[{ id:'wood_handle', qty:1 }], quality:false, level:40 },
+  { id:'pick_blacksteel',   metal:'blacksteel', name:'Blacksteel Pickaxe',    barId:'bar_blacksteel', bars:2, time:3600, xp:198, extras:[{ id:'wood_handle', qty:1 }], quality:false, level:40 },
+
+  // --- Starsteel gear (lvl 50+)
+  { id:'starsteel_helm',   metal:'starsteel', name:'Starsteel Helm',       barId:'bar_starsteel', bars:2, time:4500, xp:300, level:51, rareChance:0.10, rareId:'starsteel_helm_rare' },
+  { id:'starsteel_plate',  metal:'starsteel', name:'Starsteel Platebody',  barId:'bar_starsteel', bars:1, time:5600, xp:750, level:55, rareChance:0.10, rareId:'starsteel_plate_rare' },
+  { id:'starsteel_legs',   metal:'starsteel', name:'Starsteel Platelegs',  barId:'bar_starsteel', bars:4, time:5000, xp:600, level:53, rareChance:0.10, rareId:'starsteel_legs_rare' },
+  { id:'starsteel_gloves', metal:'starsteel', name:'Starsteel Gloves',     barId:'bar_starsteel', bars:1, time:3500, xp:150, level:50, rareChance:0.10, rareId:'starsteel_gloves_rare' },
+  { id:'starsteel_boots',  metal:'starsteel', name:'Starsteel Boots',      barId:'bar_starsteel', bars:1, time:3500, xp:150, level:50, rareChance:0.10, rareId:'starsteel_boots_rare' },
+  { id:'starsteel_shield', metal:'starsteel', name:'Starsteel Shield',     barId:'bar_starsteel', bars:3, time:5200, xp:450, level:54, rareChance:0.10, rareId:'starsteel_shield_rare' },
+
+  { id:'starsteel_dagger', metal:'starsteel', name:'Starsteel Dagger',     barId:'bar_starsteel', bars:1, time:3700, xp:150, level:50, extras:[{ id:'wood_handle', qty:1 }], xpBonusRareHandle:10, rareChance:0.10, rareId:'starsteel_dagger_rare' },
+  { id:'starsteel_sword',  metal:'starsteel', name:'Starsteel Sword',      barId:'bar_starsteel', bars:3, time:4700, xp:450, level:53, extras:[{ id:'wood_handle', qty:1 }], xpBonusRareHandle:10, rareChance:0.10, rareId:'starsteel_sword_rare' },
+  { id:'starsteel_axe',    metal:'starsteel', name:'Starsteel Axe',        barId:'bar_starsteel', bars:3, time:4700, xp:450, level:55, extras:[{ id:'wood_handle', qty:1 }], xpBonusRareHandle:10, rareChance:0.10, rareId:'starsteel_axe_rare' },
+
+  { id:'axe_starsteel',  metal:'starsteel', name:'Starsteel Axe',     barId:'bar_starsteel', bars:2, time:3800, xp:300, level:50, quality:false, extras:[{ id:'wood_handle', qty:1 }]},
+  { id:'pick_starsteel', metal:'starsteel', name:'Starsteel Pickaxe', barId:'bar_starsteel', bars:2, time:4100, xp:300, level:50, quality:false, extras:[{ id:'wood_handle', qty:1 }]},
+
 
   // Upgrade materials
   { id:'copper_upgrade_bar', name:'Copper Upgrade Bar', metal:'copper', barId:'bar_copper', bars:3, time:1200, xp:18, kind:'material', quality:false, level:5 },
@@ -128,4 +155,5 @@ export const FORGE_RECIPES = [
   { id:'iron_upgrade_bar',   name:'Iron Upgrade Bar',   metal:'iron',   barId:'bar_iron',   bars:3, time:2000, xp:75, kind:'material', quality:false, level:25 },
   { id:'steel_upgrade_bar',      name:'Steel Upgrade Bar',      metal:'steel',      barId:'bar_steel',      bars:3, time:2300, xp:150,  kind:'material', quality:false, level:30 },
   { id:'blacksteel_upgrade_bar', name:'Blacksteel Upgrade Bar', metal:'blacksteel', barId:'bar_blacksteel', bars:3, time:2700, xp:270,  kind:'material', quality:false, level:40 },
+  { id:'starsteel_upgrade_bar', name:'starsteel Upgrade Bar', metal:'starsteel', barId:'bar_starsteel', bars:3, time:2900, xp:450,  kind:'material', quality:false, level:50 },
 ];

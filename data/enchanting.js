@@ -90,6 +90,51 @@ export const ENCHANT_RECIPES = {
     ],
     xp: { skill: 'enchant', amount: 45 }
   },
+  tome_forest_advanced: {
+    id: 'tome_forest_advanced',
+    name: 'Enchant Advanced Forest Tome',
+    level: 25,
+    time: 1300,
+    mana: 15,
+    inputs: [
+      { id: 'book', qty: 1 },
+      { id: 'forest_essence', qty: 3 }
+    ],
+    outputs: [
+      { id: 'tome_forest_advanced', qty: 1 }
+    ],
+    xp: { skill: 'enchant', amount: 85 }
+  },
+  tome_sea_advanced: {
+    id: 'tome_sea_advanced',
+    name: 'Enchant Advanced Sea Tome',
+    level: 25,
+    time: 1300,
+    mana: 15,
+    inputs: [
+      { id: 'book', qty: 1 },
+      { id: 'sea_essence', qty: 3 }
+    ],
+    outputs: [
+      { id: 'tome_sea_advanced', qty: 1 }
+    ],
+    xp: { skill: 'enchant', amount: 85 }
+  },
+  tome_rock_advanced: {
+    id: 'tome_rock_advanced',
+    name: 'Enchant Advanced Rock Tome',
+    level: 25,
+    time: 1300,
+    mana: 15,
+    inputs: [
+      { id: 'book', qty: 1 },
+      { id: 'rock_essence', qty: 3 }
+    ],
+    outputs: [
+      { id: 'tome_rock_advanced', qty: 1 }
+    ],
+    xp: { skill: 'enchant', amount: 85 }
+  },
   swift_tools_I: {
     id: 'swift_tools_I',
     name: 'Swiftness (I)',
