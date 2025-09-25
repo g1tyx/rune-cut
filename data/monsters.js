@@ -9,7 +9,7 @@ export const MONSTERS = [
   { id:'bramble_sprite', name:'Bramble Sprite', level:3, time:3000,
     zone:'Swamp', hp:24, attack:6, defense:4, maxHit:4,
     xp:{attack:30,strength:30,defense:30},
-    drops:[{id:'briar_oil', chance:0.25},{id:'bramble_heart', chance:0.08},{gold:4, chance:0.7}],
+    drops:[{id:'briar_oil', chance:0.25},{id:'bramble_heart', chance:0.12},{gold:4, chance:0.7}],
     img:'assets/monsters/bramble_sprite.png'
   },
   { id:'gutter_rat', name:'Gutter Rat', level:7, time:3400,

@@ -155,5 +155,5 @@ export const FORGE_RECIPES = [
   { id:'iron_upgrade_bar',   name:'Iron Upgrade Bar',   metal:'iron',   barId:'bar_iron',   bars:3, time:2000, xp:75, kind:'material', quality:false, level:25 },
   { id:'steel_upgrade_bar',      name:'Steel Upgrade Bar',      metal:'steel',      barId:'bar_steel',      bars:3, time:2300, xp:150,  kind:'material', quality:false, level:30 },
   { id:'blacksteel_upgrade_bar', name:'Blacksteel Upgrade Bar', metal:'blacksteel', barId:'bar_blacksteel', bars:3, time:2700, xp:270,  kind:'material', quality:false, level:40 },
-  { id:'starsteel_upgrade_bar', name:'starsteel Upgrade Bar', metal:'starsteel', barId:'bar_starsteel', bars:3, time:2900, xp:450,  kind:'material', quality:false, level:50 },
+  { id:'starsteel_upgrade_bar', name:'Starsteel Upgrade Bar', metal:'starsteel', barId:'bar_starsteel', bars:3, time:2900, xp:450,  kind:'material', quality:false, level:50 },
 ];

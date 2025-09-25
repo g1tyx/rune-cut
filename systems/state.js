@@ -1,11 +1,11 @@
 // /systems/state.js
+import { addPet } from './pet.js';
 
 const SAVE_KEY = 'runecut-save';
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 4;
 
-/* ---------------- Fresh state factory ---------------- */
 export function defaultState(){
-  return {
+  const base = {
     version: SAVE_VERSION,
 
     gold: 0,
@@ -33,23 +33,22 @@ export function defaultState(){
     royalContract: null,
     royalHistory: [],
 
-    unlocks: {
-      autobattle: false,     // unlocked at 25 Favor
-    },
-    autobattleByMonster: {}, // { [monsterId]: true|false }
+    unlocks: { autobattle: false },
+    autobattleByMonster: {},
 
     // Discoveries / progression
     monsterKills: {},
     discoveredDrops: {},
 
-    pets: { cheeken: true },
+    // Pets (full stat objects live here)
+    pets: {},
 
     // UI/logging
     logs: [],
     logFilter: 'all',
-    ui: {},
+    ui: { activePet: null },
 
-    // --- Camp / Construction (PERSISTED) ---
+    // Camp / Construction
     camp: { gridW: 36, gridH: 12, placed: [] },
 
     // Selections
@@ -64,35 +63,18 @@ export function defaultState(){
     hpCurrent: null,
     manaCurrent: 0,
 
-    // Internal utility
     _jobSeq: 0,
     lastDamageMs: 0,
   };
+
+  // Starter pet if nothing else sets it later
+  addPet(base, 'cheeken');
+
+  return base;
 }
 
-/* ---------------- Live singleton ---------------- */
 export const state = defaultState();
 
-/* ---------------- Helpers ---------------- */
-function sanitizeCamp(c){
-  const base = { gridW:36, gridH:12, placed:[] };
-  if (!c || typeof c !== 'object') return base;
-
-  const gridW = Number.isFinite(c.gridW) ? c.gridW : 36;
-  const gridH = Number.isFinite(c.gridH) ? c.gridH : 12;
-
-  const placed = Array.isArray(c.placed) ? c.placed.map(p => ({
-    id: String(p?.id || ''),
-    x: Math.max(0, (p?.x|0)),
-    y: Math.max(0, (p?.y|0)),
-    rot: (p?.rot|0) || 0,
-    status: 'active',
-  })) : [];
-
-  return { gridW, gridH, placed };
-}
-
-/* ---------------- Persistence ---------------- */
 function safeToSave(s){
   return {
     version: SAVE_VERSION,
@@ -103,13 +85,12 @@ function safeToSave(s){
     atkXp: s.atkXp||0, strXp: s.strXp||0, defXp: s.defXp||0,
     smithXp: s.smithXp||0, craftXp: s.craftXp||0, cookXp: s.cookXp||0,
     enchantXp: s.enchantXp||0, alchXp: s.alchXp||0,
-    constructionXp: s.constructionXp||0,
+    constructionXp: s.constructionXp||0, royalXp: s.royalXp||0,
 
     inventory: s.inventory || {},
     equipment: s.equipment || {},
     equipmentMods: s.equipmentMods || {},
 
-    royalXp: s.royalXp||0,
     royalContract: s.royalContract ?? null,
     royalFavor: s.royalFavor||0,
     royalHistory: Array.isArray(s.royalHistory) ? s.royalHistory : [],
@@ -119,11 +100,14 @@ function safeToSave(s){
     monsterKills: s.monsterKills || {},
     discoveredDrops: s.discoveredDrops || {},
 
+    // Pets are stored exactly as maintained at runtime (no normalization)
+    pets: s.pets || {},
+
     logs: Array.isArray(s.logs) ? s.logs : [],
     logFilter: s.logFilter || 'all',
-    ui: s.ui || {},
+    ui: s.ui || { activePet: null },
 
-    camp: sanitizeCamp(s.camp),
+    camp: s.camp,
 
     selectedTreeId: s.selectedTreeId || 'oak',
     selectedSpotId: s.selectedSpotId || 'pond_shallows',
@@ -136,6 +120,7 @@ function safeToSave(s){
     manaCurrent: s.manaCurrent == null ? 0 : s.manaCurrent,
 
     _jobSeq: s._jobSeq || 0,
+    lastDamageMs: s.lastDamageMs || 0,
   };
 }
 
@@ -156,75 +141,31 @@ export function loadState(){
   }
 }
 
-/* ---------------- Migrator ---------------- */
-function migrateLoaded(loaded){
-  if (!loaded || typeof loaded !== 'object') return null;
-
-  if (!loaded.version) loaded.version = 1;
-
-  loaded.inventory       = loaded.inventory       || {};
-  loaded.equipment       = loaded.equipment       || {};
-  loaded.equipmentMods   = loaded.equipmentMods   || {};
-  loaded.monsterKills    = loaded.monsterKills    || {};
-  loaded.discoveredDrops = loaded.discoveredDrops || {};
-  loaded.logs            = Array.isArray(loaded.logs) ? loaded.logs : [];
-  loaded.royalHistory    = Array.isArray(loaded.royalHistory) ? loaded.royalHistory : [];
-  loaded.ui              = loaded.ui || {};
-  delete loaded.lastDamageMs;
-
-  // Normalize equipment slots
-  const eqBase = defaultState().equipment;
-  loaded.equipment = { ...eqBase, ...loaded.equipment };
-
-  if (!loaded.unlocks || typeof loaded.unlocks !== 'object') loaded.unlocks = { autobattle:false };
-  if (!loaded.autobattleByMonster || typeof loaded.autobattleByMonster !== 'object') loaded.autobattleByMonster = {};
-
-  // Ensure constructionXp exists
-  if (typeof loaded.constructionXp !== 'number') loaded.constructionXp = 0;
-
-  if (typeof loaded.royalFavor !== 'number') loaded.royalFavor = 0;
-
-  // Ensure camp exists & normalized
-  loaded.camp = sanitizeCamp(loaded.camp);
-
-  loaded.version = SAVE_VERSION;
-  return loaded;
-}
-
-/* ---------------- Hydration ---------------- */
 export function hydrateState(){
-  const loadedRaw = loadState();
-  const loaded = migrateLoaded(loadedRaw);
-  const base = defaultState();
+  const loaded = loadState();
 
   if (!loaded){
-    Object.assign(state, base);
+    // brand new: keep defaults (which include cheeken via addPet)
+    for (const k of Object.keys(state)) delete state[k];
+    Object.assign(state, defaultState());
     return state;
   }
 
-  const merged = {
-    ...base,
-    ...loaded,
-    inventory:       { ...base.inventory,       ...loaded.inventory },
-    equipment:       { ...base.equipment,       ...loaded.equipment },
-    equipmentMods:   { ...base.equipmentMods,   ...loaded.equipmentMods },
-    monsterKills:    { ...base.monsterKills,    ...loaded.monsterKills },
-    discoveredDrops: { ...base.discoveredDrops, ...loaded.discoveredDrops },
-    ui:              { ...base.ui,              ...loaded.ui },
-    camp:            sanitizeCamp(loaded.camp),
-    unlocks:         { ...base.unlocks,         ...loaded.unlocks },
-    autobattleByMonster: { ...base.autobattleByMonster, ...loaded.autobattleByMonster },
-  };
-
-  merged.lastDamageMs = 0;
-  merged.logs = loaded.logs;
-  merged.royalHistory = loaded.royalHistory;
-
-  merged.action = null;
-  merged.combat = null;
-
+  // Replace live state with loaded data
   for (const k of Object.keys(state)) delete state[k];
-  Object.assign(state, merged);
+  Object.assign(state, { ...defaultState(), ...loaded, version: SAVE_VERSION });
+
+  // If there are no pets at all in the save, add starter and do NOT modify existing otherwise
+  if (!state.pets || Object.keys(state.pets).length === 0){
+    state.pets = {};
+    addPet(state, 'cheeken');
+  }
+
+  // If there's no activePet but pets exist, pick the first key (explicit, minimal)
+  if (!state.ui) state.ui = {};
+  if (!state.ui.activePet && state.pets && Object.keys(state.pets).length){
+    state.ui.activePet = Object.keys(state.pets)[0];
+  }
 
   return state;
 }

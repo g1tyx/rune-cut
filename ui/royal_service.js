@@ -30,9 +30,14 @@ const FAVOR_BONUSES = [
     id: 'autobattle',
     name: 'Autobattle',
     need: 25,
-    desc: 'Adds a checkbox in the combat card. When enabled, you will automatically re-engage the selected monster for 3 minutes until you are defeated, flee, or close the combat screen.'
+    desc: 'Adds an Autobattle checkbox on the combat card to auto re-engage for 3 minutes.'
   },
-  // future: more bonuses here...
+  {
+    id: 'pet_sterling',
+    name: 'Royal Service Dog',
+    need: 50,
+    desc: 'Earn the loyal hound Sterling after serving the royal court. Stronger than Cheeken.'
+  }
 ];
 
 /* ------------------------ helpers ------------------------ */
@@ -42,6 +47,7 @@ function iconForItem(id){
   const it  = ITEMS?.[bid];
   return it?.img || '';
 }
+
 function ensureRoyalCss(){
   if (document.getElementById('royal-css')) return;
   const css = document.createElement('style');
@@ -91,18 +97,17 @@ function ensureRoyalBonusCss(){
   css.id = 'royal-bonus-css';
   css.textContent = `
     #royalBonusesWrap { margin-top: 14px; }
-    #royalBonuses { display:grid; grid-template-columns: repeat(auto-fill,1fr); gap:10px; margin:8px 0; }
+    #royalBonuses { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:10px; margin:8px 0; }
     .bonus-card { position:relative; border:1px solid rgba(0,0,0,0.1); border-radius:10px; padding:10px; background:#0d1117; color:#e6edf3; }
-    .bonus-card.locked { opacity:0.6; filter:saturate(0.6); }
+    .bonus-card.locked { opacity:0.65; filter:saturate(0.75); }
     .bonus-card .title { font-weight:700; margin-bottom:4px; }
-    .bonus-card .req   { font-size:12px; opacity:0.8; }
+    .bonus-card .req   { font-size:12px; opacity:0.85; }
     .bonus-card .pill  { position:absolute; top:8px; right:8px; font-size:11px; padding:2px 6px; border-radius:999px; background:#222c; }
-    .bonus-card.unlocked .pill { background:#15714b; color: #e6edf3; font-weight:600 }
+    .bonus-card.unlocked .pill { background:#15714b; color:#e6edf3; font-weight:600; }
   `;
   document.head.appendChild(css);
 }
 ensureRoyalBonusCss();
-
 
 function celebrateComplete(){
   const n = document.createElement('div');
@@ -121,11 +126,11 @@ function patronLine(ctr){
     case 'Armorer':
       return `The Royal Armorer has issued a contract to arm the kingdom's troops:`;
     case 'Steward':
-      return `The Royal Quartermaster has requested the following food supplies in service to the kingdom:`;
+      return `The Royal Steward has requested the following food supplies:`;
     case 'Craftsman':
-      return `The Royal Craftsman has requested the following in service to the kingdom:`;
+      return `The Royal Craftsman has requested the following goods:`;
     default:
-      return `A Royal Patron has requested the following in service to the kingdom:`;
+      return `A Royal Patron has requested the following:`;
   }
 }
 
@@ -139,13 +144,12 @@ function renderContract(){
   }
   el.abandonBtn?.removeAttribute('disabled');
 
-  // Build task list with small icons for Deliver tasks
   const tasksHtml = ctr.tasks.map(t=>{
     if (t.kind==='deliver') {
       const p = taskProgress(t);
       const icon = iconForItem(t.id);
       const canTurn = canTurnInItemTask(t);
-      const btn = canTurn ? `<button class="btn-success" data-act="turnin">Turn In</button>` : '';
+      const btn = canTurn ? `<button class="btn-success" data-act="turnin" data-id="${t.id}">Turn In</button>` : '';
       return `<li>
         <div class="task-row">
           <img class="task-icon" src="${icon}" alt="" width="24" height="24" loading="lazy"
@@ -169,6 +173,7 @@ function renderContract(){
         </div>
       </li>`;
     }
+    // delivered item already:
     return `<li>
       <div class="task-row">
         <div class="task done">
@@ -178,7 +183,6 @@ function renderContract(){
     </li>`;
   }).join('');
 
-  // Contract-level turn-in availability
   const readyForAll = ctr.tasks.every(t=>{
     if (t.kind==='slay'){
       const p = taskProgress(t);
@@ -211,7 +215,7 @@ function renderContract(){
     });
   });
 
-  // bulk "Turn In Contract"
+  // bulk "Turn In"
   el.contractBox.querySelector('#royalTurnInAllBtn')?.addEventListener('click', ()=>{
     const ctr2 = state.royalContract;
     if (!ctr2) return;
@@ -239,7 +243,6 @@ function ensureBonusContainer(){
     wrap = document.createElement('div');
     wrap.id = 'royalBonusesWrap';
     wrap.innerHTML = `<div class="muted" style="margin:6px 0 2px;">Favor Bonuses</div><div id="royalBonuses"></div>`;
-    // ⬇️ place AFTER the contract box
     if (el.contractBox && el.contractBox.parentNode){
       el.contractBox.insertAdjacentElement('afterend', wrap);
     } else {
@@ -255,12 +258,12 @@ function renderBonuses(){
 
   const cards = FAVOR_BONUSES.map(b => {
     const unlocked = favor >= b.need;
-    // persist unlock flag (once unlocked, keep it)
-    if (unlocked && !state.unlocks?.[b.id]) {
+    // persist unlock flags for non-pet bonuses only; pet grant is handled in systems/royal_service.js
+    if (unlocked && b.id !== 'pet_sterling') {
       state.unlocks = state.unlocks || {};
       state.unlocks[b.id] = true;
     }
-    const cls = `bonus-card ${unlocked ? 'unlocked' : 'locked'}`;
+    const cls  = `bonus-card ${unlocked ? 'unlocked' : 'locked'}`;
     const pill = unlocked ? 'Unlocked' : `Needs ${b.need} Favor`;
     return `<div class="${cls}" title="${b.desc.replace(/"/g,'&quot;')}">
       <div class="title">${b.name}</div>
@@ -277,8 +280,8 @@ function renderBonuses(){
 export function renderRoyal(){
   if (!el.panel) return;
   renderHeader();
-  renderContract();  // ⬅️ contract first
-  renderBonuses();   // ⬅️ bonuses below the contract
+  renderContract();
+  renderBonuses();
 }
 
 /* ------------------------ wire up ------------------------ */
@@ -287,8 +290,6 @@ export function renderRoyal(){
     console.warn('[Royal UI] panel not found: #tab-royal');
     return;
   }
-  if (!el.requestBtn) console.warn('[Royal UI] requestBtn not found: #royalRequestBtn');
-  if (!el.abandonBtn) console.warn('[Royal UI] abandonBtn not found: #royalAbandonBtn');
 
   el.requestBtn?.addEventListener('click', ()=>{
     const got = tryOfferContract();
@@ -316,4 +317,7 @@ export function renderRoyal(){
     celebrateComplete();
     renderRoyal();
   });
+
+  // Initial paint
+  renderRoyal();
 })();
