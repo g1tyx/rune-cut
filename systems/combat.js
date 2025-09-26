@@ -45,7 +45,8 @@ function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
 function totalAccBonus(s){
   let n = 0;
   for (const eff of getActiveEffects(s)){
-    const v = Number(eff?.data?.accBonus) || 0;
+    // Accept either key to be compatible with older effects
+    const v = Number((eff?.data?.accBonus ?? eff?.data?.hitBonus) || 0);
     if (v) n += v;
   }
   return n;
@@ -61,7 +62,15 @@ function totalDmgReduce(s){
 
 /* ---------------- discovery helpers ---------------- */
 function dropKey(d){ if (!d) return null; if (d.id) return `item:${d.id}`; if (d.gold) return `gold:${d.gold}`; return null; }
-function recordDiscovery(s, d){ const k = dropKey(d); if (!k) return; s.discoveredDrops = s.discoveredDrops || {}; s.discoveredDrops[k] = true; }
+function recordDiscovery(s, d){
+  const k = dropKey(d); if (!k) return;
+  s.discoveredDrops = s.discoveredDrops || {};
+  const firstTime = !s.discoveredDrops[k];
+  s.discoveredDrops[k] = true;
+  if (firstTime){
+    try { window.dispatchEvent(new Event('drops:discover')); } catch {}
+  }
+}
 
 /* ---------------- gear sum ---------------- */
 function sumEquip(s, key){
@@ -177,6 +186,7 @@ export function beginFight(state, monsterId, opts = {}){
   } else {
     const maxHp = hpMaxFor(state);
     if (state.hpCurrent == null) state.hpCurrent = maxHp;
+    else state.hpCurrent = Math.max(1, Math.min(maxHp, state.hpCurrent|0));
     state.combat = {
       monsterId: mon.id,
       monHp: mon.hp | 0,
@@ -294,19 +304,20 @@ export function turnFight(s){
       // Recalc ALL stats on the pet & FULL HEAL (single source of truth in state)
       const petId = combat.petId || s.ui?.activePet;
       applyLevelAndRecalc(s, petId, s.pets[petId].level);
-      // also ensure combat reflects healed vitals right before we clear it (optional)
+      // also ensure combat reflects healed vitals right before we clear (optional)
       combat.petMax = s.pets[petId].maxHp;
       combat.petHp  = s.pets[petId].hp;
+
+      const payload = awardWin(s, mon, { playerXp:false }); // award loot for pets
 
       log.push(`${ps.name} defeated ${mon.name}!`);
       log.push(`${ps.name} gains ${petRes.gained} pet xp.` + (petRes.newLevel > (petRes.oldLevel||0) ? ` Level up! ${petRes.oldLevel} → ${petRes.newLevel}.` : ''));
 
-      // Clear combat; UI will repaint from state (pet now full-healed & updated stats)
-      s.combat = null;
-
-      // If you award loot/xp to player here, keep your existing call:
-      // const payload = awardWin(s, mon, { playerXp:false });
-      return { done:true, win:true, log, petXp: petRes.gained, petLevel: petRes.newLevel };
+      return {
+        done:true, win:true, log,
+        loot: payload.loot || [],
+        petXp: petRes.gained, petLevel: petRes.newLevel
+      };
     }
 
     // Monster hits pet
@@ -328,7 +339,7 @@ export function turnFight(s){
     // LOSS
     if ((combat.petHp|0) <= 0){
       const petId = combat.petId || s.ui?.activePet;
-      // On loss you said: “bring hp back to max (because we can’t heal)”
+      // On loss: bring hp back to max (no healing system)
       applyLevelAndRecalc(s, petId, s.pets[petId].level);
 
       const name = ps.name;
@@ -392,4 +403,3 @@ export function turnFight(s){
 
   return { done:false, log };
 }
-

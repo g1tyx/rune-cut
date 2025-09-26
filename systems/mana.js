@@ -7,21 +7,22 @@ import { applyEffect } from './effects.js';
 export const MANA_BASE_MAX = 10;
 
 const _manaSubs = new Set();
+let _pendingNotify = false;
 function _notifyMana(state){
-  for (const cb of _manaSubs) { try { cb(state); } catch {} }
-  try { window.dispatchEvent(new CustomEvent('mana:change')); } catch {}
+  // Coalesce notifications to once-per-frame
+  if (_pendingNotify) return;
+  _pendingNotify = true;
+  requestAnimationFrame(()=>{
+    _pendingNotify = false;
+    for (const cb of _manaSubs) { try { cb(state); } catch {} }
+    try { window.dispatchEvent(new CustomEvent('mana:change')); } catch {}
+  });
 }
+
 export function onManaChange(cb){
   if (typeof cb === 'function') _manaSubs.add(cb);
   return () => _manaSubs.delete(cb);
 }
-
-export function recalcMana(state){
-  ensureMana(state);
-  _notifyMana(state);
-}
-
-let _manaTimer = null;
 
 export function manaMaxFor(state){
   const bonus = state.manaBonus || 0;
@@ -32,17 +33,24 @@ export function manaMaxFor(state){
 export function ensureMana(state){
   const max = manaMaxFor(state);
   if (state.manaCurrent == null) state.manaCurrent = max;
-  state.manaCurrent = Math.max(0, Math.min(max, state.manaCurrent));
+  const clamped = Math.max(0, Math.min(max, state.manaCurrent));
+  if (clamped !== state.manaCurrent){
+    state.manaCurrent = clamped;
+    _notifyMana(state);
+  }
   return state.manaCurrent;
 }
 
 export function addMana(state, n=0){
   ensureMana(state);
   const max = manaMaxFor(state);
-  const before = state.manaCurrent;
-  state.manaCurrent = Math.min(max, before + Math.max(0, n|0));
-  if (state.manaCurrent !== before) _notifyMana(state);
-  return state.manaCurrent - before;
+  const before = state.manaCurrent|0;
+  const after = Math.min(max, before + Math.max(0, n|0));
+  if (after !== before){
+    state.manaCurrent = after;
+    _notifyMana(state);
+  }
+  return after - before;
 }
 
 export function spendMana(state, n=0){
@@ -54,27 +62,48 @@ export function spendMana(state, n=0){
   return true;
 }
 
+// ---- Regen (single interval, single onTick) ----
+let _manaTimer = null;
+let _regenTickCb = null;
+
 export function startManaRegen(state, onTick){
-  if (onTick) _manaSubs.add(onTick);
+  if (onTick) _regenTickCb = onTick; // keep latest only
   if (_manaTimer) return _manaTimer;
+
   let secs = 0;
   _manaTimer = setInterval(()=>{
     secs += 1;
     if (secs >= 5){
       secs = 0;
-      const gained = addMana(state, 1);
-      if (gained > 0) { try { onTick?.(state); } catch {} }
+      const gained = addMana(state, 1); // will notify if changed
+      if (gained > 0 && _regenTickCb){
+        try { _regenTickCb(state); } catch {}
+      }
     }
   }, 1000);
+
   return _manaTimer;
 }
 
+export function stopManaRegen(){
+  if (_manaTimer){
+    clearInterval(_manaTimer);
+    _manaTimer = null;
+  }
+  _regenTickCb = null;
+}
+
+// ---------- (rest of file unchanged) ----------
 function baseId(id){ return String(id||'').split('@')[0]; }
 function firstStackIdForBase(inv={}, base){
   for (const [id, qty] of Object.entries(inv)){
     if (qty > 0 && baseId(id) === base) return id;
   }
   return null;
+}
+
+export function recalcMana(state){
+  ensureMana(state); // already notifies when it actually changes
 }
 
 export function drinkPotion(state, preferId = null, opts = {}){
@@ -129,7 +158,8 @@ export function drinkPotion(state, preferId = null, opts = {}){
       id: 'acc',
       name: 'Accuracy',
       durationMs: durMs,
-      data: { type:'acc', hitBonus: Number(it.accBonus)||0 }
+      // Canonical key going forward; combat accepts both accBonus and hitBonus
+      data: { type:'acc', accBonus: Number(it.accBonus)||0 }
     });
 
     removeItem(state, stackId, 1);

@@ -36,7 +36,7 @@ const FAVOR_BONUSES = [
     id: 'pet_sterling',
     name: 'Royal Service Dog',
     need: 50,
-    desc: 'Earn the loyal hound Sterling after serving the royal court. Stronger than Cheeken.'
+    desc: 'Earn the loyal hound Sterling after serving the royal court.'
   }
 ];
 

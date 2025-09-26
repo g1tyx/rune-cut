@@ -203,7 +203,7 @@ export const ITEMS = {
     name: 'Novice Forest Tome',
     type: 'equipment',
     slot: 'tome',
-    img: 'assets/materials/book.png',
+    img: 'assets/materials/forestbook.png',
     tint: 'forest',
     sell: 25,
     tome: {
@@ -220,7 +220,7 @@ export const ITEMS = {
     name: 'Novice Sea Tome',
     type: 'equipment',
     slot: 'tome',
-    img: 'assets/materials/book.png',
+    img: 'assets/materials/seabook.png',
     tint: 'sea',
     sell: 25,
     tome: {
@@ -237,7 +237,7 @@ export const ITEMS = {
     name: 'Novice Rock Tome',
     type: 'equipment',
     slot: 'tome',
-    img: 'assets/materials/book.png',
+    img: 'assets/materials/rockbook.png',
     tint: 'rock',
     sell: 25,
     tome: {

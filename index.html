@@ -153,15 +153,16 @@
             <label class="muted" for="treeSelect">Tree</label>
             <select id="treeSelect"></select>
             <button id="chopBtn" class="btn-primary">Chop</button>
+            <button id="wcStopBtn" class="btn ghost wc-stop-btn">Stop</button>
           </div>
           <div class="progress" style="margin-bottom:10px;">
             <div class="bar" id="actionBar"></div>
             <div class="label" id="actionLabel">Idle</div>
           </div>
-            <div class="card" style="padding:10px;">
-              <h2 style="margin-bottom:6px;">📜 Log</h2>
-              <div id="wcLog" class="log" aria-live="polite"></div>
-            </div>
+          <div class="card" style="padding:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+            <div id="wcLog" class="log" aria-live="polite"></div>
+          </div>
         </div>
 
         <!-- Crafting panel -->
@@ -186,6 +187,7 @@
             <label class="muted" for="spotSelect">Spot</label>
             <select id="spotSelect"></select>
             <button id="fishBtn" class="btn-primary">Fish</button>
+            <button id="fishStopBtn" class="btn ghost fish-stop-btn">Stop</button>
           </div>
           <div class="progress" style="margin-bottom:10px;">
             <div class="bar" id="fishBar"></div>
@@ -225,6 +227,7 @@
             <label class="muted" for="rockSelect">Rock</label>
             <select id="rockSelect"></select>
             <button id="mineBtn" class="btn-primary">Mine</button>
+            <button id="mineStopBtn" class="btn ghost mine-stop-btn">Stop</button>
           </div>
           <div class="progress" style="margin-bottom:10px;">
             <div class="bar" id="mineBar"></div>
@@ -248,6 +251,7 @@
               <select id="smeltSelect"></select>
               <button id="smeltOneBtn"  class="btn-primary">Smelt 1</button>
               <button id="smeltAllBtn"  class="btn-primary">Smelt All</button>
+              <button id="smeltStopBtn" class="btn ghost smelt-stop-btn">Stop</button>
             </div>
             <div class="progress" style="margin-bottom:8px;">
               <div class="bar" id="smithBar"></div>
@@ -285,7 +289,6 @@
             <p class="small muted">Tip: Items with a quality (e.g., <i>qty: 62%</i>) can be upgraded up to 100%.</p>
           </div>
 
-
           <!-- Forging (gear + materials) -->
           <div class="card" style="padding:10px;">
             <h3 style="margin:0 0 8px;">🛡️ Forge Gear & Materials</h3>
@@ -303,38 +306,40 @@
             <div id="forgeList" class="shop"></div>
           </div>
         </div>
+
         <!-- /ui: Alchemy panel (recipe grid is empty; JS fills it at runtime) -->
         <div class="tabpanel hidden" id="tab-alchemy">
           <div class="panel-head">
             <h2>Alchemy</h2>
             <div class="muted small">Craft potions from gathered reagents. Higher Alchemy level speeds brewing.</div>
           </div>
-        
+
           <div id="alchemyRecipes" class="recipe-list"></div>
-        
+
           <div class="progress" style="margin-top:8px;">
             <div class="bar" id="alchBar"></div>
             <div class="label" id="alchLabel">Idle</div>
           </div>
         </div>
+
         <!-- Enchanting panel -->
         <div class="tabpanel hidden" id="tab-enchanting">
           <h2>🪄 Enchanting</h2>
           <p class="small muted" style="margin:6px 0;">
             Turn <b>Books</b> into <b>Tomes</b> using <b>Mana</b> and <b>Essences</b>. Higher Enchanting level unlocks more recipes.
           </p>
-        
+
           <div class="row small muted" style="justify-content:space-between; align-items:center;">
             <span>Mana: <b id="enchantManaVal">0/0</b></span>
             <span id="enchantLabel">Idle</span>
           </div>
-        
+
           <div class="progress xs" style="margin:6px 0 10px;">
             <div id="enchantBar" class="bar" style="width:0%"></div>
           </div>
           <div class="card" style="padding:10px;">
             <h2 style="margin-bottom:6px;">📜 Log</h2>
-          <div id="enchantLog" class="log" aria-live="polite"></div>
+            <div id="enchantLog" class="log" aria-live="polite"></div>
           </div>
           <div id="enchantList" class="shop"></div>
         </div>
@@ -452,7 +457,7 @@
       </section>
     </div>
     <footer>
-      Version: 1.5.26
+      Version: 1.5.29
     </footer>
   </div>
   

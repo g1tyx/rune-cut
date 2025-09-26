@@ -2,15 +2,16 @@
 import { ITEMS } from '../data/items.js';
 import { BUILDINGS } from '../data/construction.js'; // data-driven camp effects
 
+// Skill drivers (register below)
 import { listRocks, canMine, startMine, finishMine } from './mining.js';
 import { listTrees, canChop, startChop, finishChop } from './woodcutting.js';
-import { listFishingSpots, isSpotUnlocked as fishUnlocked, canFish, startFish, finishFish } from './fishing.js';
+import { listFishingSpots, canFish, startFish, finishFish } from './fishing.js';
 
-// --- Base config ---
+/* ---------------- Base config ---------------- */
 export const setAfkTimeMs = (state, ms)=> { state.afkTimeMs = Math.max(1000, ms|0); };
 export const baseAfkTimeMs = (state)=> Math.max(1000, (state.afkTimeMs|0) || 30000);
 
-// ---- Camp bonuses (data-driven from BUILDINGS) ----
+/* ---------------- Camp bonuses (data-driven) ---------------- */
 function sumCampSeconds(state, effectType){
   const placed = state?.camp?.placed || [];
   let total = 0;
@@ -35,10 +36,11 @@ function autoCookWindowMs(state){
 // Final AFK time including camp bonuses
 export const afkTimeMs = (state)=> baseAfkTimeMs(state) + afkBonusMsFromCamp(state);
 
-// --- Driver registry (plug more skills here anytime) ---
+/* ---------------- Driver registry (plug more skills anytime) ---------------- */
 const DRIVERS = new Map();
 
-/** Register a skill driver.
+/**
+ * Register a skill driver.
  * driver(state, targetId, done) -> boolean started
  *  - call `done(detail)` when the action finishes; detail merged into event payload
  */
@@ -46,7 +48,7 @@ export function registerAfkSkill(skill, driver){
   DRIVERS.set(String(skill), driver);
 }
 
-// -------- Built-in drivers: Forestry, Fishing, Mining --------
+/* ---------------- Built-in drivers: Forestry, Fishing, Mining ---------------- */
 
 registerAfkSkill('forestry', function forestryDriver(state, treeId, done){
   const trees = listTrees(state) || [];
@@ -72,7 +74,6 @@ registerAfkSkill('fishing', function fishingDriver(state, spotId, done){
   const spots = listFishingSpots(state) || [];
   const sp = spots.find(s => s.id === spotId) || spots[0];
   if (!sp) return false;
-  if (!fishUnlocked(state, sp)) return false;
   if (!canFish(state, sp.id)) return false;
 
   return startFish(state, sp.id, ()=>{
@@ -109,35 +110,61 @@ registerAfkSkill('mining', (state, veinId, done)=>{
   });
 });
 
-// --- Session + loop ---
+/* ---------------- Session + loop ---------------- */
 let AFK = null;
 
 export function isAfkRunning(){ return !!AFK; }
 export function currentAfk(){ return AFK ? { ...AFK } : null; }
+export function isAfkSkillActive(skill){ return !!(AFK && AFK.skill === String(skill)); }
 
-export function stopAfk(){
+/** Hard interrupt any in-flight action so switches are immediate. */
+export function interruptAction(state){
+  if (state?.action) state.action = null;
+}
+
+/** Stop AFK session and clear action. */
+export function stopAfk(state, reason='stop'){
   if (!AFK) return;
-  const ended = { skill: AFK.skill, targetId: AFK.targetId };
+  interruptAction(state);
+  const ended = { skill: AFK.skill, targetId: AFK.targetId, reason };
   AFK = null;
   try { window.dispatchEvent(new CustomEvent('afk:end', { detail: ended })); } catch {}
 }
 
+/** Switch target without resetting session end time (same-skill only). */
+export function switchAfkTarget(state, { skill, targetId }){
+  const key = String(skill);
+  if (!AFK || AFK.skill !== key) return false;
+  interruptAction(state); // cancel current tick immediately
+  const prev = { ...AFK };
+  AFK.targetId = targetId;
+  try {
+    window.dispatchEvent(new CustomEvent('afk:switch', {
+      detail: { name: key, prevTargetId: prev.targetId, nextTargetId: targetId }
+    }));
+  } catch {}
+  // Nudge the loop so it picks up the new target right away
+  setTimeout(()=>runLoop(state), 0);
+  return true;
+}
+
+/** Start AFK; if same skill already running, acts as a live switch. */
 export function startAfk(state, { skill, targetId }){
   const key = String(skill);
-  // Tell UIs/other systems we’re switching
-  try { window.dispatchEvent(new CustomEvent('afk:switch', { detail:{ name:key } })); } catch {}
 
+  // Same-skill: live switch (no timer reset)
+  if (AFK && AFK.skill === key){
+    return switchAfkTarget(state, { skill:key, targetId });
+  }
+
+  // Fresh session
   const durationMs = afkTimeMs(state);
   const endAt = performance.now() + durationMs;
-  const bonuses = {
-    autocookMs: autoCookWindowMs(state), // exposed for cooking listeners
-  };
+  const bonuses = { autocookMs: autoCookWindowMs(state) }; // exposed for cooking, etc.
 
   AFK = { skill:key, targetId, endAt, bonuses };
 
-  try {
-    window.dispatchEvent(new CustomEvent('afk:start', { detail:{ ...AFK } }));
-  } catch {}
+  try { window.dispatchEvent(new CustomEvent('afk:start', { detail:{ ...AFK } })); } catch {}
 
   runLoop(state);
   return true;
@@ -148,7 +175,7 @@ function runLoop(state){
   const now = performance.now();
 
   if (now >= AFK.endAt){
-    stopAfk();
+    stopAfk(state, 'timeup');
     return;
   }
 
@@ -161,7 +188,7 @@ function runLoop(state){
   const driver = DRIVERS.get(AFK.skill);
   if (!driver){
     console.warn('[AFK] No driver for skill:', AFK.skill);
-    stopAfk();
+    stopAfk(state, 'no-driver');
     return;
   }
 

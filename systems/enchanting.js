@@ -2,7 +2,7 @@ import { ENCHANT_RECIPES } from '../data/enchanting.js';
 import { addItem, removeItem } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
 import { recalcMana } from './mana.js';
-import { ITEMS } from '../data/items.js'; // ⬅️ new
+import { ITEMS } from '../data/items.js';
 
 const XP = buildXpTable();
 const clampMs = (ms)=> Math.max(300, ms);

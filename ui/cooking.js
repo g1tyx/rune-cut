@@ -1,13 +1,11 @@
-// /ui/cooking.js
 import { state, saveState } from '../systems/state.js';
-import { COOK_TIME_MS, canCook, startCook, resolveCook, cookGateReason } from '../systems/cooking.js';
+import { COOK_TIME_MS, canCook, startCook, resolveCook, cookGateReason, cookItems } from '../systems/cooking.js';
 import { COOK_RECIPES } from '../data/cooking.js';
 import { qs, on } from '../utils/dom.js';
 import { pushLog } from './logs.js';
 import { renderInventory } from './inventory.js';
 import { renderEnchanting } from './enchanting.js';
 import { renderSkills } from './skills.js';
-import { ITEMS } from '../data/items.js';
 import { buildXpTable, levelFromXp } from '../systems/xp.js';
 
 const XP_TABLE = buildXpTable();
@@ -17,37 +15,64 @@ const el = {
   bar:    qs('#cookBar'),
   zone:   qs('#cookPerfectZone'),
   hint:   qs('#cookHint'),
+  auto:   qs('#cookAuto'),   // present in DOM only if unlocked
 };
 
-let pendingRawId = null;       // which raw_* is armed/selected
-let dragRawId = null;          // which raw_* is currently being dragged
-let holding = false;           // true while timing
-let holdingMode = null;        // 'drag' | 'pointer'
-let zoneStart = 0.35, zoneEnd = 0.53; // golden zone [0..1]
-
-/* ---------------- helpers ---------------- */
+/* ---------- small helpers ---------- */
+function baseId(id){ return String(id||'').split('@')[0]; }
+function cookedIdOf(raw){ return COOK_RECIPES[raw]?.output?.id || null; }
+function cookedQtyPerRaw(raw){ return COOK_RECIPES[raw]?.output?.qty || 1; }
+function displayName(id=''){ return baseId(id).replace(/^raw_/,'').replace(/_/g,' ').replace(/\b\w/g, m=>m.toUpperCase()); }
 function playerLvl(){ return levelFromXp(state.cookXp || 0, XP_TABLE); }
-function reqLevel(rawId){
-  const rec = COOK_RECIPES[rawId] || {};
-  return rec.level ?? rec.lvl ?? 1;
-}
-
-function nameOf(id){
-  return (ITEMS?.[id]?.name)
-    || String(id||'').replace(/^raw_/, '').replace(/_/g, ' ')
-    .replace(/\b\w/g, m=>m.toUpperCase());
-}
+function reqLevel(rawId){ const r = COOK_RECIPES[rawId] || {}; return r.level ?? r.lvl ?? 1; }
 function setHint(s){ if (el.hint) el.hint.textContent = s; }
 
-/* Golden zone width with scaling: ×2 per 10 levels OVER. */
+function hasAutoCookUnlocked(){ return !!(state.unlocks?.autocook); }
+function isAuto(){
+  // Auto mode only if feature unlocked AND toggle exists+checked in UI state
+  if (!hasAutoCookUnlocked()) return false;
+  return !!(state.ui?.autocook);
+}
+function syncAutoToggleToState(){
+  if (!el.auto) return;
+  if (!hasAutoCookUnlocked()){
+    // If UI accidentally has it, hide/remove so it "only exists when unlocked"
+    try { el.auto.closest('label')?.remove(); } catch {}
+    return;
+  }
+  el.auto.checked = !!(state.ui?.autocook);
+}
+function reflectAutoUI(){
+  if (el.zone) el.zone.style.visibility = isAuto() ? 'hidden' : 'visible';
+  updateBar();
+}
+function setAuto(v){
+  if (!hasAutoCookUnlocked()) return;
+  state.ui = state.ui || {};
+  state.ui.autocook = !!v;
+  saveState(state);
+  syncAutoToggleToState();
+  if (isAuto()){
+    // abort any manual timing
+    if (state.action?.type === 'cook') state.action = null;
+    holding = false; holdingMode = null;
+  }
+  reflectAutoUI();
+}
+
+/* ---------- golden zone ---------- */
+let pendingRawId = null;
+let dragRawId = null;
+let holding = false;
+let holdingMode = null;
+let zoneStart = 0.35, zoneEnd = 0.53;
+
 function zoneWidthFor(rawId){
   const over = Math.max(0, playerLvl() - reqLevel(rawId));
   const steps = Math.floor(over / 10);
   const base = 0.18;
-  // clamp so it never covers the whole bar
   return Math.max(0.06, Math.min(0.6, base * Math.pow(2, steps)));
 }
-
 function randomizeZone(customWidth){
   const width = (typeof customWidth === 'number' ? customWidth : 0.18);
   const left  = 0.12 + Math.random() * (0.76 - width);
@@ -59,26 +84,14 @@ function randomizeZone(customWidth){
   }
 }
 
-/* ---------------- inventory dragability ---------------- */
-function ensureRawSlotsDraggable(){
-  const inv = document.getElementById('inventory'); if (!inv) return;
-  inv.querySelectorAll('.inv-slot').forEach(slot=>{
-    const id = slot.dataset.id || '';
-    if (id.startsWith('raw_') && !slot.hasAttribute('draggable')){
-      slot.setAttribute('draggable','true');
-    }
-  });
-}
-(function initInvObserver(){
-  const inv = document.getElementById('inventory'); if (!inv) return;
-  ensureRawSlotsDraggable();
-  const mo = new MutationObserver(()=> ensureRawSlotsDraggable());
-  mo.observe(inv, { childList:true, subtree:true });
-})();
-
-/* ---------------- paint ---------------- */
+/* ---------- paint ---------- */
 function updateBar(){
   if (!el.bar) return;
+  if (isAuto()){
+    el.bar.style.width = '0%';
+    setHint('Auto-cook: drop raw food to cook instantly');
+    return;
+  }
   if (state.action?.type === 'cook' && holding){
     const now = performance.now();
     const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / (state.action.duration || 1)));
@@ -86,23 +99,23 @@ function updateBar(){
     setHint(`${state.action.label || 'Cooking'} — ${(pct*100).toFixed(0)}%`);
   } else {
     el.bar.style.width = '0%';
-    setHint(pendingRawId ? `Ready: ${nameOf(pendingRawId)} — hold to cook` : 'Drop raw food here');
+    setHint(pendingRawId ? `Ready: ${displayName(pendingRawId)} — hold to cook` : 'Drop raw food here');
   }
 }
 export function renderCooking(){ updateBar(); }
 
-/* -------------------- drag from inventory -------------------- */
+/* ---------- drag from inventory ---------- */
 on(document, 'dragstart', '.inv-slot', (e, slot)=>{
   const id = slot.dataset.id || '';
   if (!id.startsWith('raw_') || !(state.inventory?.[id] > 0)) return;
-  dragRawId = id;
-  e.dataTransfer?.setData('text/plain', id);
-  e.dataTransfer?.setData('application/x-runecut-item', id);
+  dragRawId = baseId(id);
+  e.dataTransfer?.setData('text/plain', dragRawId);
+  e.dataTransfer?.setData('application/x-runecut-item', dragRawId);
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
 });
 
 document.addEventListener('dragend', ()=>{
-  if (holding && holdingMode === 'drag'){ endHold('auto'); }
+  if (holding && holdingMode === 'drag'){ endHold(); }
   dragRawId = null;
 });
 
@@ -111,13 +124,22 @@ document.addEventListener('dragend', ()=>{
     e.preventDefault();
     el.fire.classList.add('dragging');
 
-    // Only start timing if level & mats are OK
-    if (!holding && dragRawId && COOK_RECIPES[dragRawId]){
-      if (canCook(state, dragRawId)){
-        startHoldWith(dragRawId, 'drag');
-      } else {
-        setHint(cookGateReason(state, dragRawId) || 'Cannot cook this yet');
-      }
+    const raw = dragRawId;
+    if (!raw || !COOK_RECIPES[raw]) return;
+
+    if (isAuto()){
+      const reason = cookGateReason(state, raw);
+      const cookedId = cookedIdOf(raw);
+      setHint(reason ? reason : `Release to auto-cook 1× ${displayName(cookedId)}`);
+      return;
+    }
+
+    if (!holding && canCook(state, raw)){
+      pendingRawId = raw;
+      randomizeZone(zoneWidthFor(raw));
+      startHoldWith(raw, 'drag');
+    } else if (!holding){
+      setHint(cookGateReason(state, raw) || 'Cannot cook this yet');
     }
   });
 });
@@ -130,41 +152,70 @@ el.fire?.addEventListener('drop', (e)=>{
   e.preventDefault();
   el.fire.classList.remove('dragging');
 
-  if (holding && holdingMode === 'drag'){
-    endHold('drag');
-  } else {
-    const id = e.dataTransfer?.getData('application/x-runecut-item') || e.dataTransfer?.getData('text/plain') || '';
-    if (id && COOK_RECIPES[id]){
-      // If under level, just message; don't arm
-      if (!canCook(state, id)){
-        setHint(cookGateReason(state, id) || 'Cannot cook this yet');
-      } else {
-        pendingRawId = id;
-        randomizeZone(zoneWidthFor(id));
-        updateBar();
+  const raw = (e.dataTransfer?.getData('application/x-runecut-item') || e.dataTransfer?.getData('text/plain') || dragRawId || '').trim();
+  if (!raw || !COOK_RECIPES[raw]){ dragRawId = null; return; }
+
+  if (isAuto()){
+    const reason = cookGateReason(state, raw);
+    if (reason){
+      setHint(reason);
+    } else {
+      const cookedCount = cookItems(state, raw, 1); // returns cooked items produced
+      if (cookedCount > 0){
+        const cookedId = cookedIdOf(raw);
+        const xp = (COOK_RECIPES[raw]?.xp || 0) * 1; // xp is per-raw (we used 1 raw)
+        pushLog(`Auto-cooked ${cookedCount}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
+        renderEnchanting(); renderInventory(); renderSkills(); saveState(state);
+        // keep armed for repeated drags
       }
+      setHint('Auto-cook: drop raw food to cook instantly');
     }
+    dragRawId = null;
+    return;
+  }
+
+  if (holding && holdingMode === 'drag'){
+    endHold();
+  } else {
+    pendingRawId = raw;
+    randomizeZone(zoneWidthFor(raw));
+    updateBar();
   }
   dragRawId = null;
 });
 
-/* -------------------- click–hold alternative -------------------- */
+/* ---------- click–hold alternative ---------- */
 el.fire?.addEventListener('pointerdown', (e)=>{
   e.preventDefault();
   el.fire.setPointerCapture?.(e.pointerId);
 
-  // Pick armed or best raw (by highest qty)
+  const auto = isAuto();
   let id = pendingRawId;
+
   if (!id){
+    // pick best available raw (highest qty)
     let best=null, qty=0;
-    for (const r of Object.keys(COOK_RECIPES)){
-      const q = state.inventory?.[r]||0;
-      if (q>qty){ qty=q; best=r; }
+    for (const raw of Object.keys(COOK_RECIPES)){
+      const q = state.inventory?.[raw]||0;
+      if (q>qty){ qty=q; best=raw; }
     }
     id = best;
-    if (id){ pendingRawId = id; randomizeZone(zoneWidthFor(id)); }
+    if (!auto && id){ pendingRawId = id; randomizeZone(zoneWidthFor(id)); }
   }
   if (!id) return;
+
+  if (auto){
+    const reason = cookGateReason(state, id);
+    if (reason){ setHint(reason); return; }
+    const cookedCount = cookItems(state, id, 1);
+    if (cookedCount > 0){
+      const cookedId = cookedIdOf(id);
+      const xp = (COOK_RECIPES[id]?.xp || 0) * 1;
+      pushLog(`Auto-cooked ${cookedCount}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
+      renderEnchanting(); renderInventory(); renderSkills(); saveState(state);
+    }
+    return;
+  }
 
   if (!canCook(state, id)){
     setHint(cookGateReason(state, id) || 'Cannot cook this yet');
@@ -177,85 +228,78 @@ el.fire?.addEventListener('pointerup', (e)=>{
   e.preventDefault();
   el.fire.releasePointerCapture?.(e.pointerId);
   if (holding && holdingMode === 'pointer'){
-    endHold('pointer');
+    endHold();
   }
 });
 el.fire?.addEventListener('pointercancel', ()=>{
   if (holding && holdingMode === 'pointer'){
-    endHold('cancel');
+    endHold();
   }
 });
 
-/* -------------------- timing core -------------------- */
-/* Duration scaling: ×2 time per 6 levels UNDER (i.e., speed halves). */
+/* ---------- timing core ---------- */
 function scaledDurationFor(rawId){
   const lvl = playerLvl();
   const req = reqLevel(rawId);
   const under = Math.max(0, req - lvl);
-  const factor = Math.pow(2, under / 6); // continuous scaling
+  const factor = Math.pow(2, under / 6);
   return COOK_TIME_MS * factor;
 }
-
 function startHoldWith(rawId, mode){
+  if (isAuto()) return;
   if (holding || state.action) return;
   if (!COOK_RECIPES[rawId] || !canCook(state, rawId)){
     setHint(cookGateReason(state, rawId) || 'Cannot cook this yet');
     return;
   }
-
   pendingRawId = rawId;
   randomizeZone(zoneWidthFor(rawId));
-
   const ok = startCook(state, rawId);
   if (!ok) return;
-
-  // restart timer exactly now with scaled duration
   state.action.startedAt = performance.now();
   state.action.duration  = scaledDurationFor(rawId);
   state.action.endsAt    = state.action.startedAt + state.action.duration;
-
   holding = true;
   holdingMode = mode;
   updateBar();
 }
-
-function endHold(source){
+function endHold(){
   if (!holding || state.action?.type !== 'cook') { holding=false; return; }
-
   const now = performance.now();
   const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / (state.action.duration || 1)));
-
   let outcome = 'early';
   if (pct > zoneEnd) outcome = 'burnt';
   else if (pct >= zoneStart && pct <= zoneEnd) outcome = 'perfect';
-
   const res = resolveCook(state, outcome);
-
   if (res.ok){
     if (outcome === 'perfect' && res.cooked > 0){
-      const cookedName = nameOf(res.cookedId);
+      const cookedName = displayName(res.cookedId);
       pushLog(`Cooked ${res.cooked}× ${cookedName} → +${res.xp} Cooking xp`, 'cooking');
     } else if (outcome === 'burnt'){
-      pushLog(`Burnt ${nameOf(res.rawId)} — no xp`, 'cooking');
+      const rawName = displayName(res.rawId);
+      pushLog(`Burnt ${rawName} — no xp`, 'cooking');
     } else {
       pushLog(`Removed too early — still raw`, 'cooking');
     }
-    renderEnchanting();
-    renderInventory();
-    renderSkills();
-    saveState(state);
+    renderEnchanting(); renderInventory(); renderSkills(); saveState(state);
   }
-
-  holding = false;
-  holdingMode = null;
-  if (outcome !== 'early') pendingRawId = null;
-
-  randomizeZone(zoneWidthFor(pendingRawId || 'raw_shrimps')); // harmless default
+  holding = false; holdingMode = null;
+  if (!isAuto()){
+    pendingRawId = null;
+    randomizeZone(zoneWidthFor('raw_shrimps'));
+  }
   updateBar();
 }
 
-// keep the bar smooth
-(function raf(){
-  updateBar();
-  requestAnimationFrame(raf);
-})();
+/* ---------- smooth bar ---------- */
+(function raf(){ updateBar(); requestAnimationFrame(raf); })();
+
+/* ---------- toggle wiring (no HTML changes) ---------- */
+if (el.auto){
+  syncAutoToggleToState();
+  reflectAutoUI();
+  el.auto.addEventListener('change', ()=> setAuto(!!el.auto.checked));
+} else {
+  // If toggle isn't present, make sure auto mode can't be entered accidentally
+  state.ui = state.ui || {}; state.ui.autocook = false;
+}

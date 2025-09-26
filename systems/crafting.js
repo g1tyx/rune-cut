@@ -1,166 +1,18 @@
-// systems/crafting.js
+// /systems/crafting.js
 import { CRAFT_RECIPES } from '../data/crafting.js';
-import { addItem, removeItem } from './inventory.js';
-import { buildXpTable, levelFromXp } from './xp.js';
+import { createProductionSkill } from './production_core.js';
 
-const XP = buildXpTable();
-const clampMs = (ms)=> Math.max(300, ms);
+const craft = createProductionSkill({
+  actionType: 'craft',
+  data: CRAFT_RECIPES,
+  labelVerb: 'Craft',
+  levelScale: 0.03, // +3%/level on speedSkill
+  minActionMs: 300
+});
 
-// ---- helpers ----
-function levelOf(state, skill){
-  if(skill==='wc')    return levelFromXp(state.wcXp||0, XP);
-  if(skill==='fish')  return levelFromXp(state.fishXp||0, XP);
-  if(skill==='min')   return levelFromXp(state.minXp||0, XP);
-  if(skill==='smith') return levelFromXp(state.smithXp||0, XP);
-  if(skill==='craft') return levelFromXp(state.craftXp||0, XP);
-  return 1;
-}
-function speedMult(state, recipe){
-  if(!recipe?.speedSkill) return 1;
-  const lvl = levelOf(state, recipe.speedSkill);
-  return 1 + 0.03*(lvl-1); // +3%/level
-}
-function resolveId(recipeOrId){
-  if (!recipeOrId) return null;
-  if (typeof recipeOrId === 'string') return recipeOrId;
-  if (recipeOrId.id) return recipeOrId.id;
-  return null;
-}
-function getRec(id){
-  const r = CRAFT_RECIPES[id];
-  if (!r) return null;
-  return { id, name: r.name || id, ...r };
-}
-
-function xpGainsOf(r){
-  return Array.isArray(r?.xp)
-    ? r.xp.map(g => ({ skill:g?.skill, amount:(g?.amount|0) }))
-        .filter(g => g.skill && g.amount > 0)
-    : [];
-}
-
-function awardXp(state, r){
-  if (!r || !Array.isArray(r.xp) || r.xp.length === 0) return;
-
-  const KEY = {
-    craft: 'craftXp',
-    wc: 'wcXp',
-    fish: 'fishXp',
-    min: 'minXp',
-    smith: 'smithXp',
-    construction: 'constructionXp',
-  };
-
-  for (const g of r.xp){
-    const skill = g?.skill;
-    const amt   = (g?.amount|0);
-    if (!skill || amt <= 0) continue;
-
-    const prop = KEY[skill] || (skill + 'Xp');
-    state[prop] = (state[prop] || 0) + amt;
-  }
-
-  try { window.dispatchEvent(new Event('xp:gain')); } catch {}
-}
-
-
-// Which skill gates the recipe's required level? Default to 'craft'.
-function gateSkillFor(r){ return r.reqSkill || 'craft'; }
-function meetsLevel(state, r){
-  const needed = r.level || 1;
-  const have = levelOf(state, gateSkillFor(r));
-  return have >= needed;
-}
-
-// ---- core checks (UI-friendly) ----
-export function canCraft(state, recipeOrId, times=1){
-  const id = resolveId(recipeOrId);
-  const r = getRec(id); if(!r) return false;
-
-  if (!meetsLevel(state, r)) return false; // level gate
-
-  const needTimes = Math.max(1, times|0);
-  return (r.inputs||[]).every(inp => (state.inventory[inp.id]||0) >= inp.qty * needTimes);
-}
-
-export function maxCraftable(state, recipeOrId){
-  const id = resolveId(recipeOrId);
-  const r = getRec(id); if(!r || !r.inputs?.length) return 0;
-  if (!meetsLevel(state, r)) return 0; // under-leveled
-  return Math.min(...r.inputs.map(inp => Math.floor((state.inventory[inp.id]||0)/inp.qty)));
-}
-
-// ---- callback-style single craft (used by /ui/crafting.js) ----
-export function startCraft(state, recipeOrId, onDone){
-  //if (state.action) return false;
-  const id = resolveId(recipeOrId);
-  const r = getRec(id); if(!r) return false;
-  if (!canCraft(state, id, 1)) return false;
-
-  const dur = clampMs((r.time || 1000) / speedMult(state, r));
-  const now = performance.now();
-
-  state.action = {
-    type: 'craft',
-    label: `Craft ${r.name}`,
-    startedAt: now,
-    endsAt: now + dur,
-    duration: dur,
-    key: id
-  };
-
-  // ✅ Schedule completion so the bar resets and inventory/xp apply
-  setTimeout(()=>{
-    if (state.action?.type === 'craft' && state.action?.key === id){
-      onDone?.();
-    }
-  }, dur);
-
-  return true;
-}
-
-export function finishCraft(state, recipeOrId){
-  const id = resolveId(recipeOrId) || state.action?.key;
-  const r = getRec(id); if(!r){ state.action = null; return null; }
-  if (!canCraft(state, id, 1)){ state.action = null; return null; }
-
-  (r.inputs || []).forEach(inp => removeItem(state, inp.id, inp.qty));
-  (r.outputs|| []).forEach(out => addItem(state, out.id, out.qty));
-
-  const gains = xpGainsOf(r);
-  awardXp(state, r);
-
-  state.action = null;
-  return { id, name: r.name, xpGains: gains };
-}
-
-export function finishOneCraft(state){
-  const key = state.action?.key; if(!key) return null;
-  const r = getRec(key); if(!r) return null;
-  if(!canCraft(state, key, 1)) return null;
-
-  (r.inputs||[]).forEach(inp => removeItem(state, inp.id, inp.qty));
-  (r.outputs||[]).forEach(out => addItem(state, out.id, out.qty));
-
-  const gains = xpGainsOf(r);
-  awardXp(state, r);
-
-  return { id:key, name:r.name, xpGains: gains };
-}
-
-// ---- legacy queue-style API (kept for compatibility) ----
-export function startCraftQueued(state, id, count=1){
-  //if(state.action) return false;
-  const r = getRec(id); if(!r) return false;
-  if(!canCraft(state, id, 1)) return false;
-
-  const dur = clampMs((r.time || 1000) / speedMult(state, r));
-  state.action = {
-    type:'craft', key:id,
-    startedAt: performance.now(),
-    endsAt: performance.now()+dur,
-    duration: dur,
-    queue: Math.max(1, count|0)
-  };
-  return true;
-}
+export const getRecipe       = (id)=> craft.get(id);
+export const canCraft        = (state, id, times=1)=> craft.canMake(state, id, times);
+export const maxCraftable    = (state, id)=> craft.maxCraftable(state, id);
+export const startCraft      = (state, id, onDone)=> craft.start(state, id, onDone);
+export const finishCraft     = (state, id)=> craft.finish(state, id);
+export const finishOneCraft  = (state)=> craft.finishOne(state);
