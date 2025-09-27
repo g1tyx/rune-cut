@@ -146,4 +146,68 @@ export const ENCHANT_RECIPES = {
     xp: { skill: 'enchant', amount: 100 },
     desc: 'Imbues quicksilver with speed magic. Drag onto a tool to apply +0.25 speed (non-stacking).'
   },
+  enchant_sapphire_ring: {
+    id: 'enchant_sapphire_ring',
+    name: 'Enchant Sapphire Ring',
+    level: 15,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 200 },
+    desc: 'Applies a random stat to the Sapphire Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
+  },
+
+  enchant_ruby_ring: {
+    id: 'enchant_ruby_ring',
+    name: 'Enchant Ruby Ring',
+    level: 22,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 350 },
+    desc: 'Applies a random stat to the Ruby Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
+  },
+
+  enchant_emerald_ring: {
+    id: 'enchant_emerald_ring',
+    name: 'Enchant Emerald Ring',
+    level: 29,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 500 },
+    desc: 'Applies a random stat to the Emerald Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
+  },
+
+  enchant_diamond_ring: {
+    id: 'enchant_diamond_ring',
+    name: 'Enchant Diamond Ring',
+    level: 36,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 750 },
+    desc: 'Applies a random stat to the Diamond Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
+  },
+
+  enchant_starstone_ring: {
+    id: 'enchant_starstone_ring',
+    name: 'Enchant Starstone Ring',
+    level: 43,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 1000 },
+    desc: 'Applies a random stat to the Starstone Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
+  },
 };

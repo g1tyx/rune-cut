@@ -14,7 +14,7 @@ import { ITEMS } from '../data/items.js';
  * 2) Selector groups (one card that lets the player choose between a set of variant recipes).
  *
  * @param {Object} cfg
- * @param {string}   cfg.actionType          'craft' | 'smelt' | 'brew'
+ * @param {string}   cfg.actionType          'craft' | 'smelt' | 'brew' | 'enchant' | ...
  * @param {string}   cfg.listSelector        '#craftList' (container)
  * @param {string}   [cfg.barSelector]       '#craftBar'   (optional legacy global bar)
  * @param {string}   [cfg.labelSelector]     '#craftLabel' (optional legacy label)
@@ -27,6 +27,7 @@ import { ITEMS } from '../data/items.js';
  * @param {function} [cfg.getBatchOptions(state)]: (number[] | includes 'X')
  * @param {function} [cfg.getBatchChoice(state)]: number|'X'
  * @param {function} [cfg.setBatchChoice(state, v)]: void
+ * @param {function} [cfg.iconFor(recipe)]: string|null  // return a base item id for the icon (overrides output icon)
  *
  * @param {Array}    [cfg.selectorGroups]  optional array of selector groups:
  *   [{
@@ -48,6 +49,9 @@ export function initRecipePanel(cfg){
     typeof cfg.getBatchOptions === 'function' &&
     typeof cfg.getBatchChoice  === 'function' &&
     typeof cfg.setBatchChoice  === 'function';
+
+  // strict base helper (strips @quality and #tags if any)
+  const baseIdStrict = (s) => String(s||'').split('@')[0].split('#')[0];
 
   /* ---------- helpers ---------- */
   function getAllMap(){
@@ -77,9 +81,10 @@ export function initRecipePanel(cfg){
     const p = (now - startedAt) / Math.max(1, duration);
     return Math.max(0, Math.min(1, p));
   }
+
   const H = {
     itemName(id){
-      const base = String(id||'').split('@')[0];
+      const base = baseIdStrict(id);
       return ITEMS?.[base]?.name || base.replace(/_/g, ' ');
     },
     optionDisabled(id){ return !cfg.canMake(state, id); },
@@ -102,14 +107,34 @@ export function initRecipePanel(cfg){
       const tot = arr.reduce((s,g)=>s+g.amount,0);
       return tot ? `<span class="badge xp" title="${arr.map(g=>`+${g.amount} ${g.skill} xp`).join(', ')}">+${tot}xp</span>` : '';
     },
-    iconForOutput(r){
-      const out = Array.isArray(r.outputs) ? r.outputs[0] : null;
-      const outBase = out ? String(out.id).split('@')[0] : null;
-      const def = outBase ? ITEMS[outBase] : null;
-      const src = def?.img || null;
-      return src ? `<img class="icon-img" src="${src}" alt="${def?.name || outBase}">`
-                 : `<span class="icon" style="font-size:20px">🧰</span>`;
+
+    // Preferred icon logic (no post-render swaps):
+    // 1) If cfg.iconFor(recipe) returns a base id whose def has an image, use it.
+    // 2) Otherwise, if recipe has outputs, use the first output image (e.g., tomes).
+    // 3) Otherwise, show a small sparkle.
+    iconHtml(r){
+      let src = null;
+
+      if (typeof cfg.iconFor === 'function'){
+        const forcedBase = cfg.iconFor(r);
+        if (forcedBase){
+          const b = baseIdStrict(forcedBase);
+          const def = ITEMS[b];
+          if (def?.img) src = def.img;
+        }
+      }
+
+      if (!src && Array.isArray(r.outputs) && r.outputs.length){
+        const outBase = baseIdStrict(r.outputs[0].id);
+        const def = ITEMS[outBase];
+        if (def?.img) src = def.img;
+      }
+
+      return src
+        ? `<img class="icon-img" src="${src}" alt="">`
+        : `<span class="icon" style="font-size:20px">✨</span>`;
     },
+
     reqLine(r){
       const ins = Array.isArray(r.inputs) ? r.inputs : [];
       return ins.map(i => `${i.qty}× ${H.itemName(i.id)}`).join(', ');
@@ -284,7 +309,7 @@ export function initRecipePanel(cfg){
       const chosenRec = map[chosen] || g.variants[0];
       const canChosen = cfg.canMake(state, chosen);
       const isActive  = active && g.variants.some(v => v.id === active);
-      const icon      = H.iconForOutput(chosenRec);
+      const icon      = H.iconHtml(chosenRec);
       const lvl       = chosenRec.level || 1;
       const xpBadge   = H.xpBadge(chosenRec);
       const subLine   = H.reqLine(chosenRec);
@@ -327,7 +352,7 @@ export function initRecipePanel(cfg){
       const dis    = busy || !ok;
       const isAct  = active === r.id;
       const lvl    = r.level || 1;
-      const icon   = H.iconForOutput(r);
+      const icon   = H.iconHtml(r);
       const reqs   = H.reqLine(r);
       return `
         <button class="recipe-card ${dis?'disabled':''} ${isAct?'active':''}"

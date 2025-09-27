@@ -3,12 +3,10 @@ import { ITEMS } from '../data/items.js';
 import { levelFromXp } from './xp.js';
 import { startTomeRun, isTomeActive, stopTomeRun } from './tomes.js';
 
-function baseId(id){
-  return String(id || '').split('@')[0];
-}
+const baseIdStrict = (s) => String(s || '').split('@')[0].split('#')[0];
 
 export function equipReqLabel(id) {
-  const it = ITEMS[baseId(id)];
+  const it = ITEMS[baseIdStrict(id)];
   if (!it) return '';
   if (it.reqAtk) return `Requires Attack ${it.reqAtk}`;
   if (it.reqDef) return `Requires Defence ${it.reqDef}`;
@@ -16,7 +14,7 @@ export function equipReqLabel(id) {
 }
 
 export function canEquip(state, id) {
-  const it = ITEMS[baseId(id)];
+  const it = ITEMS[baseIdStrict(id)];
   if (!it) return { ok: false, message: 'Unknown item.' };
 
   if (!it.reqAtk && !it.reqDef) return { ok: true };
@@ -39,7 +37,7 @@ export function canEquip(state, id) {
 
 /** Equip an item by id; returns boolean or {ok:false,message} */
 export function equipItem(state, id){
-  const def = ITEMS[baseId(id)];
+  const def = ITEMS[baseIdStrict(id)];
   if (!def) return false;
   const slot = def.slot;
   if (!slot) return false;
@@ -53,8 +51,8 @@ export function equipItem(state, id){
     if (invHave <= 0) return false;
 
     const cur  = state.equipment.tome || null;
-    const curBase = cur ? baseId(cur) : null;
-    const newBase = baseId(id);
+    const curBase = cur ? baseIdStrict(cur) : null;
+    const newBase = baseIdStrict(id);
 
     // Only identical tomes can stack
     if (cur && curBase !== newBase){

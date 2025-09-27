@@ -1,86 +1,41 @@
 // /systems/mining.js
 import { ROCKS } from '../data/mining.js';
-import { addItem } from './inventory.js';
+import { createGatheringSkill } from './gathering_core.js';
 import { ITEMS } from '../data/items.js';
-import { buildXpTable, levelFromXp } from './xp.js';
+import { pushMineLog } from '../ui/logs.js';
 
-const XP_TABLE = buildXpTable();
-const speedFromLevel = (lvl)=> 1 + 0.03*(lvl-1); // +3% per Mining level
-const clampMs = (ms)=> Math.max(100, ms);
 export const ROCK_ESSENCE_ID = 'rock_essence';
 
-function baseId(id){ return String(id||'').split('@')[0]; }
+const mine = createGatheringSkill({
+  actionType: 'mine',
+  selectedIdKey: 'selectedRockId',
+  xpKey: 'minXp',
+  data: ROCKS,
+  equipmentSlot: 'pick',
+  actionBindKey: 'rockId',
+  labelVerb: 'Mine',
+  essenceId: ROCK_ESSENCE_ID,
+  essenceChance: 0.10,
+  levelScale: 0.03,
+  minActionMs: 100
+});
 
-/* ---------- helpers ---------- */
-export function listRocks(_state){
-  return ROCKS;
-}
-
-function resolveRock(state, rockOrId){
-  if (!rockOrId) return ROCKS.find(r=>r.id===state.selectedRockId) || ROCKS[0] || null;
-  if (typeof rockOrId === 'string') return ROCKS.find(r=>r.id===rockOrId) || null;
-  if (rockOrId && rockOrId.id) return ROCKS.find(r=>r.id===rockOrId.id) || rockOrId;
-  return null;
-}
-
-function requiredLevel(rock){ return rock.level || 1; }
-
-function pickSpeedFromState(state){
-  const pickId = state.equipment?.pick || '';
-  const def    = ITEMS[baseId(pickId)] || {};
-  const base   = Number(def.speed || 1);
-  const swift  = Number(state.equipmentMods?.pick?.swift?.addSpeed || 0);
-  return base + swift;
-}
-
-/* ---------- ui-facing api ---------- */
-export function canMine(state, rockOrId){
-  //if (state.action) return false;
-  const rock = resolveRock(state, rockOrId);
-  if (!rock) return false;
-  const lvl = levelFromXp(state.minXp || 0, XP_TABLE);
-  return lvl >= requiredLevel(rock);
-}
-
-export function startMine(state, rockOrId, onDone){
-  const rock = resolveRock(state, rockOrId);
-  if (!rock || !canMine(state, rock)) return false;
-
-  const minLvl    = levelFromXp(state.minXp || 0, XP_TABLE);
-  const pickSpeed = pickSpeedFromState(state);
-  const baseTime  = rock.baseTime || 2000;
-  const dur       = clampMs(baseTime / (pickSpeed * speedFromLevel(minLvl)));
-  const now       = performance.now();
-
-  state.selectedRockId = rock.id;
-
-  state.action = {
-    type: 'mine',
-    label: `Mine ${rock.name || rock.id}`,
-    startedAt: now,
-    endsAt: now + dur,
-    duration: dur,
-    rockId: rock.id
-  };
-
-  setTimeout(()=>{
-    if (state.action?.type === 'mine' && state.action?.rockId === rock.id){
-      onDone?.();
-    }
-  }, dur);
-
-  return true;
-}
+export const listRocks = mine.listTargets;
+export const canMine   = mine.canDo;
+export const startMine = mine.start;
 
 export function finishMine(state, rockOrId){
-  const rock = resolveRock(state, rockOrId) || ROCKS.find(r=>r.id===state.action?.rockId);
-  if (!rock){ state.action = null; return 0; }
+  const res = mine.finish(state, rockOrId);
+  if (!res) return 0;
 
-  addItem(state, rock.drop, 1);
-  const essence = Math.random() < 0.10;
-  if (essence) addItem(state, ROCK_ESSENCE_ID, 1);
+  const bonusParts = Array.isArray(res.bonuses) && res.bonuses.length
+    ? res.bonuses.map(b => `+${b.qty || 1} ${(ITEMS?.[b.id]?.name || b.id)}`).join(' · ')
+    : '';
 
-  state.minXp = (state.minXp || 0) + (rock.xp || 0);
-  state.action = null;
-  return { qty: 1, essence };
+  if (bonusParts){
+    // distinct, colored bonus log
+    pushMineLog(`You found: ${bonusParts}`);
+  }
+
+  return res;
 }

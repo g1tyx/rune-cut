@@ -2,7 +2,7 @@
 // Stores active effects on state.effects = { [id]: { id, name, endsAt, data } }
 // Non-stacking by ID: reapplying extends duration.
 // Dispatches a 'effects:tick' event ~1/sec for UI to refresh badges.
-
+///systems/effects.js
 let tickerStarted = false;
 
 function nowMs(){ return Date.now(); }

@@ -210,7 +210,7 @@ export const MONSTERS = [
   { id:'peak_giant', name:'Peak Giant', level:34, time:4800,
     zone:'Mountains', hp:350, attack:48, defense:40, maxHit:32,
     xp:{attack:340,strength:340,defense:340},
-    drops:[{gold:58, chance:0.7}],
+    drops:[{gold:58, chance:0.7},{id: 'gold_ring', chance: 0.1}],
     img:'assets/monsters/peak_giant.png'
   },
   { id:'frost_drake', name:'Frost Drake', level:42, time:5400,

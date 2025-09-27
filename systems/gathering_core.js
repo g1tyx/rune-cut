@@ -1,4 +1,3 @@
-// /systems/gathering_core.js
 import { ITEMS } from '../data/items.js';
 import { addItem } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
@@ -9,22 +8,6 @@ import {
 
 const XP_TABLE = buildXpTable();
 
-/**
- * Create a standardized gathering skill module.
- *
- * @param {Object} cfg
- * @param {string}   cfg.actionType           'chop' | 'fish' | 'mine'
- * @param {string}   cfg.selectedIdKey        e.g. 'selectedTreeId' | 'selectedSpotId' | 'selectedRockId'
- * @param {string}   cfg.xpKey                e.g. 'wcXp' | 'fishXp' | 'miningXp'
- * @param {Array}    cfg.data                 data array with objects: { id, name?, level?, baseTime?, xp?, drop, qty?, bonusDrops? }
- * @param {string}   cfg.equipmentSlot        'axe' | 'fishing' | 'pickaxe' (key in state.equipment & equipmentMods)
- * @param {string}   cfg.actionBindKey        property stored in state.action to bind the target id (e.g. 'treeId' | 'spotId' | 'rockId')
- * @param {string}   [cfg.labelVerb]          'Chop' | 'Fish' | 'Mine' (defaults to capitalized actionType)
- * @param {string}   [cfg.essenceId]          essence item id for this skill
- * @param {number}   [cfg.essenceChance=0.10] default essence chance if target doesn’t specify its own
- * @param {number}   [cfg.levelScale=0.03]    +3% speed per level by default
- * @param {number}   [cfg.minActionMs=100]    minimum duration clamp
- */
 export function createGatheringSkill(cfg){
   const {
     actionType,
@@ -80,7 +63,6 @@ export function createGatheringSkill(cfg){
       [actionBindKey]: t.id
     };
 
-    // AFK-safe completion guard: only fire if our action is still the same
     setTimeout(()=>{
       if (state.action?.type === actionType && state.action?.[actionBindKey] === t.id){
         onDone?.();
@@ -91,27 +73,31 @@ export function createGatheringSkill(cfg){
   }
 
   function finish(state, tOrId){
-    // allow explicit arg first, else read from in-flight action
     const t = resolveTarget(data, state.action?.[actionBindKey], tOrId);
     if (!t){ state.action = null; return 0; }
 
-    // base drop (allow qty number or omitted → 1)
     const qty = Math.max(1, Number(t.qty || 1));
     addItem(state, t.drop, qty);
 
-    // standardized bonus drops: [{ id, chance, qty }] with qty number or [min,max]
     const bonuses = applyDrops(state, Array.isArray(t.bonusDrops) ? t.bonusDrops : [], addItem);
 
-    // essence (per-target override or default)
     const roll = Number(t.essenceChance ?? essenceChance);
     const essence = chance(roll);
     if (essence && essenceId) addItem(state, essenceId, 1);
 
-    // apply XP & clear action
-    state[xpKey] = (state[xpKey] || 0) + (t.xp || 0);
+    const gainedXp = (t.xp || 0);
+    state[xpKey] = (state[xpKey] || 0) + gainedXp;
     state.action = null;
 
-    return { qty, essence, bonuses };
+    return {
+      qty,
+      essence,
+      bonuses,        // [{ id, qty }, ...]
+      dropId: t.drop, // for naming
+      xp: gainedXp,   // for log line
+      target: t.name || t.id,
+      essenceId       // for naming
+    };
   }
 
   return {

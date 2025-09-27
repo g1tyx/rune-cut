@@ -1,5 +1,5 @@
 // /ui/enchanting.js
-import { state, saveState } from '../systems/state.js';
+import { state } from '../systems/state.js';
 import { ENCHANT_RECIPES } from '../data/enchanting.js';
 import { canEnchant, startEnchant, finishEnchant } from '../systems/enchanting.js';
 import { ensureMana, manaMaxFor, onManaChange } from '../systems/mana.js';
@@ -7,11 +7,15 @@ import { initRecipePanel } from './recipe_ui.js';
 import { qs } from '../utils/dom.js';
 import { pushLog } from './logs.js';
 
+// DOM refs
 const el = {
   mana:  qs('#enchantMana'),
   label: qs('#enchantLabel'),
   list:  qs('#enchantList'),
 };
+
+// Strict base helper (strip @quality and #tags)
+const baseIdStrict = s => String(s||'').split('@')[0].split('#')[0];
 
 // ---- display helpers ----
 const manaText = () => {
@@ -21,23 +25,37 @@ const manaText = () => {
   return `Mana: ${cur}/${max}`;
 };
 
-// ---- max make (we still compute, but UI will force single craft) ----
-function maxMake(state, id){
+// ---- max make (UI forces single craft; still compute for availability) ----
+function maxMake(s, id){
   const r = ENCHANT_RECIPES[id]; if (!r) return 0;
 
   // material bound
   const matMax = (r.inputs || []).reduce((lim, inp)=>{
-    const have = state.inventory?.[inp.id] || 0;
+    const have = s.inventory?.[inp.id] || 0;
     const can  = Math.floor(have / Math.max(1, inp.qty|0));
     return Math.min(lim, can);
   }, Infinity);
 
   // mana bound
   const perMana = Math.max(0, Number(r.mana) || 0);
-  const manaMax = perMana ? Math.floor((state.manaCurrent|0) / perMana) : Infinity;
+  const manaMax = perMana ? Math.floor((s.manaCurrent|0) / perMana) : Infinity;
 
   const m = Math.min(matMax, manaMax);
   return Number.isFinite(m) ? Math.max(0, m) : 0;
+}
+
+// ---- icon selection (no post-render swaps; prevents flicker) ----
+// - Tome/normal recipes with outputs: keep output icon (handled by recipe_ui)
+// - Ring-enchant recipes (no outputs): infer ring base from recipe id
+// - Optional: for other icon-less recipes with inputs, fall back to first input base
+function iconForRecipe(r){
+  if (Array.isArray(r.outputs) && r.outputs.length) return null; // use output icon
+  if (r?.apply?.mode === 'ring_enchant'){
+    const m = String(r?.id||'').match(/^enchant_(.+_ring)$/);
+    return m ? m[1] : null; // e.g., "enchant_sapphire_ring" -> "sapphire_ring"
+  }
+  if (Array.isArray(r.inputs) && r.inputs.length) return baseIdStrict(r.inputs[0].id);
+  return null;
 }
 
 // ---- init standardized panel (no batching) ----
@@ -59,12 +77,11 @@ const panel = initRecipePanel({
 
     // Standard result for shared panel
     const name = out.appliedTo
-      ? (r.name || id)                  // apply-to-tool recipes use recipe name
+      ? (r.name || id)                  // apply-to-gear recipes use recipe name
       : (out.outputs?.[0]?.id || r.id); // normal recipes use first output id
 
-    // Normalize xp into array-of-gains; avoids "undefined"
-    const xpArr = Array.isArray(r.xp) ? r.xp
-                 : (r.xp ? [r.xp] : []);
+    // Normalize xp into array-of-gains
+    const xpArr = Array.isArray(r.xp) ? r.xp : (r.xp ? [r.xp] : []);
     const xpGains = xpArr.filter(g => g?.skill && g?.amount > 0);
 
     return { id: out.id || id, name, xpGains };
@@ -73,26 +90,19 @@ const panel = initRecipePanel({
   // Rename generic log verb
   pushLog: (txt) => pushLog(String(txt).replace(/^Crafted/i, 'Enchanted'), 'enchanting'),
 
-  // Force single-craft behavior (panel expects these):
-  getBatchOptions: () => [1],          // ensures no multi options
-  getBatchChoice:  () => 1,            // always 1
-  setBatchChoice:  () => {},           // no-op
+  // Force single-craft behavior:
+  getBatchOptions: () => [1],
+  getBatchChoice:  () => 1,
+  setBatchChoice:  () => {},
 
-  // No selectorGroups for enchanting
+  // Final icon is computed here to avoid flicker and keep tome icons correct
+  iconFor: iconForRecipe,
 });
-
-// Remove batch row entirely for enchanting
-function removeBatchRow() {
-  if (!el.list) return;
-  const row = el.list.previousElementSibling;
-  if (row && row.classList?.contains('batch-row')) row.remove();
-}
 
 // ---- public render ----
 export function renderEnchanting(){
   if (el.mana) el.mana.textContent = manaText();
   panel.render?.();
-  removeBatchRow();
   // keep label coherent when idle
   if (el.label && (!state.action || state.action.type !== 'enchant')) {
     el.label.textContent = 'Idle';
@@ -102,6 +112,13 @@ export function renderEnchanting(){
 // keep mana label fresh (coalesced by mana.js)
 onManaChange(()=>{
   if (el.mana) el.mana.textContent = manaText();
+});
+
+// Re-render panel immediately on shared state changes
+['equipment:change','inventory:change','mana:change','effects:tick'].forEach(ev=>{
+  window.addEventListener(ev, ()=> {
+    try { renderEnchanting(); } catch {}
+  });
 });
 
 // init

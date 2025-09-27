@@ -76,6 +76,7 @@ export function wireLogFilters(){
  *    pushLog('Crafted Handle → +6 Crafting xp','crafting');
  */
 export const pushLog        = (m, type='skilling') => { logEvent(type, m); renderPanelLogs(); };
+export const pushMineLog   = (m)=>{ logEvent('mining',     m); renderPanelLogs(); };
 export const pushSmithLog   = (m)=>{ logEvent('smithing',   m); renderPanelLogs(); };
 export const pushCombatLog  = (m)=>{ logEvent('combat',     m); renderPanelLogs(); };
 export const pushCraftLog   = (m)=>{ logEvent('crafting',   m); renderPanelLogs(); };

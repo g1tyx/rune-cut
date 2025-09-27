@@ -410,4 +410,18 @@ export const ITEMS = {
     durationSec: 60,
     sell: 25
   },
+
+  gem_sapphire: { id:'gem_sapphire', name:'Sapphire',    type:'gem', sell:200,  img:'assets/gems/gem_sapphire.png' },
+  gem_ruby:     { id:'gem_ruby',     name:'Ruby',        type:'gem', sell:400,  img:'assets/gems/gem_ruby.png' },
+  gem_emerald:  { id:'gem_emerald',  name:'Emerald',     type:'gem', sell:600,  img:'assets/gems/gem_emerald.png' },
+  gem_diamond:  { id:'gem_diamond',  name:'Diamond',     type:'gem', sell:1000, img:'assets/gems/gem_diamond.png' },
+  gem_starstone:{ id:'gem_starstone',name:'Starstone',   type:'gem', sell:2000, img:'assets/gems/gem_starstone.png' },
+  sapphire_ring: { id:'sapphire_ring', name:'Sapphire Ring', type:'equipment', slot:'ring', sell:260,  img:'assets/gems/ring_sapphire.png' },
+  ruby_ring:     { id:'ruby_ring',     name:'Ruby Ring',     type:'equipment', slot:'ring', sell:480,  img:'assets/gems/ring_ruby.png' },
+  emerald_ring:  { id:'emerald_ring',  name:'Emerald Ring',  type:'equipment', slot:'ring', sell:685,  img:'assets/gems/ring_emerald.png' },
+  diamond_ring:  { id:'diamond_ring',  name:'Diamond Ring',  type:'equipment', slot:'ring', sell:1100, img:'assets/gems/ring_diamond.png' },
+  starstone_ring:{ id:'starstone_ring',name:'Starstone Ring',type:'equipment', slot:'ring', sell:2300, img:'assets/gems/ring_starstone.png' },
+  gold_ring: { id:'gold_ring', name:'Gold Ring', type:'equipment', slot:'ring', sell:50,  img:'assets/gems/ring.png' },
+
 };
+

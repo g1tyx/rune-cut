@@ -27,7 +27,15 @@ export function onManaChange(cb){
 export function manaMaxFor(state){
   const bonus = state.manaBonus || 0;
   const enchLvl = levelFromXp(state.enchantXp || 0, XP_TABLE);
-  return MANA_BASE_MAX + Math.max(0, bonus) + enchLvl;
+  let max = MANA_BASE_MAX + Math.max(0, bonus) + enchLvl;
+
+  // ring enchant: +Mana max when id contains "#e:manaMax:<add>"
+  const m = String(state?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
+  if (m && m[1] === 'manaMax'){
+    max += Number(m[2]) || 0;
+  }
+
+  return max;
 }
 
 export function ensureMana(state){

@@ -41,6 +41,14 @@ const BALANCE = {
 
 function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
 
+const RING_ENCH_RE = /#e:([a-zA-Z_]+):(\d+)/;
+function ringEnchant(state){
+  const id = state?.equipment?.ring;
+  if (!id) return null;
+  const m = String(id).match(RING_ENCH_RE);
+  return m ? { stat: m[1], add: Number(m[2])||0 } : null;
+}
+
 /* ---------------- active effects ---------------- */
 function totalAccBonus(s){
   let n = 0;
@@ -92,16 +100,45 @@ function emitHpChange(){ try { window.dispatchEvent(new CustomEvent('hp:change')
 export function hpMaxFor(s){
   const defLvl = levelFromXp(Number(s.defXp)||0, XP_TABLE);
   const hpGear = sumEquip(s, 'hp');
-  return Math.floor(BALANCE.hpBase + defLvl * BALANCE.hpLevelPerDef + hpGear * BALANCE.hpGearWeight);
+  let max = BALANCE.hpBase + defLvl * BALANCE.hpLevelPerDef + hpGear * BALANCE.hpGearWeight;
+
+  // ring enchant bound to item id: "#e:hpMax:<add>"
+  const m = String(s?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
+  if (m && m[1] === 'hpMax'){
+    max += Number(m[2]) || 0;
+  }
+  return Math.floor(max);
 }
+
+export function ensureHp(state){
+  const max = hpMaxFor(state);
+  if (state.hpCurrent == null) state.hpCurrent = max;
+  // clamp to new max (if max increased, further heals can now go above the old cap)
+  state.hpCurrent = Math.max(0, Math.min(max, state.hpCurrent));
+  try { window.dispatchEvent(new Event('hp:change')); } catch {}
+  return state.hpCurrent;
+}
+
 
 export function derivePlayerStats(s, mon){
   const atkLvl = levelFromXp(Number(s.atkXp)||0, XP_TABLE);
   const strLvl = levelFromXp(Number(s.strXp)||0, XP_TABLE);
   const defLvl = levelFromXp(Number(s.defXp)||0, XP_TABLE);
-  const atkBonus = sumEquip(s,'atk');
-  const strBonus = sumEquip(s,'str');
-  const defBonus = sumEquip(s,'def');
+
+  // base gear bonuses
+  let atkBonus = sumEquip(s,'atk');
+  let strBonus = sumEquip(s,'str');
+  let defBonus = sumEquip(s,'def');
+
+  // add bound ring enchant (#e:stat:add) to the appropriate bonus
+  const m = String(s?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
+  if (m){
+    const stat = m[1], add = Number(m[2])||0;
+    if (stat === 'attack')   atkBonus += add;
+    if (stat === 'strength') strBonus += add;
+    if (stat === 'defense')  defBonus += add;
+    // hpMax & manaMax are handled in hpMaxFor / manaMaxFor
+  }
 
   const atkRating = atkLvl*BALANCE.atkLevelWeight + atkBonus*BALANCE.atkGearWeight;
   const defRating = defLvl*BALANCE.defLevelWeight + defBonus*BALANCE.defGearWeight;
@@ -112,6 +149,7 @@ export function derivePlayerStats(s, mon){
   acc = clamp(acc + totalAccBonus(s), 0.05, 0.99);
 
   const maxHit = Math.max(1, Math.floor(1 + strRating + atkLvl*BALANCE.maxHitAtkWeight));
+
   return { atkLvl, strLvl, defLvl, atkBonus, strBonus, defBonus, maxHit, acc, atkRating, defRating, strRating };
 }
 

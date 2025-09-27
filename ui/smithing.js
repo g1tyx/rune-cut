@@ -327,6 +327,33 @@ on(document, 'change', '#forgeMetal', ()=>{
   renderForgeList();
 });
 
+function stopSmith(reason = 'smithing'){
+  if (state.action?.type === 'smith') {
+    // only stop if specific sub-mode matches (so forging UI can keep its own stop if you add one)
+    const wasSmelt = state.action?.mode === 'smelt';
+    state.action = null;
+    try { window.dispatchEvent(new Event('action:stop')); } catch {}
+    if (el.smithLabel) el.smithLabel.textContent = 'Idle';
+    const bar = document.getElementById('smithBar');
+    if (bar) bar.style.width = '0%';
+
+    saveState(state);
+    // keep these renders consistent with your other flows
+    renderSmithing();
+    renderInventory();
+    renderEnchanting();
+    renderSkills();
+    return wasSmelt;
+  }
+  return false;
+}
+on(document, 'click', '#smeltStopBtn, .smelt-stop-btn', ()=>{
+  // Only stop if the current job is smelting
+  if (state.action?.type === 'smith' && state.action?.mode === 'smelt') {
+    stopSmith('smelt');
+  }
+});
+
 // Build upgrade metal filter from data
 (function ensureUpgradeFilterOptions(){
   if (!el.upgradeFilter) return;

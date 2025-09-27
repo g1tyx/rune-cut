@@ -237,6 +237,15 @@ export function finishForge(state){
   return { outId, q: giveQuality ? parseInt(outId.split('@')[1],10) : null, xp: gain };
 }
 
+export function stopSmelt(state){
+  const a = state.action;
+  if (a && a.type === 'smith' && a.mode === 'smelt'){
+    state.action = null;
+    return true;
+  }
+  return false;
+}
+
 /* -------------------- Upgrades -------------------- */
 function parseId(id=''){
   const [base, qStr] = String(id).split('@');
