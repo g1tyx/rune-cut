@@ -3,7 +3,7 @@ import { ITEMS } from '../data/items.js';
 import { BUILDINGS } from '../data/construction.js'; // data-driven camp effects
 
 // Skill drivers (register below)
-import { listRocks, canMine, startMine, finishMine } from './mining.js';
+import { listRocks, canMine, startMining, finishMining } from './mining.js';
 import { listTrees, canChop, startChop, finishChop } from './woodcutting.js';
 import { listFishingSpots, canFish, startFish, finishFish } from './fishing.js';
 
@@ -96,8 +96,8 @@ registerAfkSkill('mining', (state, veinId, done)=>{
   if (!r) return false;
   if (!canMine(state, r)) return false;
 
-  return startMine(state, r, ()=>{
-    const res = finishMine(state, r);
+  return startMining(state, r, ()=>{
+    const res = finishMining(state, r);
     done({
       skill: 'mining',
       targetId: r.id,
@@ -129,6 +129,7 @@ export function stopAfk(state, reason='stop'){
   const ended = { skill: AFK.skill, targetId: AFK.targetId, reason };
   AFK = null;
   try { window.dispatchEvent(new CustomEvent('afk:end', { detail: ended })); } catch {}
+  if (window.__afkTimer) { clearTimeout(window.__afkTimer); window.__afkTimer = null; }
 }
 
 /** Switch target without resetting session end time (same-skill only). */
@@ -151,6 +152,7 @@ export function switchAfkTarget(state, { skill, targetId }){
 /** Start AFK; if same skill already running, acts as a live switch. */
 export function startAfk(state, { skill, targetId }){
   const key = String(skill);
+  window.__afkTimer = setTimeout(() => runLoop(state), 50);
 
   // Same-skill: live switch (no timer reset)
   if (AFK && AFK.skill === key){

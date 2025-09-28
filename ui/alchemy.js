@@ -1,5 +1,5 @@
 // /ui/alchemy.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { getAlchemyRecipes, canBrew, maxBrewable, startBrew, finishBrew } from '../systems/alchemy.js';
 import { initRecipePanel } from './recipe_ui.js';
 import { pushCraftLog } from './logs.js';

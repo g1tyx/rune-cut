@@ -1,6 +1,6 @@
 // /ui/camp.js
 import { qs } from '../utils/dom.js';
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { ITEMS } from '../data/items.js';
 import {
   buildBuildings,     // -> first tier of each allowed family (hut/campfire), hides if already placed
@@ -53,7 +53,7 @@ function ensureCampUnlockedFlow(){
 
   state.gold = Math.max(0, (state.gold|0) - COST);
   state.ui.campUnlocked = true;
-  saveState(state);
+  saveNow();
   try { window.dispatchEvent(new Event('gold:change')); } catch {}
   updateCampTabLockUI();
   return true;
@@ -353,7 +353,7 @@ function renderCampPalette(){
         const xp = Math.max(1, CONSTRUCT_XP(id)|0);
         pushLog(`Built ${def.name || id} → +${xp} Construction xp`, 'construction');
         showXpToast(xp);
-        saveState(state);
+        saveNow();
         renderSkills();
         renderCamp(); // refresh palette, entities, inspector
       }
@@ -400,7 +400,7 @@ function renderCampPalette(){
         const xp = Math.max(1, CONSTRUCT_XP(id)|0);
         pushLog(`Built ${def.name || id} → +${xp} Construction xp`, 'construction');
         showXpToast(xp);
-        saveState(state);
+        saveNow();
         renderSkills();
         renderCamp();
       }
@@ -472,7 +472,7 @@ function enableKeyboardNudge(el, idx){
     const newX = nudgeToFreeX(p.id, Math.max(0, Math.min(W - w, (p.x|0) + dx)), idx);
     if (newX !== p.x){
       p.x = newX;
-      saveState(state);
+      saveNow();
       renderCampEntities();
     }
   });
@@ -540,7 +540,7 @@ function enableDragMove(el, idx){
       const nudged = nudgeToFreeX(p.id, desiredX, idx);
       p.x = nudged;
   
-      saveState(state);
+      saveNow();
       renderCampEntities();
     });
   
@@ -669,7 +669,7 @@ function openInspectorFor(idx){
           const xp = Math.max(1, (typeof CONSTRUCT_XP === 'function' ? CONSTRUCT_XP(res.id) : 1)|0);
           pushLog?.(`Upgraded to ${buildingDef(res.id)?.name || res.id} → +${xp} Construction xp`, 'construction');
           showXpToast?.(xp);
-          if (typeof saveState === 'function') saveState(state);
+          saveNow();
   
           // Re-render panels
           renderSkills?.();
@@ -777,7 +777,7 @@ export function initCamp(){
   updateCampTabLockUI();
 
   // Live-update palette enable/disable when inventory changes
-  window.addEventListener('inventory:change', renderCampPalette);
+  window.addEventListener('inventory:changed', renderCampPalette);
 
   // When total level or gold updates, keep lock label fresh
   const totalEl = document.getElementById('totalLevel');

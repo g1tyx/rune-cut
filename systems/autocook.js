@@ -1,11 +1,12 @@
+// /systems/autocook.js
 // Non-restarting auto-cook window that starts ONLY when the player
 // manually cooks something perfectly. It locks to that raw_* for the
 // entire window. No boot/start on refresh. No restart on expiry.
 
-import { state, saveState } from './state.js';
+import { state, saveNow } from './state.js';
 import { constructionBonuses } from './construction.js';
 import { COOK_RECIPES } from '../data/cooking.js';
-import { cookItems } from './cooking.js';
+import { cookOnce } from './cooking.js';
 
 const TICK_MS = 250;
 const COOK_EVERY_MS = 1200;
@@ -18,6 +19,14 @@ function now(){ return performance.now(); }
 function hasWindow(){
   const until = Number(state.ui?.autoCookUntil || 0);
   return until > now();
+}
+
+function cookedIdOf(raw){
+  const r = COOK_RECIPES?.[raw];
+  if (!r) return null;
+  if (r.output?.id) return r.output.id;
+  if (Array.isArray(r.outputs) && r.outputs[0]?.id) return r.outputs[0].id;
+  return null;
 }
 
 /** Start a new fixed window (overwrite, don't extend). */
@@ -61,14 +70,13 @@ function doOneAutoCook(){
   const have = state.inventory?.[lockedRawId] | 0;
   if (have <= 0) return false;
 
-  const cooked = cookItems(state, lockedRawId, 1);
-  if (cooked > 0){
-    saveState(state);
-    try { window.dispatchEvent(new Event('inventory:change')); } catch {}
+  const res = cookOnce(state, lockedRawId);
+  if (res){
+    saveNow();
+    try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
     try {
-      const cookedId = COOK_RECIPES[lockedRawId]?.cooked;
       window.dispatchEvent(new CustomEvent('autocook:tick', {
-        detail: { rawId: lockedRawId, cookedId, n: cooked }
+        detail: { rawId: lockedRawId, cookedId: cookedIdOf(lockedRawId), n: 1 }
       }));
     } catch {}
     return true;
@@ -111,11 +119,11 @@ function schedule(){ tickHandle = window.setTimeout(tick, TICK_MS); }
 export function initAutoCook(){
   if (tickHandle) return;
 
-  // When the player cooks PERFECT manually, start a window for that raw
-  window.addEventListener('cook:result', (e)=>{
-    const { outcome, rawId } = e.detail || {};
-    if (outcome !== 'perfect' || !rawId) return;
-
+  // When the player cooks PERFECT manually, start a window for that raw.
+  // UI must emit: window.dispatchEvent(new CustomEvent('cook:perfect', { detail:{ rawId } }))
+  window.addEventListener('cook:perfect', (e)=>{
+    const { rawId } = e.detail || {};
+    if (!rawId) return;
     const secs = Number(constructionBonuses(state)?.auto_cook_seconds || 0);
     if (secs > 0){
       startWindow(secs, { preferRawId: rawId });

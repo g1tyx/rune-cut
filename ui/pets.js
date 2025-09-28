@@ -1,5 +1,5 @@
 // /ui/pets.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { PETS } from '../data/pets.js';
 import { on } from '../utils/dom.js';
 import { openPetBattleMode } from './combat.js';
@@ -72,7 +72,7 @@ function ensurePetsUnlockedFlow(){
   if (!confirm("Unlock pets for 25,000 gold?")) return false;
   state.gold = Math.max(0, (state.gold|0) - 25_000);
   state.ui.petsUnlocked = true;
-  saveState(state);
+  saveNow();
   updatePetsTabLockUI();
   return true;
 }
@@ -86,7 +86,7 @@ function ensureActivePetDefault(){
   if (!owned.length) { state.ui.activePet = null; return; }
   if (!owned.includes(state.ui.activePet || '')) {
     state.ui.activePet = owned[0];
-    saveState(state);
+    saveNow();
   }
 }
 
@@ -177,7 +177,7 @@ export function initPets(){
     }
     state.ui = state.ui || {};
     state.ui.activePet = id;
-    saveState(state);
+    saveNow();
     renderPetsPanel();
   });
 

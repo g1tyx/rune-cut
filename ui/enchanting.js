@@ -115,7 +115,7 @@ onManaChange(()=>{
 });
 
 // Re-render panel immediately on shared state changes
-['equipment:change','inventory:change','mana:change','effects:tick'].forEach(ev=>{
+['equipment:change','inventory:changed','mana:change','effects:tick'].forEach(ev=>{
   window.addEventListener(ev, ()=> {
     try { renderEnchanting(); } catch {}
   });

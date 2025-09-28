@@ -1,5 +1,5 @@
 // /ui/recipe_ui.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { on } from '../utils/dom.js';
 import { renderInventory } from './inventory.js';
 import { renderSkills } from './skills.js';
@@ -206,7 +206,7 @@ export function initRecipePanel(cfg){
     const v = btn.getAttribute('data-batch');
     const val = (v === 'X') ? 'X' : parseInt(v,10);
     cfg.setBatchChoice(state, val);
-    saveState(state);
+    saveNow();
     render();
   });
 
@@ -221,7 +221,7 @@ export function initRecipePanel(cfg){
           cfg.pushLog(txt);
           renderInventory(); renderEnchanting(); renderSkills();
         }
-        saveState(state);
+        saveNow();
         if (count === 'X'){
           if (cfg.maxMake(state, id) > 0) requestAnimationFrame(doOne);
           else { onDone?.(); render(); }
@@ -253,7 +253,7 @@ export function initRecipePanel(cfg){
     if (!choice || !variants.some(v => v.id === choice)){
       choice = initialChoice ? initialChoice(variants, H) : variants[0]?.id;
       state.ui.recipeSelectors[selectorKey(groupId)] = choice;
-      saveState(state);
+      saveNow();
     }
     return choice;
   }
@@ -261,7 +261,7 @@ export function initRecipePanel(cfg){
     state.ui = state.ui || {};
     state.ui.recipeSelectors = state.ui.recipeSelectors || {};
     state.ui.recipeSelectors[selectorKey(groupId)] = id;
-    saveState(state);
+    saveNow();
   }
 
   /* ---------- render ---------- */
@@ -384,7 +384,7 @@ export function initRecipePanel(cfg){
     const groupId = sel?.dataset?.group; if (!groupId) return;
     const choice = sel.value;
     setSelectorChoice(groupId, choice);
-    saveState(state);
+    saveNow();
     render();
   });
 
@@ -397,7 +397,7 @@ export function initRecipePanel(cfg){
     const count = computeCount();
 
     craftMany(choice, count, ()=>{
-      saveState(state);
+      saveNow();
       renderInventory(); renderEnchanting(); renderSkills();
       render();
     });
@@ -414,7 +414,7 @@ export function initRecipePanel(cfg){
     const count = computeCount();
 
     craftMany(id, count, ()=>{
-      saveState(state);
+      saveNow();
       renderInventory(); renderEnchanting(); renderSkills();
       render();
     });

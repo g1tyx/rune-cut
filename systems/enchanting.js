@@ -181,7 +181,7 @@ export function finishEnchant(state, id){
 
   // Notify UIs so recipe enablement and equipment slot refresh without a page reload
   try { window.dispatchEvent(new Event('equipment:change')); } catch {}
-  try { window.dispatchEvent(new Event('inventory:change')); } catch {}
+  try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
   try { window.dispatchEvent(new Event('mana:change')); } catch {}
   try { window.dispatchEvent(new Event('effects:tick')); } catch {}
 

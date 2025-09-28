@@ -1,5 +1,5 @@
 // /ui/smithing.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { qs, on } from '../utils/dom.js';
 import { FORGE_RECIPES, SMELT_RECIPES } from '../data/smithing.js';
 import {
@@ -26,12 +26,13 @@ const SMELT_BY_ID = Array.isArray(SMELT_RECIPES)
   : (SMELT_RECIPES || {});
 
 const el = {
-  smithLabel: qs('#smithLabel'),
-  smeltSelect: qs('#smeltSelect'),
-  smeltOneBtn: qs('#smeltOneBtn'),
-  smeltAllBtn: qs('#smeltAllBtn'),
-  forgeList:   qs('#forgeList'),
-  forgeMetal:  qs('#forgeMetal'),
+  smithLabel:   qs('#smithLabel'),
+  smithBar:     qs('#smithBar'),
+  smeltSelect:  qs('#smeltSelect'),
+  smeltOneBtn:  qs('#smeltOneBtn'),
+  smeltAllBtn:  qs('#smeltAllBtn'),
+  forgeList:    qs('#forgeList'),
+  forgeMetal:   qs('#forgeMetal'),
   upgradeFilter:   qs('#upgradeFilter'),
   upgradeTarget:   qs('#upgradeTarget'),
   applyUpgradeBtn: qs('#applyUpgradeBtn'),
@@ -56,21 +57,24 @@ function metalsInOrder(){
 }
 function isSmithBusy(){ return state.action?.type === 'smith'; }
 function isForging(){ return state.action?.type === 'smith' && state.action?.mode === 'forge'; }
+function isSmelting(){ return state.action?.type === 'smith' && state.action?.mode === 'smelt'; }
 function activeForgeId(){ return isForging() ? state.action.key : null; }
-function progressPct(){
-  if (!isForging()) return 0;
+
+function pctFromAction(){
+  if (!isSmithBusy()) return 0;
   const now = performance.now();
-  const { startedAt, duration } = state.action;
-  const p = (now - (startedAt||now)) / Math.max(1, (duration||1));
+  const { startedAt = now, duration = 1 } = state.action || {};
+  const p = (now - startedAt) / Math.max(1, duration);
   return Math.max(0, Math.min(1, p));
 }
+
 function stopAfkIfNotSmithingOrTome(reason = 'smithing'){
   const a = state.action;
   if (a && a.type !== 'smith' && a.type !== 'tome') {
     state.action = null;
     try { window.dispatchEvent(new Event('action:stop')); } catch {}
     pushSmithLog(`Stopped ${a.type || 'afk'} to ${reason}.`);
-    saveState(state);
+    saveNow();
     return true;
   }
   return false;
@@ -99,10 +103,8 @@ function ensureSmeltDropdown(){
     return `<option value="${r.id}" ${under ? 'disabled' : ''} title="${title}">${label}</option>`;
   }).join('');
 
-  // keep previous selection if valid
   if (prev && SMELT_BY_ID[prev]) el.smeltSelect.value = prev;
 
-  // pick first enabled if none selected or disabled
   const sel = el.smeltSelect.options[el.smeltSelect.selectedIndex];
   if (!sel || sel.disabled){
     const firstEnabled = Array.from(el.smeltSelect.options).find(o => !o.disabled);
@@ -147,22 +149,40 @@ function ensureForgeMetalOptions(){
   if (!el.forgeMetal.value) el.forgeMetal.value = metals[0] || '';
 }
 
-// ---------- forge progress loop ----------
+// ---------- Unified smithing progress loop (smelt + forge) ----------
 let RAF = null;
-function stopForgeLoop(){ if (RAF) cancelAnimationFrame(RAF); RAF = null; }
-function startForgeLoop(){
+function stopSmithLoop(){ if (RAF) cancelAnimationFrame(RAF); RAF = null; }
+function startSmithLoop(){
   if (RAF) return;
   const tick = ()=>{
     RAF = null;
-    if (!isForging()) return;
-    const id = activeForgeId();
-    const bar = el.forgeList?.querySelector(`[data-id="${id}"] .forge-progress .bar`);
-    if (bar) bar.style.width = `${Math.round(progressPct()*100)}%`;
-    if (el.smithLabel){
-      const r = FORGE_RECIPES.find(x=>x.id===id);
-      const pctTxt = `${Math.round(progressPct()*100)}%`;
-      el.smithLabel.textContent = `Forging ${r?.name || prettyName(id)}… ${pctTxt}`;
+    if (!isSmithBusy()) {
+      // clear global bar/label when idle
+      if (el.smithBar)   el.smithBar.style.width = '0%';
+      if (el.smithLabel) el.smithLabel.textContent = 'Idle';
+      return;
     }
+
+    const pct = Math.round(pctFromAction()*100);
+
+    if (isSmelting()){
+      // update global progress bar & label
+      if (el.smithBar) el.smithBar.style.width = `${pct}%`;
+      if (el.smithLabel){
+        const id = state.action?.key;
+        el.smithLabel.textContent = `Smelting ${prettyName(id)}… ${pct}%`;
+      }
+    } else if (isForging()){
+      // update active forge row progress and label
+      const id = activeForgeId();
+      const bar = el.forgeList?.querySelector(`[data-id="${id}"] .forge-progress .bar`);
+      if (bar) bar.style.width = `${pct}%`;
+      if (el.smithLabel){
+        const r = FORGE_RECIPES.find(x=>x.id===id);
+        el.smithLabel.textContent = `Forging ${r?.name || prettyName(id)}… ${pct}%`;
+      }
+    }
+
     RAF = requestAnimationFrame(tick);
   };
   RAF = requestAnimationFrame(tick);
@@ -198,13 +218,12 @@ function renderForgeList(){
 
   const busy = isForging();
   const activeId = activeForgeId();
-  const nowPct = progressPct();
+  const pct = Math.round(pctFromAction()*100);
 
   el.forgeList.innerHTML = list.map(r=>{
-    const ok   = canForge(state, r.id) && !busy;
+    const ok   = canForge(state, r.id) && !isSmithBusy();
     const need = r.level || 1;
     const isActive = busy && r.id === activeId;
-    const pct = isActive ? Math.round(nowPct*100) : 0;
     const costs = inputsOf(r).map(inp => `${inp.qty}× ${prettyName(inp.id)}`).join(', ');
     return `
       <button class="forge-item ${ok ? '' : 'disabled'} ${isActive ? 'busy':''}"
@@ -224,7 +243,7 @@ function renderForgeList(){
     `;
   }).join('');
 
-  if (busy) startForgeLoop(); else stopForgeLoop();
+  if (isForging()) startSmithLoop();
 }
 
 function renderUpgradeDropdown(){
@@ -256,11 +275,16 @@ export function renderSmithing(){
   if (el.smithLabel && (!state.action || state.action.type!=='smith')) {
     el.smithLabel.textContent = 'Idle';
   }
+  // keep global bar in sync on initial paint
+  if (el.smithBar) el.smithBar.style.width = isSmithBusy() ? `${Math.round(pctFromAction()*100)}%` : '0%';
+
   ensureSmeltDropdown();
   updateSmeltButtons();
   ensureForgeMetalOptions();
   renderForgeList();
   renderUpgradeDropdown();
+
+  if (isSmithBusy()) startSmithLoop(); else stopSmithLoop();
 }
 
 // ---------- interactions ----------
@@ -271,16 +295,20 @@ on(document, 'click', '#smeltOneBtn', ()=>{
   if (smithLevel() < need) return;
   if (!canSmelt(state, outId)) return;
   stopAfkIfNotSmithingOrTome('smelt');
+
   const ok = startSmelt(state, outId, ()=>{
     finishSmelt(state);
     const xp = smithXpOf(smeltRec(outId)) || 0;
     pushSmithLog(`Smelted ${prettyName(outId)} → +${xp} Smithing xp`);
-    saveState(state);
+    saveNow();
     renderSmithing();
     renderInventory();
     renderSkills();
   });
-  if (ok) renderSmithing();
+  if (ok){
+    renderSmithing();
+    startSmithLoop();
+  }
 });
 
 on(document, 'click', '#smeltAllBtn', ()=>{
@@ -301,7 +329,7 @@ on(document, 'click', '#smeltAllBtn', ()=>{
       finishSmelt(state);
       const xp = smithXpOf(smeltRec(outId)) || 0;
       pushSmithLog(`Smelted ${prettyName(outId)} → +${xp} Smithing xp`);
-      saveState(state);
+      saveNow();
       renderSmithing();
       renderEnchanting();
       renderInventory();
@@ -309,7 +337,10 @@ on(document, 'click', '#smeltAllBtn', ()=>{
       left -= 1;
       step();
     });
-    if (ok) renderSmithing();
+    if (ok){
+      renderSmithing();
+      startSmithLoop();
+    }
   };
   step();
 });
@@ -329,29 +360,25 @@ on(document, 'change', '#forgeMetal', ()=>{
 
 function stopSmith(reason = 'smithing'){
   if (state.action?.type === 'smith') {
-    // only stop if specific sub-mode matches (so forging UI can keep its own stop if you add one)
-    const wasSmelt = state.action?.mode === 'smelt';
     state.action = null;
+    stopSmithLoop();
     try { window.dispatchEvent(new Event('action:stop')); } catch {}
     if (el.smithLabel) el.smithLabel.textContent = 'Idle';
-    const bar = document.getElementById('smithBar');
-    if (bar) bar.style.width = '0%';
+    if (el.smithBar)   el.smithBar.style.width = '0%';
+    const rowBar = el.forgeList?.querySelector('.forge-progress .bar');
+    if (rowBar) rowBar.style.width = '0%';
 
-    saveState(state);
-    // keep these renders consistent with your other flows
+    saveNow();
     renderSmithing();
     renderInventory();
     renderEnchanting();
     renderSkills();
-    return wasSmelt;
+    return true;
   }
   return false;
 }
 on(document, 'click', '#smeltStopBtn, .smelt-stop-btn', ()=>{
-  // Only stop if the current job is smelting
-  if (state.action?.type === 'smith' && state.action?.mode === 'smelt') {
-    stopSmith('smelt');
-  }
+  if (isSmelting()) stopSmith('smelt');
 });
 
 // Build upgrade metal filter from data
@@ -376,7 +403,7 @@ on(document, 'change', '#upgradeFilter', ()=>{
 
 on(document, 'click', '#forgeList .forge-item', (e, btn)=>{
   const id = btn.dataset.id;
-  if (!id || btn.hasAttribute('disabled') || btn.classList.contains('disabled') || isForging()) return;
+  if (!id || btn.hasAttribute('disabled') || btn.classList.contains('disabled') || isSmithBusy()) return;
   if (!canForge(state, id)) return;
   stopAfkIfNotSmithingOrTome('forge');
 
@@ -388,7 +415,7 @@ on(document, 'click', '#forgeList .forge-item', (e, btn)=>{
       const q = res.q!=null ? ` · ${qStr(res.q)}` : '';
       pushSmithLog(`Forged ${name}${q} → +${res.xp} Smithing xp`);
     }
-    saveState(state);
+    saveNow();
     renderSmithing();
     renderInventory();
     renderEquipment();
@@ -397,8 +424,8 @@ on(document, 'click', '#forgeList .forge-item', (e, btn)=>{
 
   if (ok){
     renderSmithing();
-    startForgeLoop();
-    saveState(state);
+    startSmithLoop();
+    saveNow();
   }
 });
 
@@ -413,7 +440,7 @@ on(document, 'click', '#applyUpgradeBtn', ()=>{
   const barUsed = prettyName(res.barId);
   pushSmithLog(`Upgraded ${name}: ${qStr(res.oldQ)} → ${qStr(res.newQ)} (+${res.xp} Smithing xp) (−1 ${barUsed})`);
 
-  saveState(state);
+  saveNow();
   renderSmithing();
   renderInventory();
   renderEquipment();

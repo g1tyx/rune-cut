@@ -1,5 +1,5 @@
 // /ui/combat.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { MONSTERS } from '../data/monsters.js';
 import { beginFight, turnFight, hpMaxFor } from '../systems/combat.js';
 import { qs } from '../utils/dom.js';
@@ -31,7 +31,7 @@ const overlayEls = {
 };
 
 function setPetMode(on){
-  state.petBattleMode = !!on; saveState(state);
+  state.petBattleMode = !!on; saveNow();
   overlayEls.overlay?.classList.toggle('pet-only', !!on);
   if (overlayEls.fightBtn) overlayEls.fightBtn.textContent = on ? 'Pet Fight' : 'Start Fight';
   if (overlayEls.training) overlayEls.training.disabled = !!on;
@@ -50,10 +50,10 @@ export function openPetBattleMode(){
 /* --- autobattle (unchanged behavior) --- */
 function isAutobattleUnlocked(){ return !!(state.unlocks && state.unlocks.autobattle); }
 function getAuto(monId){ return !!(state.autobattleByMonster && state.autobattleByMonster[monId]); }
-function setAuto(monId,val){ state.autobattleByMonster=state.autobattleByMonster||{}; state.autobattleByMonster[monId]=!!val; saveState(state); }
+function setAuto(monId,val){ state.autobattleByMonster=state.autobattleByMonster||{}; state.autobattleByMonster[monId]=!!val; saveNow(); }
 const AUTO_SESSION_MS = 180000;
-function startAutoSession(monId){ state.autobattleMonId=monId; state.autobattleUntilMs=Date.now()+AUTO_SESSION_MS; saveState(state); }
-function clearAutoSession(){ delete state.autobattleMonId; delete state.autobattleUntilMs; saveState(state); }
+function startAutoSession(monId){ state.autobattleMonId=monId; state.autobattleUntilMs=Date.now()+AUTO_SESSION_MS; saveNow(); }
+function clearAutoSession(){ delete state.autobattleMonId; delete state.autobattleUntilMs; saveNow(); }
 function autoActive(monId){ return isAutobattleUnlocked() && getAuto(monId) && state.autobattleMonId===monId && Date.now()<(state.autobattleUntilMs||0); }
 
 /* --- drop preview helpers --- */
@@ -97,7 +97,7 @@ function doEatOnce(){
   pulse(overlayEls.playerHpBar,'flash-heal',350); bubbleHeal(overlayEls.playerHpBar, healed);
   if(overlayEls.log){ const line=document.createElement('div'); line.textContent=`You eat ${name} and heal ${healed} HP.`; overlayEls.log.appendChild(line); overlayEls.log.scrollTop=overlayEls.log.scrollHeight; }
   try{ window.dispatchEvent(new Event('hp:change')); }catch{} try{ window.dispatchEvent(new Event('food:change')); }catch{}
-  renderEquipment(); renderCombat(); saveState(state); return true;
+  renderEquipment(); renderCombat(); saveNow(); return true;
 }
 
 /* HUD paint: in pet mode, reuse player HP bar to show pet HP */
@@ -176,7 +176,7 @@ function paintMonsterCard(mon){
 
 export function renderCombat(){
   ensureMana(state);
-  startManaRegen(state, ()=>{ saveState(state); const maxMp=manaMaxFor(state); setBar(overlayEls.playerManaBar, overlayEls.playerManaVal, state.manaCurrent, maxMp); });
+  startManaRegen(state, ()=>{ saveNow(); const maxMp=manaMaxFor(state); setBar(overlayEls.playerManaBar, overlayEls.playerManaVal, state.manaCurrent, maxMp); });
   paintHud();
 }
 
@@ -258,7 +258,7 @@ function runCombatTurn(){
               if (Number.isFinite(result?.petLevel) && result.petLevel > 0) pet.level = result.petLevel | 0;
             }
           }
-          saveState(state); 
+          saveNow(); 
           renderCombat(); 
           renderEquipment(); 
           startFightLoop();
@@ -271,13 +271,13 @@ function runCombatTurn(){
       overlayEls.log.appendChild(Object.assign(document.createElement('div'), { textContent: state.petBattleMode ? `Your pet was defeated.` : `You were defeated.` }));
       clearAutoSession();
     }
-    saveState(state); 
+    saveNow(); 
     renderInventory(); 
     renderEquipment(); 
     renderSkills();
     renderCombat();
   } else {
-    saveState(state);
+    saveNow();
   }
 
   return result;
@@ -296,7 +296,7 @@ function renderPetMonsterPicker(zoneId, preId){
     row.innerHTML = `<label class="muted" style="font-size:12px;">Monster</label><select id="monsterPickerSelect" style="flex:1;min-width:180px;"></select>`;
     anchor?.parentElement?.insertBefore(row, anchor);
     row.querySelector('#monsterPickerSelect').addEventListener('change', (e)=>{
-      state.selectedMonsterId = e.target.value; saveState(state);
+      state.selectedMonsterId = e.target.value; saveNow();
       const mon = MONSTERS.find(m=>m.id===state.selectedMonsterId); if(mon) paintMonsterCard(mon);
     });
   }
@@ -305,7 +305,7 @@ function renderPetMonsterPicker(zoneId, preId){
   const mons = MONSTERS.filter(m=>!zone || m.zone===zone);
   const selected = preId || state.selectedMonsterId || mons[0]?.id || '';
   sel.innerHTML = mons.map(m=>`<option value="${m.id}" ${m.id===selected?'selected':''}>${m.name} (Lv ${m.level})</option>`).join('');
-  state.selectedMonsterId = selected; saveState(state);
+  state.selectedMonsterId = selected; saveNow();
 }
 
 /* ---------------- Overlay Control ---------------- */
@@ -315,7 +315,7 @@ function openCombat(mon, opts = {}){
   setPetMode(petOnly);
   state.selectedMonsterId = mon.id;
   // keep combat null until beginFight()
-  saveState(state);
+  saveNow();
 
   if (petOnly) renderPetMonsterPicker(mon.zone, mon.id);
   paintMonsterCard(mon);
@@ -328,12 +328,12 @@ function openCombat(mon, opts = {}){
 
 function closeCombat(){
   overlayEls.overlay?.classList.add('hidden'); setPetMode(false);
-  state.combat=null; saveState(state); clearAutoSession(); stopFightLoop();
+  state.combat=null; saveNow(); clearAutoSession(); stopFightLoop();
 }
 overlayEls.close?.addEventListener('click', closeCombat);
 overlayEls.overlay?.addEventListener('click', (e)=>{ if (e.target === overlayEls.overlay) closeCombat(); });
 document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && !overlayEls.overlay.classList.contains('hidden')) closeCombat(); });
-overlayEls.training?.addEventListener('change', ()=>{ state.trainingStyle = overlayEls.training.value || 'shared'; saveState(state); });
+overlayEls.training?.addEventListener('change', ()=>{ state.trainingStyle = overlayEls.training.value || 'shared'; saveNow(); });
 
 /* ---------------- Buttons ---------------- */
 overlayEls.fightBtn?.addEventListener('click', ()=>{
@@ -350,7 +350,7 @@ overlayEls.fightBtn?.addEventListener('click', ()=>{
       overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle: session started (3 minutes).`}));
     }
   }
-  saveState(state); renderCombat(); renderEquipment(); startFightLoop();
+  saveNow(); renderCombat(); renderEquipment(); startFightLoop();
 });
 overlayEls.eatBtn?.addEventListener('click', ()=>{ if (state.petBattleMode) return; if (!canEat()) return; doEatOnce(); });
 overlayEls.fleeBtn?.addEventListener('click', ()=>{
@@ -428,7 +428,7 @@ function setupZones(){
       renderMonsterGrid(btn.dataset.zone);
       if (state.petBattleMode){
         const firstInZone = MONSTERS.find(m=>m.zone===btn.dataset.zone) || null;
-        if (firstInZone){ state.selectedMonsterId = firstInZone.id; saveState(state); renderPetMonsterPicker(btn.dataset.zone, firstInZone.id); paintMonsterCard(firstInZone); }
+        if (firstInZone){ state.selectedMonsterId = firstInZone.id; saveNow(); renderPetMonsterPicker(btn.dataset.zone, firstInZone.id); paintMonsterCard(firstInZone); }
       }
     });
   });

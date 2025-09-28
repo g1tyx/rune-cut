@@ -1,48 +1,46 @@
-// /systems/royal_service.js
-import { state, saveState } from './state.js';
-import { addPet } from './pet.js';
+// /systems/royal_service.js — lean version + patron XP multipliers
 
-import { ITEMS as _ITEMS } from '../data/items.js';
-import { MONSTERS as _MONSTERS } from '../data/monsters.js';
+import { state, saveNow } from './state.js';
+import { hasItems, removeItem } from './inventory.js';
 import { XP_TABLE, levelFromXp } from './xp.js';
-import { removeItem } from './inventory.js';
 
-// Level-bearing data sources
+// Data
+import { ITEMS as _ITEMS } from '../data/items.js';
 import { COOK_RECIPES as _COOK_RECIPES } from '../data/cooking.js';
 import { CRAFT_RECIPES as _CRAFT_RECIPES } from '../data/crafting.js';
-import { FISHING_SPOTS as _FISHING_SPOTS } from '../data/fishing.js';
-import { ROCKS as _ROCKS } from '../data/mining.js';
-import { SMELT_RECIPES as _SMELT_RECIPES, FORGE_RECIPES as _FORGE_RECIPES } from '../data/smithing.js';
-import { TREES as _TREES } from '../data/woodcutting.js';
+import { MONSTERS as _MONSTERS } from '../data/monsters.js'; // optional
 
-/* ---------- Safe imports ---------- */
-const ITEMS          = _ITEMS || {};
-const MONSTERS       = Array.isArray(_MONSTERS) ? _MONSTERS : [];
-const COOK_RECIPES   = _COOK_RECIPES  || {};
-const CRAFT_RECIPES  = _CRAFT_RECIPES || {};
-const FISHING_SPOTS  = Array.isArray(_FISHING_SPOTS) ? _FISHING_SPOTS : [];
-const ROCKS          = Array.isArray(_ROCKS) ? _ROCKS : [];
-const SMELT_RECIPES  = Array.isArray(_SMELT_RECIPES) ? _SMELT_RECIPES : [];
-const FORGE_RECIPES  = Array.isArray(_FORGE_RECIPES) ? _FORGE_RECIPES : [];
-const TREES          = Array.isArray(_TREES) ? _TREES : [];
+// ---------- Safe aliases ----------
+const ITEMS         = _ITEMS || {};
+const COOK_RECIPES  = _COOK_RECIPES || {};
+const CRAFT_RECIPES = _CRAFT_RECIPES || {};
+const MONSTERS      = Array.isArray(_MONSTERS) ? _MONSTERS : [];
 
-const PATRONS = ['Armorer','Steward','Craftsman','Warden','Quartermaster'];
-
-/* ---------- Small utils ---------- */
+// ---------- Small utils ----------
 function baseId(id){ return String(id || '').split('@')[0]; }
-function humanizeId(id=''){ return id.replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+function labelFor(id){ return ITEMS?.[baseId(id)]?.name || String(id || '').replace(/[_-]+/g,' '); }
+function uniqById(arr){ const s=new Set(); return (arr||[]).filter(x=>x?.id && !s.has(x.id) && s.add(x.id)); }
 function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
-function uniqById(arr){ const s=new Set(); return arr.filter(x=>!s.has(x.id) && s.add(x.id)); }
 
-function pushRoyalLog(msg){
-  try{
-    state.logs = Array.isArray(state.logs) ? state.logs : [];
-    state.logs.push(`[Royal] ${msg}`);
-    saveState();
-  }catch{}
+function levelForItemId(id){
+  const it = ITEMS?.[baseId(id)];
+  const n = Number(it?.level ?? it?.lvl ?? it?.levelReq);
+  return Number.isFinite(n) ? n : 1;
+}
+function levelFromRecipe(r){
+  const lvl = r?.level ?? r?.lvl ?? r?.levelReq ?? r?.req ?? r?.requirement ?? 1;
+  const n = Number(lvl);
+  return Number.isFinite(n) ? n : 1;
+}
+function pickExistingItemId(...candidates){
+  for (const raw of candidates){
+    const id = typeof raw === 'string' ? raw : raw?.id;
+    if (id && ITEMS[baseId(id)]) return baseId(id);
+  }
+  return null;
 }
 
-/* ---------- Level helpers ---------- */
+// ---------- Royal level & banding (original) ----------
 function safeLevelFromXpFallback(xp){
   const T = XP_TABLE;
   if (Array.isArray(T) && T.length){
@@ -61,173 +59,163 @@ function safeLevelFromXp(xp){
 }
 const royalLevel = ()=> safeLevelFromXp(state.royalXp || 0);
 
-function bandForRoyal(lv){
-  const start = Math.floor((Math.max(1, lv) - 1) / 5) * 5 + 1; // 1,6,11,16,..
+/** Deliverables: 5-level windows by royal level, used as a max-cap gate (like old file). */
+function bandForRoyal(rLvl){
+  const start = Math.floor((Math.max(1, rLvl) - 1) / 5) * 5 + 1;
   return { min: start, max: start + 4 };
 }
-function levelFromRecipe(r){ return r?.level ?? r?.lvl ?? r?.levelReq ?? r?.req ?? r?.requirements?.level ?? 1; }
-function levelFromNode(n){   return n?.level ?? n?.lvl ?? n?.levelReq ?? n?.req ?? n?.requirements?.level ?? 1; }
-function labelFor(id){ return ITEMS?.[id]?.name || humanizeId(id); }
-function pickExistingItemId(...candidates){
-  for (const c of candidates){
-    const bid = baseId(c);
-    if (bid && ITEMS[bid]) return bid;
-  }
-  return null;
+
+// ---------- Favor-based monster window ----------
+/** e.g., 45 Favor → {min:20, max:40}. */
+function monsterBandForFavor(favor = 0){
+  const f = Math.max(0, favor|0);
+  if (f >= 90) return { min: 45, max: 90 };
+  if (f >= 80) return { min: 40, max: 80 };
+  if (f >= 70) return { min: 35, max: 70 };
+  if (f >= 60) return { min: 30, max: 60 };
+  if (f >= 50) return { min: 25, max: 50 };
+  if (f >= 40) return { min: 20, max: 40 };  // 45 favor → 20–40
+  if (f >= 30) return { min: 15, max: 30 };
+  if (f >= 20) return { min: 10, max: 20 };
+  if (f >= 10) return { min: 5,  max: 15 };
+  return            { min: 1,  max: 8  };
 }
 
-/* ---------- LEVEL INDEX (from data only; no guesses) ---------- */
-const LEVEL_INDEX = Object.create(null);
-function indexLevel(id, level){
-  const bid = baseId(id);
-  const n = Number(level);
-  if (!bid || !Number.isFinite(n) || n <= 0) return;
-  if (!LEVEL_INDEX[bid] || n < LEVEL_INDEX[bid]) LEVEL_INDEX[bid] = n;
-}
-(function buildLevelIndex(){
-  try{
-    for (const tr of TREES){
-      const lvl = levelFromNode(tr);
-      const ids = [tr?.logId, tr?.dropId, tr?.yieldId, tr?.itemId, tr?.id].filter(Boolean);
-      for (const id of ids) indexLevel(id, lvl);
-    }
-    for (const rk of ROCKS){
-      const lvl = levelFromNode(rk);
-      const ids = [rk?.oreId, rk?.dropId, rk?.yieldId, rk?.itemId, rk?.id].filter(Boolean);
-      for (const id of ids) indexLevel(id, lvl);
-    }
-    for (const sp of FISHING_SPOTS){
-      const lvl = levelFromNode(sp);
-      const ids = [sp?.rawId, sp?.raw, sp?.dropId, sp?.yieldId, sp?.itemId, sp?.id].filter(Boolean);
-      for (const id of ids) indexLevel(id, lvl);
-    }
-    for (const r of Object.values(CRAFT_RECIPES)) {
-      const rawId = r.outputs?.[0]?.id ?? r.output?.id ?? r.output ?? r.result ?? r.product ?? r.id;
-      if (rawId) indexLevel(rawId, levelFromRecipe(r));
-    }
-    for (const r of Object.values(COOK_RECIPES)) {
-      const rawId = r.outputs?.[0]?.id ?? r.output?.id ?? r.output ?? r.result ?? r.product ?? r.id;
-      if (rawId) indexLevel(rawId, levelFromRecipe(r));
-    }
-    for (const r of SMELT_RECIPES){ const id = pickExistingItemId(r?.output?.id ?? r?.output ?? r?.result ?? r?.product ?? r?.id); if (id) indexLevel(id, levelFromRecipe(r)); }
-    for (const r of FORGE_RECIPES){ const id = pickExistingItemId(r?.output?.id ?? r?.output ?? r?.result ?? r?.product ?? r?.id); if (id) indexLevel(id, levelFromRecipe(r)); }
-  }catch(e){
-    console.warn('[Royal] Error building LEVEL_INDEX', e);
-  }
-})();
-function levelForItemId(id){
-  const v = LEVEL_INDEX[baseId(id)];
-  return Number.isFinite(v) ? v : Infinity;
-}
-
-/* ---------- Source pools ---------- */
-function poolFromCook(){
-  return Object.values(COOK_RECIPES).map(r => {
-    const rawId = r.outputs?.[0]?.id ?? r.output?.id ?? r.output ?? r.result ?? r.product ?? r.id;
-    if (!rawId) return null;
-    const id = baseId(rawId);
-    return { id, level: levelFromRecipe(r), label: labelFor(id) };
-  }).filter(Boolean);
-}
-function poolFromCraft(){
-  return Object.values(CRAFT_RECIPES).map(r => {
-    const rawId = r.outputs?.[0]?.id ?? r.output?.id ?? r.output ?? r.result ?? r.product ?? r.id;
-    if (!rawId) return null;
-    const id = baseId(rawId);
-    return { id, level: levelFromRecipe(r), label: labelFor(id) };
-  }).filter(Boolean);
-}
-function poolFromArmorer(){
-  const forge = FORGE_RECIPES.map(r=>{
-    const id = pickExistingItemId(r?.output?.id ?? r?.output ?? r?.result ?? r?.product ?? r?.id);
-    if (!id) return null;
-    return { id, level: levelFromRecipe(r), label: labelFor(id) };
-  }).filter(Boolean);
-  return forge;
-}
-function poolFromQuartermaster(){
-  const logs = TREES.map(tr=>{
-    const id = pickExistingItemId(tr?.drop);
-    if (!id) return null;
-    return { id, level: levelFromNode(tr), label: labelFor(id) };
-  }).filter(Boolean);
-  const ores = ROCKS.map(rk=>{
-    const id = pickExistingItemId(rk?.oreId, rk?.dropId, rk?.yieldId, rk?.itemId, rk?.id);
-    if (!id) return null;
-    return { id, level: levelFromNode(rk), label: labelFor(id) };
-  }).filter(Boolean);
-  const fish = FISHING_SPOTS.map(sp=>{
-    const id = pickExistingItemId(sp?.rawId, sp?.raw, sp?.dropId, sp?.yieldId, sp?.itemId, sp?.id);
-    if (!id) return null;
-    return { id, level: levelFromNode(sp), label: labelFor(id) };
-  }).filter(Boolean);
-  return uniqById([...logs, ...ores, ...fish]);
-}
-function poolFromWarden(){
-  return (MONSTERS || []).map(m=>({ monsterId: m.id, name: m.name, level: m.level || 1 }));
-}
-
-/* ---------- Filtering & picking ---------- */
-const RAW_POOLS = {
-  Armorer:       poolFromArmorer(),
-  Steward:       poolFromCook(),
-  Craftsman:     poolFromCraft(),
-  Quartermaster: poolFromQuartermaster(),
-  Warden:        poolFromWarden()
-};
-function filterCapLevel(pool, bandMax){
-  return (pool || [])
-    .map(x => ({ ...x, level: Number.isFinite(x.level) ? x.level : levelForItemId(x.id) }))
-    .filter(x => Number.isFinite(x.level) && x.level <= bandMax);
-}
-function pickDeliverables(patron, band, n){
-  let cand = filterCapLevel(RAW_POOLS[patron], band.max);
-  cand = uniqById(cand);
-  if (!cand.length){
-    const msg = `No eligible deliverables for ${patron} in band ${band.min}-${band.max}.`;
-    console.warn('[Royal]', msg, { band, patron });
-    pushRoyalLog(`${msg} Check data levels.`);
-    return [];
-  }
-  const bag = cand.slice();
-  const out = [];
-  while (out.length < n && bag.length){
-    const idx = Math.floor(Math.random()*bag.length);
-    out.push(bag.splice(idx,1)[0]);
-  }
-  return out;
-}
-function pickMonsters(band, n){
-  let cand = (RAW_POOLS.Warden || []).filter(m => (m.level || 1) <= band.max);
-  if (!cand.length){
-    const msg = `No eligible monsters in band ${band.min}-${band.max}.`;
-    console.warn('[Royal]', msg, { band });
-    pushRoyalLog(`${msg} Check MONSTERS data.`);
-    return [];
-  }
-  const bag = cand.slice();
-  const out = [];
-  while (out.length < n && bag.length){
-    const idx = Math.floor(Math.random()*bag.length);
-    out.push(bag.splice(idx,1)[0]);
-  }
-  return out;
-}
-
-/* ---------- Difficulty scaling ---------- */
+// ---------- Difficulty scaling (original) ----------
 function layoutForRoyal(rLvl){
-  if (rLvl <= 5)  return { tasksMin:2, tasksMax:3, qtyMin:2,  qtyMax:6 };
+  if (rLvl <= 5)  return { tasksMin:2, tasksMax:3, qtyMin:2,  qtyMax:6  };
   if (rLvl <= 10) return { tasksMin:3, tasksMax:4, qtyMin:8,  qtyMax:16 };
   if (rLvl <= 20) return { tasksMin:4, tasksMax:5, qtyMin:12, qtyMax:20 };
   if (rLvl <= 35) return { tasksMin:5, tasksMax:6, qtyMin:18, qtyMax:28 };
   return            { tasksMin:6, tasksMax:6, qtyMin:24, qtyMax:36 };
 }
 
-/* ---------- Rewards ---------- */
+// ---------- Pools (validated against ITEMS) ----------
+function poolFromCook(){
+  return Object.values(COOK_RECIPES).map(r=>{
+    const id = pickExistingItemId(
+      r?.outputs?.[0]?.id,
+      r?.output?.id, r?.output,
+      r?.result, r?.product, r?.id
+    );
+    if (!id) return null;
+    return { id, level: levelFromRecipe(r), label: labelFor(id) };
+  }).filter(Boolean);
+}
+function poolFromCraft(){
+  return Object.values(CRAFT_RECIPES).map(r=>{
+    const id = pickExistingItemId(
+      r?.outputs?.[0]?.id,
+      r?.output?.id, r?.output,
+      r?.result, r?.product, r?.id
+    );
+    if (!id) return null;
+    return { id, level: levelFromRecipe(r), label: labelFor(id) };
+  }).filter(Boolean);
+}
+function poolFromSmithLikeCraft(){
+  const ARMORISH = /sword|axe|mace|bow|helm|helmet|hood|chest|plate|armor|armour|mail|shield|greaves|boots|gauntlet|bracer|dagger|spear|pike|arrow|bolt/i;
+  return Object.values(CRAFT_RECIPES).map(r=>{
+    const id = pickExistingItemId(
+      r?.outputs?.[0]?.id, r?.output?.id, r?.output, r?.result, r?.product, r?.id
+    );
+    if (!id) return null;
+    const name = labelFor(id);
+    if (!ARMORISH.test(id) && !ARMORISH.test(name)) return null;
+    return { id, level: levelFromRecipe(r), label: name };
+  }).filter(Boolean);
+}
+function poolFromQuartermasterResources(){
+  const RES = /log|plank|board|stone|rock|ore|bar|coal|brick|fiber|cloth|leather|rope|nail|hinge|timber|ingot|sand|glass/i;
+  const seen = new Set();
+  const out = [];
+
+  for (const [id, it] of Object.entries(ITEMS)){
+    if (!id || seen.has(id)) continue;
+    const name = it?.name || id;
+    if (RES.test(id) || RES.test(name)){
+      out.push({ id, level: Number(it?.level)||1, label: name });
+      seen.add(id);
+    }
+  }
+  for (const r of Object.values(CRAFT_RECIPES)){
+    const id = pickExistingItemId(
+      r?.outputs?.[0]?.id, r?.output?.id, r?.output, r?.result, r?.product, r?.id
+    );
+    if (!id || seen.has(id)) continue;
+    const name = labelFor(id);
+    if (RES.test(id) || RES.test(name)){
+      out.push({ id, level: levelFromRecipe(r), label: name });
+      seen.add(id);
+    }
+  }
+  return out;
+}
+function poolFromMonsters(){
+  return MONSTERS.map(m=>{
+    const lvl = Number(m?.level ?? m?.lvl ?? m?.combatLevel ?? 1);
+    const name = m?.name || m?.id || 'Monster';
+    const id   = m?.id || name.toLowerCase().replace(/\s+/g,'_');
+    return { id, level: Number.isFinite(lvl) ? lvl : 1, name };
+  }).filter(x=>x.id && x.level >= 1);
+}
+
+// Assemble patrons (non-empty only)
+const _RAW = {
+  Steward:       poolFromCook(),
+  Craftsman:     poolFromCraft(),
+  Armorer:       poolFromSmithLikeCraft(),
+  Quartermaster: poolFromQuartermasterResources(),
+  Warden:        poolFromMonsters(),
+};
+const RAW_POOLS = Object.fromEntries(
+  Object.entries(_RAW).filter(([,v]) => Array.isArray(v) && v.length > 0)
+);
+
+// ---------- Candidate filtering & picking (original cap-by-max style) ----------
+function filterCapLevel(pool, bandMax){
+  return (pool||[])
+    .map(x=>{
+      const lvl = Number.isFinite(x.level) ? x.level : levelForItemId(x.id);
+      return { ...x, level: Number.isFinite(lvl) ? lvl : 1 };
+    })
+    .filter(x => Number.isFinite(x.level) && x.level <= bandMax);
+}
+
+export function pickDeliverables(patron, band, n){
+  let cand = filterCapLevel(RAW_POOLS[patron], band.max);
+  cand = uniqById(cand);
+  if (!cand.length) return [];
+
+  const bag = cand.slice();
+  const out = [];
+  while (out.length < n && bag.length){
+    const idx = Math.floor(Math.random()*bag.length);
+    out.push(bag.splice(idx,1)[0]);
+  }
+  return out;
+}
+function pickMonstersFavor(band, n){
+  // Favor-based band (min..max), simple selection
+  let cand = (RAW_POOLS.Warden || []).filter(m =>
+    (m.level || 1) >= band.min && (m.level || 1) <= band.max
+  );
+  if (!cand.length) return [];
+
+  const bag = cand.slice();
+  const out = [];
+  while (out.length < n && bag.length){
+    const idx = Math.floor(Math.random()*bag.length);
+    out.push(bag.splice(idx,1)[0]);
+  }
+  return out;
+}
+
+// ---------- Rewards (original base) + Patron multipliers ----------
 const XP_TUNING = {
-  deliverBase:      1.0,
-  deliverPerReq:    0.7,
-  deliverPerTier:   0.3,
+  deliverBase:      4.0,
+  deliverPerReq:    1.7,
+  deliverPerTier:   1.3,
   slayBase:         1.0,
   slayPerLevel:     1.2,
   completePerRoyal: 2.0,
@@ -236,6 +224,18 @@ const XP_TUNING = {
   contractMinAbs:   40,
   contractMaxAbs:   6000
 };
+
+// New: XP multiplier by patron (Steward 0.6x, Quartermaster 2.2x, Craftsman 2.5x, Warden 1.2x, Armorer 1.0x)
+function patronXpMultiplier(patron){
+  switch (patron){
+    case 'Steward':       return 0.60; // 40% less
+    case 'Quartermaster': return 2.20; // 120% more
+    case 'Craftsman':     return 2.50; // 150% more
+    case 'Warden':        return 1.20; // 20% more
+    default:              return 1.00; // Armorer/others unchanged
+  }
+}
+
 function computeRewardXp(contract){
   let raw = 0;
   for (const t of (contract?.tasks || [])){
@@ -244,13 +244,18 @@ function computeRewardXp(contract){
       const tier = (it?.tier || 1);
       const sr   = Math.min(t.serviceLevel || 1, t.bandMax || 1);
       const per  = XP_TUNING.deliverBase + XP_TUNING.deliverPerReq * sr + XP_TUNING.deliverPerTier * tier;
-      raw += Math.round(t.qty * per);
+      raw += Math.round((t.qty ?? t.need ?? 0) * per);
     } else {
       const lev = Math.min(t.level || 1, t.bandMax || 1);
       const per = XP_TUNING.slayBase + XP_TUNING.slayPerLevel * lev;
-      raw += Math.round(t.qty * per);
+      raw += Math.round((t.qty ?? 0) * per);
     }
   }
+
+  // Apply patron multiplier once to the total (contracts are single-patron)
+  raw = Math.round(raw * patronXpMultiplier(contract?.patron));
+
+  // Completion bonus & soft cap as before
   raw += Math.floor(royalLevel() * XP_TUNING.completePerRoyal);
 
   const cur = state.royalXp || 0;
@@ -264,176 +269,127 @@ function computeRewardXp(contract){
   return Math.max(10, Math.min(raw, cap));
 }
 
-/* ---------- Inventory helpers ---------- */
-function countByBaseId(base){
-  const inv = state.inventory || {};
-  let total = 0;
-  for (const [id, qty] of Object.entries(inv)){
-    if (baseId(id) === base) total += (qty || 0);
-  }
-  return total;
-}
-function removeByBaseId(base, qty){
-  const inv = state.inventory || {};
-  let remaining = qty;
-  const entries = Object.entries(inv)
-    .filter(([id]) => baseId(id) === base)
-    .map(([id, q]) => {
-      const qStr = String(id).split('@')[1];
-      const qual = qStr ? parseInt(qStr, 10) : 100;
-      return { id, qty: q || 0, qual };
-    })
-    .sort((a,b)=> (a.qual - b.qual)); // consume worse first
-  for (const e of entries){
-    if (remaining <= 0) break;
-    if (e.qty <= 0) continue;
-    const take = Math.min(e.qty, remaining);
-    removeItem(state, e.id, take);
-    remaining -= take;
-  }
-  return remaining <= 0;
-}
-
-/* ---------- Slay progress ---------- */
-function currentKills(monsterId){ return Number(state.monsterKills?.[monsterId] || 0); }
-function slayCountSince(task){
-  const base = Number(task.baseKills || 0);
-  const now  = currentKills(task.monsterId);
-  return Math.max(0, now - base);
-}
-
-/* ---------- PET UNLOCKS (SYSTEMS-LEVEL) ---------- */
-/**
- * Ensure systemic unlocks that depend on Favor.
- * - At 50 Favor: award the Royal Service Dog "sterling" (once).
- */
+// ---------- Favor & unlocks ----------
+function royalFavor(){ return +(state.royalFavor || 0); }
 export function ensureRoyalUnlocks(){
-  const favor = state.royalFavor | 0;
-
-  if (favor >= 50) {
-    if (!state.pets?.sterling) {
-      try {
-        addPet(state, 'sterling');
-        pushRoyalLog('The Royal Court awards you Sterling, the Royal Service Dog.');
-        saveState();
-        try { window.dispatchEvent(new Event('pets:change')); } catch {}
-      } catch (e) {
-        console.warn('[Royal] Failed to add Sterling:', e);
-      }
+  try {
+    const favor = royalFavor();
+    const pets = (state.pets = state.pets || {});
+    if (favor >= 50 && !pets.sterling){
+      pets.sterling = { id: 'sterling', level: 1, xp: 0, owned: true };
+      saveNow();
+      try { window.dispatchEvent(new CustomEvent('pets:change')); } catch {}
     }
+  } catch (e) {
+    console.error('[Royal] ensureRoyalUnlocks error', e);
   }
 }
 
-/* ---------- Public API ---------- */
+// ---------- Contract engine (original quantities) ----------
+function randomPatron(){
+  const order = ['Warden','Quartermaster','Armorer','Steward','Craftsman'];
+  const keys = order.filter(k => (RAW_POOLS[k]||[]).length);
+  return keys[Math.floor(Math.random()*keys.length)] || 'Steward';
+}
+
 export function tryOfferContract(){
   if (state.royalContract) return state.royalContract;
 
   const rLvl   = royalLevel();
-  const band   = bandForRoyal(rLvl);
+  const dBand  = bandForRoyal(rLvl);            // deliverables cap-by-max
+  const fBand  = monsterBandForFavor(royalFavor()); // monsters favor-based
   const layout = layoutForRoyal(rLvl);
-  const patron = ['Warden','Quartermaster','Armorer','Steward','Craftsman'][Math.floor(Math.random()*5)];
+  const patron = randomPatron();
+
   const want   = randInt(layout.tasksMin, layout.tasksMax);
   const qtyMin = layout.qtyMin, qtyMax = layout.qtyMax;
 
   let tasks = [];
 
   if (patron === 'Warden'){
-    const mons = pickMonsters(band, want);
+    const mons = pickMonstersFavor(fBand, want);
     tasks = mons.map(m => ({
       kind: 'slay',
-      monsterId: m.monsterId,
+      id: m.id,
       name: m.name,
-      level: Math.min(m.level || 1, band.max),
-      bandMax: band.max,
+      level: Math.min(m.level || 1, fBand.max),
+      bandMax: fBand.max,
+      // ORIGINAL slay amount scale: ~40% of deliver quantities
       qty: Math.max(1, Math.floor(randInt(qtyMin, qtyMax) * 0.4)),
-      baseKills: currentKills(m.monsterId)
+      need: undefined, have: 0
     }));
   } else {
-    const pool = pickDeliverables(patron, band, want);
-    const isHalfQty = (patron === 'Armorer' || patron === 'Craftsman');
-    tasks = pool.map(p => ({
-      kind: 'deliver',
-      id: p.id,
-      label: p.label,
-      serviceLevel: Math.min(p.level || levelForItemId(p.id) || 1, band.max),
-      bandMax: band.max,
-      qty: Math.max(1, Math.floor(randInt(qtyMin, qtyMax) * (isHalfQty ? 0.3 : 1)))
-    }));
+    const pool = pickDeliverables(patron, dBand, want);
+    const isHalfQty = (patron === 'Armorer' || patron === 'Craftsman'); // ORIGINAL: crafts/armorer lower
+    tasks = pool.map(p => {
+      const qty = Math.max(1, Math.floor(randInt(qtyMin, qtyMax) * (isHalfQty ? 0.3 : 1)));
+      return {
+        kind: 'deliver',
+        id: p.id,
+        label: p.label || labelFor(p.id),
+        serviceLevel: Math.min(p.level || levelForItemId(p.id) || 1, dBand.max),
+        bandMax: dBand.max,
+        qty, need: qty, have: 0
+      };
+    });
   }
 
-  if (!tasks.length){
-    const msg = `No eligible tasks for ${patron} at band ${band.min}-${band.max}. Contract not created.`;
-    console.warn('[Royal]', msg);
-    pushRoyalLog(msg);
-    return null;
-  }
+  if (!tasks.length) return false;
 
   const contract = { id: `ctr_${Date.now()}`, patron, tasks, rewardXp: 0 };
   contract.rewardXp = computeRewardXp(contract);
   state.royalContract = contract;
-  saveState();
+  saveNow();
+  try { window.dispatchEvent(new Event('royal:change')); } catch {}
   return contract;
 }
 
-export function taskProgress(task){
-  if (task.kind === 'slay'){
-    if (task.baseKills == null){
-      task.baseKills = currentKills(task.monsterId);
-      saveState();
-    }
-    const got = slayCountSince(task);
-    return { have: Math.min(got, task.qty), need: task.qty };
-  } else {
-    const have = countByBaseId(baseId(task.id));
-    return { have: Math.min(have, task.qty), need: task.qty };
-  }
+// ---------- UI helpers ----------
+export function taskProgress(t){
+  if (!t) return { have:0, need:0 };
+  return { have: Math.max(0, t.have|0), need: Math.max(0, t.need ?? t.qty ?? 0) };
 }
-
-export function canTurnInItemTask(task){
-  if (task.kind !== 'deliver') return false;
-  const have = countByBaseId(baseId(task.id));
-  return have >= task.qty;
+export function canTurnInItemTask(t){
+  if (!t || t.kind !== 'deliver') return false;
+  const remaining = Math.max(0, (t.need|0) - (t.have|0));
+  if (remaining <= 0) return false;
+  return hasItems(state, [{ id: t.id, qty: remaining }]);
 }
-export function turnInItemTask(task){
-  if (task.kind !== 'deliver') return false;
-  const ok = removeByBaseId(baseId(task.id), task.qty);
-  if (!ok) return false;
-  task.kind = 'deliver_done';
-  saveState();
+export function turnInItemTask(t){
+  if (!canTurnInItemTask(t)) return false;
+  const remaining = Math.max(0, t.need - t.have);
+  if (!remaining) return false;
+  removeItem(state, t.id, remaining);
+  t.have = t.need;
+  t.kind = 'deliver_done';
+  saveNow();
+  try { window.dispatchEvent(new Event('royal:change')); } catch {}
   return true;
-}
-
-function isTaskComplete(task){
-  if (task.kind === 'deliver_done') return true;
-  if (task.kind === 'deliver') return false;
-  if (task.baseKills == null) task.baseKills = currentKills(task.monsterId);
-  return slayCountSince(task) >= task.qty;
 }
 
 export function completeIfAllDone(){
   const ctr = state.royalContract;
   if (!ctr) return false;
 
-  const allDone = ctr.tasks.every(isTaskComplete);
-  if (!allDone) return false;
+  const done = ctr.tasks.every(x => {
+    if (x.kind === 'deliver') return (x.have|0) >= (x.need|0);
+    return (x.have|0) >= (x.need ?? x.qty ?? 0);
+  });
+  if (!done) return false;
 
-  state.royalXp    = (state.royalXp || 0) + ctr.rewardXp;
+  state.royalXp    = (state.royalXp || 0) + (ctr.rewardXp || 0);
   state.royalFavor = (state.royalFavor || 0) + 1;
 
   state.royalHistory = state.royalHistory || [];
-  state.royalHistory.push({ ...ctr, completedAt: Date.now() });
+  try { state.royalHistory.push({ ...ctr, completedAt: Date.now() }); } catch {}
 
   state.royalContract = null;
-  saveState();
-
-  // Check favor-based unlocks (e.g., Sterling at 50)
-  ensureRoyalUnlocks();
-
+  saveNow();
   try {
-    window.dispatchEvent(new CustomEvent('royal:complete', {
-      detail: { favor: state.royalFavor, lastRewardXp: ctr.rewardXp }
-    }));
+    window.dispatchEvent(new Event('royal:complete'));
+    window.dispatchEvent(new Event('favor:update'));
   } catch {}
+  try { ensureRoyalUnlocks(); } catch {}
 
   return true;
 }
@@ -441,37 +397,16 @@ export function completeIfAllDone(){
 export function abandonContract(){
   if (!state.royalContract) return false;
   state.royalHistory = state.royalHistory || [];
-  state.royalHistory.push({ ...state.royalContract, abandonedAt: Date.now() });
+  try { state.royalHistory.push({ ...state.royalContract, abandonedAt: Date.now() }); } catch {}
   state.royalContract = null;
-  saveState();
+  saveNow();
+  try { window.dispatchEvent(new Event('royal:change')); } catch {}
   return true;
 }
 
-/* ---------- Debug helpers ---------- */
-export function royalPoolsSnapshot() {
-  const toRows = (arr, take = 8) =>
-    (Array.isArray(arr) ? arr.slice(0, take) : []).map(x => ({
-      id: x.id ?? x.monsterId ?? '(?)',
-      label: x.label ?? x.name ?? '(?)',
-      level: x.level ?? '(?)',
-    }));
-
-  return {
-    sizes: Object.fromEntries(Object.entries(RAW_POOLS).map(([k, v]) => [k, (v || []).length])),
-    craftsman: toRows(RAW_POOLS.Craftsman),
-    steward: toRows(RAW_POOLS.Steward),
-    armorer: toRows(RAW_POOLS.Armorer),
-    quartermaster: toRows(RAW_POOLS.Quartermaster),
-    warden: toRows(RAW_POOLS.Warden),
-  };
-}
-
+// Optional: dev helpers
 if (typeof window !== 'undefined') {
-  window.royalPoolsSnapshot = royalPoolsSnapshot;
-  window.royalPatronSizes = () =>
-    Object.fromEntries(Object.entries(RAW_POOLS).map(([k, v]) => [k, (v || []).length]));
+  window.__royalPools = () =>
+    Object.fromEntries(Object.entries(RAW_POOLS).map(([k,v]) => [k, (v||[]).length]));
   window.ensureRoyalUnlocks = ensureRoyalUnlocks;
 }
-
-// Ensure unlocks apply on load (old saves)
-try { ensureRoyalUnlocks(); } catch {}

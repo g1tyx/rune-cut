@@ -1,6 +1,6 @@
 // /ui/inventory.js
 import { ITEMS } from '../data/items.js';
-import { saveState, state } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { removeItem, addGold } from '../systems/inventory.js';
 import { equipItem, canEquip, equipReqLabel } from '../systems/equipment.js';
 import { renderEquipment } from './equipment.js';
@@ -223,13 +223,13 @@ function equipFoodAllFromInventory(id){
 on(elInv, 'click', '.inv-slot.food', (e, tile)=>{
   if (e.target.closest('button')) return;
   const id = tile.getAttribute('data-id');
-  if (equipFoodAllFromInventory(id)){ renderInventory(); renderEquipment(); saveState(state); }
+  if (equipFoodAllFromInventory(id)){ renderInventory(); renderEquipment(); saveNow(); }
 });
 
 on(elInv, 'click', 'button.use-btn', (e, btn)=>{
   e.stopPropagation();
   const id = btn.getAttribute('data-use');
-  if (eatItem(id)){ renderInventory(); saveState(state); }
+  if (eatItem(id)){ renderInventory(); saveNow(); }
 });
 
 on(elInv, 'click', 'button.sell-btn', (e, btn)=>{
@@ -257,7 +257,7 @@ on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   equipItem(state, id);
   renderInventory();
   renderEquipment();
-  saveState(state);
+  saveNow();
 });
 
 // keep DnD data on inventory tiles
@@ -450,7 +450,7 @@ elPopover?.addEventListener('click', (e)=>{
     const value = sellPrice(id) * n;
     removeItem(state, id, n);
     addGold(state, value);
-    closePopover(); renderInventory(); saveState(state);
+    closePopover(); renderInventory(); saveNow();
     return;
   }
   const eqBtn = e.target.closest('button[data-eq-amt]');
@@ -464,7 +464,7 @@ elPopover?.addEventListener('click', (e)=>{
     if(!Number.isFinite(n) || n<=0) return;
     n = Math.min(n, have);
     for (let i=0;i<n;i++){ equipItem(state, id); }
-    closePopover(); renderInventory(); renderEquipment(); saveState(state);
+    closePopover(); renderInventory(); renderEquipment(); saveNow();
   }
 });
 
@@ -489,8 +489,8 @@ elInv?.addEventListener('click', (e)=>{
   } else { return; }
 
   tile.classList.add('pulse'); setTimeout(()=> tile.classList.remove('pulse'), 200);
-  renderCharacterEffects(); renderEquipment(); renderInventory(); saveState(state);
-  try { window.dispatchEvent(new Event('inventory:change')); } catch {}
+  renderCharacterEffects(); renderEquipment(); renderInventory(); saveNow();
+  try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
   try { window.dispatchEvent(new Event('effects:tick')); } catch {}
 });
 
@@ -543,7 +543,7 @@ const invUseOf = (base) => {
     state.ui = state.ui || {};
     state.ui.invSortUse = !state.ui.invSortUse;
     btn.classList.toggle('active', !!state.ui.invSortUse);
-    renderInventory(); saveState(state);
+    renderInventory(); saveNow();
   });
   function syncSortBtnVis(){ btn.style.display = (state.unlocks && state.unlocks.sort_inventory) ? '' : 'none'; }
   syncSortBtnVis();

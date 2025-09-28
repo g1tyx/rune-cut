@@ -1,121 +1,128 @@
-import { addItem, removeItem } from './inventory.js';
-import { COOK_RECIPES } from '../data/cooking.js';
+// /systems/cooking.js — atomic IO + unified events (aligned with COOK_RECIPES)
+
+import { hasItems, spendItems, grantItems } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
+import { clampMs } from './utils.js';
+import { COOK_RECIPES } from '../data/cooking.js';
 
-export const COOK_TIME_MS = 1600;
 const XP_TABLE = buildXpTable();
+export const MIN_COOK_TIME_MS = 300;
 
-/* ---------- helpers ---------- */
-export function baseId(id=''){ return String(id).split('@')[0]; }
-function displayNameLocal(id=''){ return baseId(id).replace(/^raw_/,'').replace(/_/g,' ').replace(/\b\w/g, m=>m.toUpperCase()); }
+function normQty(n){ const v = Number(n); return Number.isFinite(v) ? (v|0) : 0; }
+function cookLevel(s){ return levelFromXp(Number(s.cookXp || 0), XP_TABLE); }
+function meetsLevel(s, r){ return cookLevel(s) >= (r.level || 1); }
+/** Speed = 1 + 3% per level over 1 (no tool speed for cooking). */
+function speedMult(s){ const lvl = cookLevel(s); return Math.max(1, 1 + 0.03 * Math.max(0, lvl - 1)); }
 
-function rawKeyOf(rec){
-  if (!rec) return null;
-  for (const k in COOK_RECIPES){ if (COOK_RECIPES[k] === rec) return k; }
-  return null;
-}
-function cookedIdOf(rawKey){ return COOK_RECIPES[rawKey]?.output?.id || null; }
-function cookedQtyPerRaw(rawKey){ return COOK_RECIPES[rawKey]?.output?.qty || 1; }
+/** Accepts both single-output and outputs[] schemas. Defaults inputs to 1× raw id. */
+function getRecipe(id){
+  const src = COOK_RECIPES?.[id];
+  if (!src) return null;
 
-export function recipeOf(rawOrRecipe){
-  if (!rawOrRecipe) return null;
-  if (typeof rawOrRecipe === 'string') return COOK_RECIPES[baseId(rawOrRecipe)] || null;
-  if (rawOrRecipe.raw) return COOK_RECIPES[baseId(rawOrRecipe.raw)] || null;
-  if (rawOrRecipe.id)  return COOK_RECIPES[baseId(rawOrRecipe.id)]  || null;
-  return null;
-}
-export function recipeLevel(rawOrId){ const r = recipeOf(rawOrId) || {}; return r.level ?? r.lvl ?? 1; }
-export function recipeTimeMs(rawOrId){ const r = recipeOf(rawOrId) || {}; const t = Number(r.time || 0); return Number.isFinite(t)&&t>0?t:COOK_TIME_MS; }
-export function canCookId(id){ return !!COOK_RECIPES[baseId(id)]; }
+  const inputs = Array.isArray(src.inputs) && src.inputs.length
+    ? src.inputs.map(i => ({ id: i.id, qty: Math.max(1, normQty(i.qty)) }))
+    : [{ id, qty: 1 }];
 
-function playerLvl(state){ try{ return levelFromXp(state.cookXp||0, XP_TABLE); }catch{ return 1; } }
+  let outputs = [];
+  if (Array.isArray(src.outputs) && src.outputs.length){
+    outputs = src.outputs.map(o => ({ id:o.id, qty: Math.max(1, normQty(o.qty)) }));
+  } else if (src.output?.id){
+    outputs = [{ id: src.output.id, qty: Math.max(1, normQty(src.output.qty || 1)) }];
+  }
 
-/* ---------- public API ---------- */
-export function canCook(state, recipeOrId){
-  const r = recipeOf(recipeOrId); if (!r) return false;
-  const rawKey = rawKeyOf(r); if (!rawKey) return false;
-  return (state.inventory?.[rawKey] || 0) > 0;
-}
-export function cookGateReason(state, recipeOrId){
-  const r = recipeOf(recipeOrId); if (!r) return 'Unknown recipe';
-  const rawKey = rawKeyOf(r); if (!rawKey) return 'Unknown recipe';
-  if ((state.inventory?.[rawKey] || 0) <= 0) return 'No raw items';
-  return null;
-}
-
-/** Cook N *raw* items instantly; returns number of COOKED items produced (not raws consumed). */
-export function cookItems(state, recipeOrId, qty){
-  const r = recipeOf(recipeOrId); if (!r) return 0;
-  const rawKey = rawKeyOf(r); if (!rawKey) return 0;
-
-  const haveRaw = state.inventory?.[rawKey] || 0;
-  const rawsToUse = Math.min(haveRaw, qty|0);
-  if (rawsToUse <= 0) return 0;
-
-  const outId = cookedIdOf(rawKey); if (!outId) return 0;
-  const perRaw = cookedQtyPerRaw(rawKey);
-  const cookedOut = perRaw * rawsToUse;
-
-  removeItem(state, rawKey, rawsToUse);
-  addItem(state, outId, cookedOut);
-  state.cookXp = (state.cookXp||0) + (r.xp||0) * rawsToUse;
-
-  try{
-    window.dispatchEvent(new CustomEvent('cook:tick',{detail:{rawId:rawKey,cookedId:outId,n:cookedOut}}));
-    window.dispatchEvent(new Event('inventory:change'));
-    window.dispatchEvent(new Event('skills:change'));
-  }catch{}
-
-  return cookedOut; // cooked items produced
-}
-
-export function startCook(state, recipeOrId){
-  const r = recipeOf(recipeOrId); if (!r) return false;
-  const rawKey = rawKeyOf(r); if (!rawKey) return false;
-  if (!canCook(state, rawKey)) return false;
-
-  const now = performance.now();
-  const baseMs = recipeTimeMs(rawKey);
-  state.action = {
-    type:'cook',
-    label:`Cook ${displayNameLocal(rawKey)}`,
-    startedAt: now,
-    endsAt: now + baseMs,
-    duration: baseMs,
-    payload:{ rawId: rawKey }
+  return {
+    id,
+    name: src.name || id,
+    time: Number(src.time || 1000),
+    level: Number(src.level || src.lvl || 1),
+    inputs,
+    outputs,
+    xp: Number(src.xp || 0),
   };
+}
+
+export function cookDurationMs(s, id){
+  const r = getRecipe(id);
+  if (!r) return 0;
+  return clampMs(r.time / speedMult(s), MIN_COOK_TIME_MS);
+}
+
+export function maxCookable(s, id){
+  const r = getRecipe(id); if (!r) return 0;
+  if (!meetsLevel(s, r)) return 0;
+  let m = Infinity;
+  for (const inp of r.inputs){
+    const have = Number(s.inventory?.[inp.id] || 0);
+    const need = Math.max(1, inp.qty);
+    m = Math.min(m, Math.floor(have / need));
+  }
+  return Number.isFinite(m) ? Math.max(0, m) : 0;
+}
+
+export function canCook(s, id, times = 1){
+  const r = getRecipe(id); if (!r) return false;
+  if (!meetsLevel(s, r)) return false;
+  const n = Math.max(1, times|0);
+  const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty * n }));
+  return hasItems(s, reqs);
+}
+
+export function startCook(s, id){
+  const r = getRecipe(id); if (!r) return false;
+  if (!canCook(s, id, 1)) return false;
+
+  const dur = clampMs(r.time / speedMult(s), MIN_COOK_TIME_MS);
+  const now = performance.now();
+  s.action = { type:'cook', key:id, label:`Cook ${r.name}`, startedAt:now, endsAt:now + dur, duration:dur };
+
+  try { setTimeout(()=> window.dispatchEvent(new CustomEvent('cook:tick', { detail:{ id } })), 0); } catch {}
   return true;
 }
 
-/**
- * Resolve a timed cook with outcome: 'early' | 'perfect' | 'burnt'
- * Returns cooked = number of COOKED items produced (accounting for output.qty).
- */
-export function resolveCook(state, outcome){
-  const rawId = state.action?.payload?.rawId;
-  state.action = null;
-  if (!rawId) return { ok:false, outcome:'none', cooked:0, xp:0 };
+function applyCookIOAndXp(s, r){
+  const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty })).filter(x=>x.qty>0);
+  if (reqs.length && !spendItems(s, reqs)) return false;
 
-  const r = COOK_RECIPES[rawId]; if (!r) return { ok:false, outcome:'none', cooked:0, xp:0 };
-  const outId = cookedIdOf(rawId); const perRaw = cookedQtyPerRaw(rawId);
+  const outs = r.outputs.map(o => ({ id:o.id, qty:o.qty })).filter(x=>x.qty>0);
+  if (outs.length) grantItems(s, outs);
 
-  let cooked=0, xp=0;
-
-  if (outcome==='perfect'){
-    const lvl = playerLvl(state);
-    const req = recipeLevel(rawId);
-    const bonus = Math.max(0, Math.floor((lvl - req)/10));
-    const raws = 1 + bonus;
-    cooked = cookItems(state, rawId, raws);                 // cooked items
-    xp = (r.xp||0) * raws;                                  // xp per raw
-  } else if (outcome==='burnt'){
-    if ((state.inventory?.[rawId]||0) > 0) removeItem(state, rawId, 1);
+  if (r.xp > 0){
+    s.cookXp = (s.cookXp || 0) + r.xp;
+    try { window.dispatchEvent(new Event('skills:change')); } catch {}
   }
+  try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
 
-  try{
-    window.dispatchEvent(new CustomEvent('cook:result',{detail:{outcome,rawId,cooked,xp}}));
-    window.dispatchEvent(new Event('skills:change'));
-  }catch{}
+  return true;
+}
 
-  return { ok:true, outcome, cooked, xp, rawId, cookedId: outId, need: recipeLevel(rawId) };
+export function finishCook(s, id){
+  const key = id || s.action?.key;
+  const r = getRecipe(key);
+  s.action = null;
+  if (!r) return null;
+  if (!canCook(s, key, 1)) return null;
+  if (!applyCookIOAndXp(s, r)) return null;
+
+  try { window.dispatchEvent(new CustomEvent('cook:result', { detail:{ id:r.id, name:r.name, xp:r.xp } })); } catch {}
+  return { id: r.id, name: r.name, xp: r.xp };
+}
+
+/** Cook immediately once (no timer); returns same shape as finishCook. */
+export function cookOnce(s, id){
+  const r = getRecipe(id); if (!r) return null;
+  if (!canCook(s, id, 1)) return null;
+  if (!applyCookIOAndXp(s, r)) return null;
+
+  try { window.dispatchEvent(new CustomEvent('cook:result', { detail:{ id:r.id, name:r.name, xp:r.xp } })); } catch {}
+  return { id: r.id, name: r.name, xp: r.xp };
+}
+
+/** Null if OK; 'level' or 'materials' otherwise. */
+export function cookGateReason(s, id, times = 1){
+  const r = getRecipe(id);
+  if (!r) return 'unknown';
+  if (!meetsLevel(s, r)) return 'level';
+  const n = Math.max(1, times|0);
+  const reqs = r.inputs.map(i => ({ id:i.id, qty:(i.qty|0) * n }));
+  return hasItems(s, reqs) ? null : 'materials';
 }

@@ -1,5 +1,7 @@
-import { state, saveState } from '../systems/state.js';
-import { COOK_TIME_MS, canCook, startCook, resolveCook, cookGateReason, cookItems } from '../systems/cooking.js';
+// /ui/cooking.js — unified with systems/cooking.js helpers
+
+import { state, saveNow } from '../systems/state.js';
+import { cookDurationMs, canCook, startCook, finishCook, cookOnce, cookGateReason } from '../systems/cooking.js';
 import { COOK_RECIPES } from '../data/cooking.js';
 import { qs, on } from '../utils/dom.js';
 import { pushLog } from './logs.js';
@@ -15,49 +17,35 @@ const el = {
   bar:    qs('#cookBar'),
   zone:   qs('#cookPerfectZone'),
   hint:   qs('#cookHint'),
-  auto:   qs('#cookAuto'),   // present in DOM only if unlocked
+  auto:   qs('#cookAuto'),   // present in DOM only if unlocked / shown
 };
 
 /* ---------- small helpers ---------- */
 function baseId(id){ return String(id||'').split('@')[0]; }
-function cookedIdOf(raw){ return COOK_RECIPES[raw]?.output?.id || null; }
-function cookedQtyPerRaw(raw){ return COOK_RECIPES[raw]?.output?.qty || 1; }
+function cookedIdOf(raw){ return COOK_RECIPES[raw]?.output?.id || (COOK_RECIPES[raw]?.outputs?.[0]?.id) || null; }
+function cookedQtyPerRaw(raw){
+  if (COOK_RECIPES[raw]?.output?.qty) return COOK_RECIPES[raw].output.qty|0;
+  if (COOK_RECIPES[raw]?.outputs?.[0]?.qty) return COOK_RECIPES[raw].outputs[0].qty|0;
+  return 1;
+}
 function displayName(id=''){ return baseId(id).replace(/^raw_/,'').replace(/_/g,' ').replace(/\b\w/g, m=>m.toUpperCase()); }
 function playerLvl(){ return levelFromXp(state.cookXp || 0, XP_TABLE); }
 function reqLevel(rawId){ const r = COOK_RECIPES[rawId] || {}; return r.level ?? r.lvl ?? 1; }
 function setHint(s){ if (el.hint) el.hint.textContent = s; }
 
-function hasAutoCookUnlocked(){ return !!(state.unlocks?.autocook); }
-function isAuto(){
-  // Auto mode only if feature unlocked AND toggle exists+checked in UI state
-  if (!hasAutoCookUnlocked()) return false;
-  return !!(state.ui?.autocook);
+function hasAutoCookUnlocked(){
+  // permissive: existing flags, presence of checkbox, or persisted UI toggle
+  const u = state.unlocks || {};
+  return !!(u.autocook || u.autoCook || u.cooking_auto || u.cook_auto || el.auto || (state.ui && state.ui.autocook));
 }
+function isAuto(){ return hasAutoCookUnlocked() && !!(state.ui?.autocook); }
 function syncAutoToggleToState(){
   if (!el.auto) return;
-  if (!hasAutoCookUnlocked()){
-    // If UI accidentally has it, hide/remove so it "only exists when unlocked"
-    try { el.auto.closest('label')?.remove(); } catch {}
-    return;
-  }
   el.auto.checked = !!(state.ui?.autocook);
 }
 function reflectAutoUI(){
   if (el.zone) el.zone.style.visibility = isAuto() ? 'hidden' : 'visible';
   updateBar();
-}
-function setAuto(v){
-  if (!hasAutoCookUnlocked()) return;
-  state.ui = state.ui || {};
-  state.ui.autocook = !!v;
-  saveState(state);
-  syncAutoToggleToState();
-  if (isAuto()){
-    // abort any manual timing
-    if (state.action?.type === 'cook') state.action = null;
-    holding = false; holdingMode = null;
-  }
-  reflectAutoUI();
 }
 
 /* ---------- golden zone ---------- */
@@ -94,7 +82,7 @@ function updateBar(){
   }
   if (state.action?.type === 'cook' && holding){
     const now = performance.now();
-    const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / (state.action.duration || 1)));
+    const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / Math.max(1, (state.action.duration||1))));
     el.bar.style.width = (pct*100).toFixed(2) + '%';
     setHint(`${state.action.label || 'Cooking'} — ${(pct*100).toFixed(0)}%`);
   } else {
@@ -160,13 +148,13 @@ el.fire?.addEventListener('drop', (e)=>{
     if (reason){
       setHint(reason);
     } else {
-      const cookedCount = cookItems(state, raw, 1); // returns cooked items produced
-      if (cookedCount > 0){
+      const res = cookOnce(state, raw); // consume + grant + xp
+      if (res){
         const cookedId = cookedIdOf(raw);
-        const xp = (COOK_RECIPES[raw]?.xp || 0) * 1; // xp is per-raw (we used 1 raw)
-        pushLog(`Auto-cooked ${cookedCount}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
-        renderEnchanting(); renderInventory(); renderSkills(); saveState(state);
-        // keep armed for repeated drags
+        const qty = cookedQtyPerRaw(raw);
+        const xp = res.xp || (COOK_RECIPES[raw]?.xp || 0);
+        pushLog(`Auto-cooked ${qty}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
+        renderEnchanting(); renderInventory(); renderSkills(); saveNow();
       }
       setHint('Auto-cook: drop raw food to cook instantly');
     }
@@ -207,12 +195,13 @@ el.fire?.addEventListener('pointerdown', (e)=>{
   if (auto){
     const reason = cookGateReason(state, id);
     if (reason){ setHint(reason); return; }
-    const cookedCount = cookItems(state, id, 1);
-    if (cookedCount > 0){
+    const res = cookOnce(state, id);
+    if (res){
       const cookedId = cookedIdOf(id);
-      const xp = (COOK_RECIPES[id]?.xp || 0) * 1;
-      pushLog(`Auto-cooked ${cookedCount}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
-      renderEnchanting(); renderInventory(); renderSkills(); saveState(state);
+      const qty = cookedQtyPerRaw(id);
+      const xp = res.xp || (COOK_RECIPES[id]?.xp || 0);
+      pushLog(`Auto-cooked ${qty}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
+      renderEnchanting(); renderInventory(); renderSkills(); saveNow();
     }
     return;
   }
@@ -243,7 +232,7 @@ function scaledDurationFor(rawId){
   const req = reqLevel(rawId);
   const under = Math.max(0, req - lvl);
   const factor = Math.pow(2, under / 6);
-  return COOK_TIME_MS * factor;
+  return cookDurationMs(state, rawId) * factor;
 }
 function startHoldWith(rawId, mode){
   if (isAuto()) return;
@@ -266,40 +255,49 @@ function startHoldWith(rawId, mode){
 function endHold(){
   if (!holding || state.action?.type !== 'cook') { holding=false; return; }
   const now = performance.now();
-  const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / (state.action.duration || 1)));
+  const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / Math.max(1, (state.action.duration || 1))));
   let outcome = 'early';
   if (pct > zoneEnd) outcome = 'burnt';
   else if (pct >= zoneStart && pct <= zoneEnd) outcome = 'perfect';
-  const res = resolveCook(state, outcome);
-  if (res.ok){
-    if (outcome === 'perfect' && res.cooked > 0){
-      const cookedName = displayName(res.cookedId);
-      pushLog(`Cooked ${res.cooked}× ${cookedName} → +${res.xp} Cooking xp`, 'cooking');
-    } else if (outcome === 'burnt'){
-      const rawName = displayName(res.rawId);
-      pushLog(`Burnt ${rawName} — no xp`, 'cooking');
-    } else {
-      pushLog(`Removed too early — still raw`, 'cooking');
+
+  if (outcome === 'perfect'){
+    const res = finishCook(state, state.action?.key);
+    if (res){
+      // Only manual perfect cooks start the autocook window:
+      try { window.dispatchEvent(new CustomEvent('cook:perfect', { detail:{ rawId: res.id } })); } catch {}
+      const cookedId = cookedIdOf(res.id);
+      const qty = cookedQtyPerRaw(res.id);
+      pushLog(`Cooked ${qty}× ${displayName(cookedId)} → +${res.xp} Cooking xp`, 'cooking');
+      renderEnchanting(); renderInventory(); renderSkills(); saveNow();
     }
-    renderEnchanting(); renderInventory(); renderSkills(); saveState(state);
+  } else if (outcome === 'burnt'){
+    pushLog(`Burnt ${displayName(state.action?.key)} — no xp`, 'cooking');
+  } else {
+    pushLog(`Removed too early — still raw`, 'cooking');
   }
+
   holding = false; holdingMode = null;
   if (!isAuto()){
     pendingRawId = null;
     randomizeZone(zoneWidthFor('raw_shrimps'));
   }
+  state.action = null;
   updateBar();
 }
 
 /* ---------- smooth bar ---------- */
 (function raf(){ updateBar(); requestAnimationFrame(raf); })();
 
-/* ---------- toggle wiring (no HTML changes) ---------- */
+/* ---------- toggle wiring ---------- */
+state.ui = state.ui || {};
 if (el.auto){
   syncAutoToggleToState();
   reflectAutoUI();
-  el.auto.addEventListener('change', ()=> setAuto(!!el.auto.checked));
+  el.auto.addEventListener('change', ()=>{
+    state.ui.autocook = !!el.auto.checked;
+    saveNow();
+    reflectAutoUI();
+  });
 } else {
-  // If toggle isn't present, make sure auto mode can't be entered accidentally
-  state.ui = state.ui || {}; state.ui.autocook = false;
+  // Do NOT force-disable autocook when checkbox isn't present
 }

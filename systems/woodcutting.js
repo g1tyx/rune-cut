@@ -1,10 +1,11 @@
-// /systems/woodcutting.js
 import { TREES } from '../data/woodcutting.js';
 import { createGatheringSkill } from './gathering_core.js';
+import { ITEMS } from '../data/items.js';
+import { pushLog } from '../ui/logs.js'; // if you have a forestry log; else remove
 
-export const FOREST_ESSENCE_ID = 'forest_essence';
+export const TREE_ESSENCE_ID = 'forest_essence';
 
-const wc = createGatheringSkill({
+const chop = createGatheringSkill({
   actionType: 'chop',
   selectedIdKey: 'selectedTreeId',
   xpKey: 'wcXp',
@@ -12,14 +13,20 @@ const wc = createGatheringSkill({
   equipmentSlot: 'axe',
   actionBindKey: 'treeId',
   labelVerb: 'Chop',
-  essenceId: FOREST_ESSENCE_ID,
-  essenceChance: 0.10,  // per-tree override via `essenceChance` supported
-  levelScale: 0.03,     // +3%/level
-  minActionMs: 100
+  autoLabel: 'Auto-chopping…',
+  essenceId: TREE_ESSENCE_ID,
 });
 
-// Public API aligned to previous names
-export const listTrees  = wc.listTargets;
-export const canChop    = wc.canDo;
-export const startChop  = wc.start;
-export const finishChop = wc.finish;
+export function listTrees(state){ return chop.listTargets(state); }
+export function canChop(state, treeOrId){ return chop.canDo(state, treeOrId); }
+export function startChop(state, treeOrId, onDone){ return chop.start(state, treeOrId, onDone); }
+export function finishChop(state, treeOrId){
+  const res = chop.finish(state, treeOrId);
+  if (!res) return 0;
+  // optional per-drop logging (remove if you don’t want logs)
+  if (Array.isArray(res.bonuses) && res.bonuses.length){
+    const msg = res.bonuses.map(b => `+${b.qty||1} ${(ITEMS?.[b.id]?.name || b.id)}`).join(' · ');
+    try { pushLog(`Forestry: ${msg}`, ['forestry']); } catch {}
+  }
+  return res;
+}

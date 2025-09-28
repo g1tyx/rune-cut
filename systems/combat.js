@@ -4,7 +4,7 @@ import { renderMonsterGrid } from '../ui/combat.js';
 import { addItem, addGold } from './inventory.js';
 import { XP_TABLE, levelFromXp } from './xp.js';
 import { ITEMS } from '../data/items.js';
-import { saveState, state } from './state.js';
+import { saveNow, state } from './state.js';
 import { getActiveEffects } from '../systems/effects.js';
 import { PETS } from '../data/pets.js';
 import { seedPetForCombat } from './pet.js';
@@ -250,7 +250,7 @@ function onMonsterKilled(mon){
   state.monsterKills = state.monsterKills || {};
   state.monsterKills[mon.id] = (state.monsterKills[mon.id] || 0) + 1;
   try { window.dispatchEvent(new CustomEvent('kills:change', { detail: { monsterId: mon.id, total: state.monsterKills[mon.id] } })); } catch {}
-  saveState();
+  saveNow();
 }
 
 function rollQty(d){

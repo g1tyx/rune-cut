@@ -1,5 +1,5 @@
 // /ui/equipment.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { qs, on } from '../utils/dom.js';
 import { unequipItem } from '../systems/equipment.js';
 import { showTip, hideTip } from './tooltip.js';
@@ -202,7 +202,7 @@ on(grid, 'click', '.eat-btn[data-eat-food]', ()=>{
   try { window.dispatchEvent(new Event('hp:change')); } catch {}
   try { window.dispatchEvent(new Event('food:change')); } catch {}
   renderEquipment();
-  saveState(state);
+  saveNow();
 });
 
 // ---------- unequip (single handler; tome-safe) ----------
@@ -217,7 +217,7 @@ on(grid, 'click', '.unequip-x', (_e, btn)=>{
     if (base && qty > 0){ state.inventory[base] = (state.inventory[base]||0) + qty; }
     if (state.equipment){ state.equipment.food = ''; state.equipment.foodQty = 0; }
     try { window.dispatchEvent(new Event('food:change')); } catch {}
-    saveState(state);
+    saveNow();
     renderInventory();
     renderEquipment();
     return;
@@ -226,7 +226,7 @@ on(grid, 'click', '.unequip-x', (_e, btn)=>{
   if (slot === 'tome'){ try { stopTomeRun(state); } catch {} }
 
   unequipItem(state, slot);
-  saveState(state);
+  saveNow();
   renderInventory();
   renderEquipment();
 
@@ -266,7 +266,7 @@ function applyConsumableEnchantToSlot(consumableId, slot){
   const encoded = `${idNoSwift}#swift:${newVal.toFixed(2)}`;
   state.equipment[slot] = encoded;
 
-  saveState(state);
+  saveNow();
   return { ok:true, eff, slot };
 }
 
@@ -433,8 +433,8 @@ export function renderEquipment(){
   });
 
   ensureHp(state);
-  startHpRegen(state, ()=>{ try { renderCharacter(); saveState(state); } catch {} });
-  startManaRegen(state, ()=>{ try { renderCharacter(); saveState(state); } catch {} });
+  startHpRegen(state, ()=>{ try { renderCharacter(); saveNow(); } catch {} });
+  startManaRegen(state, ()=>{ try { renderCharacter(); saveNow(); } catch {} });
   renderCharacter();
   ensureTomeEngine(state);
 }

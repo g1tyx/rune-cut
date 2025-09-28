@@ -2,7 +2,7 @@
 
 import { BUILDINGS, CONSTRUCT_XP } from '../data/construction.js';
 import { removeItem } from './inventory.js';
-import { saveState } from './state.js';
+import { saveNow } from './state.js';
 
 /* ---------- state helpers ---------- */
 function ensureCamp(state){
@@ -103,7 +103,7 @@ export function buildNow(state, id, pos = { x:0, y:0 }){
   };
   ensureCamp(state).placed.push(entry);
 
-  saveState(state);
+  saveNow();
   try { window.dispatchEvent(new CustomEvent('camp:built', { detail:{ id, pos } })); } catch {}
   return { ok:true, id };
 }
@@ -144,7 +144,7 @@ export function improveBuilding(state, placedIdx){
     size: inferSize(next),
   };
 
-  saveState(state);
+  saveNow();
   try { window.dispatchEvent(new CustomEvent('camp:upgraded', { detail:{ to:nextId, idx:placedIdx } })); } catch {}
   return { ok:true, id: nextId, replaced: placedIdx };
 }

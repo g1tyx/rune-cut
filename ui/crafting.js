@@ -1,7 +1,7 @@
 // /ui/crafting.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { CRAFT_RECIPES } from '../data/crafting.js';
-import { canCraft, maxCraftable, startCraft, finishCraft } from '../systems/crafting.js';
+import { craftDurationMs, canCraft, startCraft, finishCraft, craftOnce, craftGateReason, maxCraftable } from '../systems/crafting.js';
 import { initRecipePanel } from './recipe_ui.js';
 import { pushCraftLog } from './logs.js';
 import { craftBatchOptions } from '../data/construction.js';
@@ -32,7 +32,7 @@ const panel = initRecipePanel({
   setBatchChoice:  (s, v)=>{
     s.ui = s.ui || {};
     s.ui.craftBatch = v;
-    saveState(s);
+    saveNow();
   },
 
   /* ---------- selector groups (example: Pages) ---------- */

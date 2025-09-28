@@ -1,5 +1,5 @@
 // /ui/skill_ui.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { on } from '../utils/dom.js';
 import { pushLog } from './logs.js';
 import { renderInventory } from './inventory.js';
@@ -70,7 +70,7 @@ export function initGatheringPanel(cfg){
       const fallback = list[0]?.id || '';
       if (fallback !== sel){
         cfg.setSelectedId(fallback);
-        saveState(state);
+        saveNow();
       }
     }
   }
@@ -173,7 +173,7 @@ export function initGatheringPanel(cfg){
     if (!cfg.canUse({ ...state, action:null }, t)) return; // level guardrail
 
     cfg.setSelectedId(targetId);
-    saveState(state);
+    saveNow();
 
     if (isAfkSkillActive(cfg.skillId)) {
       switchAfkTarget(state, { skill: cfg.skillId, targetId });
@@ -206,7 +206,7 @@ export function initGatheringPanel(cfg){
     const t = list.find(x => x.id === e.detail.targetId);
     const name = t?.name || e.detail.targetId;
     pushLog(`Started ${cfg.autoLabel.toLowerCase()} at ${name}.`.replace('at Auto-', 'Auto-'), cfg.logChannel);
-    saveState(state);
+    saveNow();
     render();
   });
 
@@ -217,7 +217,7 @@ export function initGatheringPanel(cfg){
     const t = list.find(x => x.id === nextId);
     const name = t?.name || nextId;
     pushLog(`Switched to ${name}.`, cfg.logChannel);
-    saveState(state);
+    saveNow();
     render();
   });
 
@@ -229,7 +229,7 @@ export function initGatheringPanel(cfg){
     const xp = d.xp|0;
 
     pushLog(`${cfg.verbPast} ${targetName} → +1 ${itemName}${essTxt} · +${xp} ${cfg.skillId[0].toUpperCase()+cfg.skillId.slice(1)} xp`, cfg.logChannel);
-    saveState(state);
+    saveNow();
     render();
     renderInventory();
     renderEnchanting();
@@ -239,7 +239,7 @@ export function initGatheringPanel(cfg){
   window.addEventListener('afk:end', (e)=>{
     if (e?.detail?.skill !== cfg.skillId) return;
     pushLog(`Stopped ${cfg.autoLabel.toLowerCase()}`, cfg.logChannel);
-    saveState(state);
+    saveNow();
     render();
   });
 

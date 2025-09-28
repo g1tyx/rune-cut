@@ -1,15 +1,18 @@
-// /ui/royal_service.js
+
+// /ui/royal_service.js — Royal panel UI
+
 import { state } from '../systems/state.js';
 import { qs } from '../utils/dom.js';
+import { ITEMS } from '../data/items.js';
 import {
   tryOfferContract,
   taskProgress,
   canTurnInItemTask,
   turnInItemTask,
   completeIfAllDone,
-  abandonContract
+  abandonContract,
+  ensureRoyalUnlocks
 } from '../systems/royal_service.js';
-import { ITEMS } from '../data/items.js';
 
 const el = {
   panel:       qs('#tab-royal'),
@@ -20,38 +23,17 @@ const el = {
 };
 
 const FAVOR_BONUSES = [
-  {
-    id: 'sort_inventory',
-    name: 'Inventory Sort',
-    need: 10,
-    desc: 'Unlocks the Sort button in the inventory to auto-organize items by use.'
-  },
-  {
-    id: 'autobattle',
-    name: 'Autobattle',
-    need: 25,
-    desc: 'Adds an Autobattle checkbox on the combat card to auto re-engage for 3 minutes.'
-  },
-  {
-    id: 'pet_sterling',
-    name: 'Royal Service Dog',
-    need: 50,
-    desc: 'Earn the loyal hound Sterling after serving the royal court.'
-  }
+  { id:'sort_inventory', name:'Inventory Sort', need:10, desc:'Unlocks the Sort button in the inventory to auto-organize items by use.' },
+  { id:'autobattle',     name:'Autobattle',     need:25, desc:'Adds an Autobattle checkbox on the combat card to auto re-engage for 3 minutes.' },
+  { id:'pet_sterling',   name:'Royal Service Dog', need:50, desc:'Earn the loyal hound Sterling after serving the royal court.' }
 ];
 
-/* ------------------------ helpers ------------------------ */
-function baseId(id){ return String(id || '').split('@')[0]; }
-function iconForItem(id){
-  const bid = baseId(id);
-  const it  = ITEMS?.[bid];
-  return it?.img || '';
-}
+function baseId(id){ return String(id||'').split('@')[0]; }
+function iconForItem(id){ return (ITEMS?.[baseId(id)]?.img) || ''; }
 
 function ensureRoyalCss(){
   if (document.getElementById('royal-css')) return;
-  const css = document.createElement('style');
-  css.id = 'royal-css';
+  const css = document.createElement('style'); css.id='royal-css';
   css.textContent = `
     #royalContract .task-row { display:flex; align-items:center; gap:8px; }
     #royalContract .task-icon {
@@ -60,43 +42,29 @@ function ensureRoyalCss(){
       max-width: var(--royal-task-icon-size, 24px) !important;
       max-height: var(--royal-task-icon-size, 24px) !important;
       flex: 0 0 var(--royal-task-icon-size, 24px) !important;
-      object-fit: contain;
-      border-radius: 4px;
-      image-rendering: auto;
+      object-fit: contain; border-radius:4px; image-rendering:auto;
     }
-    .royal-actions { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
+    .royal-actions { margin-top:10px; display:flex; gap:8px; align-items:center; }
     .royal-celebrate {
       position: fixed; left: 50%; top: 20%;
       transform: translate(-50%, -50%) scale(0.92);
-      background: #1b1f2a; color: #fff; padding: 12px 16px; border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-      z-index: 9999; font-weight: 600; letter-spacing: .2px;
-      display: flex; align-items: center; gap: 10px;
+      background: #1b1f2a; color:#fff; padding:12px 16px; border-radius:12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35); z-index:9999; font-weight:600; letter-spacing:.2px;
+      display:flex; align-items:center; gap:10px;
       animation: royal-pop-in 140ms ease-out, royal-fade-out 900ms ease-out 1100ms forwards;
       border: 1px solid rgba(255,255,255,0.08);
     }
-    .royal-celebrate .badge {
-      background: #23c55e; color: #0b0f14; font-weight: 800; padding: 4px 8px; border-radius: 999px;
-    }
-    @keyframes royal-pop-in {
-      from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
-      to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-    @keyframes royal-fade-out {
-      from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      to   { opacity: 0; transform: translate(-50%, -50%) scale(0.98); }
-    }
+    .royal-celebrate .badge { background:#23c55e; color:#0b0f14; font-weight:800; padding:4px 8px; border-radius:999px; }
+    @keyframes royal-pop-in { from{opacity:0; transform:translate(-50%,-50%) scale(0.85)} to{opacity:1; transform:translate(-50%,-50%) scale(1)} }
+    @keyframes royal-fade-out { from{opacity:1; transform:translate(-50%,-50%) scale(1)} to{opacity:0; transform:translate(-50%,-50%) scale(0.98)} }
   `;
   document.head.appendChild(css);
 }
-ensureRoyalCss();
-
 function ensureRoyalBonusCss(){
   if (document.getElementById('royal-bonus-css')) return;
-  const css = document.createElement('style');
-  css.id = 'royal-bonus-css';
+  const css = document.createElement('style'); css.id='royal-bonus-css';
   css.textContent = `
-    #royalBonusesWrap { margin-top: 14px; }
+    #royalBonusesWrap { margin-top:14px; }
     #royalBonuses { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:10px; margin:8px 0; }
     .bonus-card { position:relative; border:1px solid rgba(0,0,0,0.1); border-radius:10px; padding:10px; background:#0d1117; color:#e6edf3; }
     .bonus-card.locked { opacity:0.65; filter:saturate(0.75); }
@@ -107,6 +75,7 @@ function ensureRoyalBonusCss(){
   `;
   document.head.appendChild(css);
 }
+ensureRoyalCss();
 ensureRoyalBonusCss();
 
 function celebrateComplete(){
@@ -119,22 +88,15 @@ function celebrateComplete(){
 
 function patronLine(ctr){
   switch (ctr.patron) {
-    case 'Warden':
-      return `The Royal Warden calls upon you to defend the kingdom:`;
-    case 'Quartermaster':
-      return `The Royal Quartermaster has requested the following building supplies:`;
-    case 'Armorer':
-      return `The Royal Armorer has issued a contract to arm the kingdom's troops:`;
-    case 'Steward':
-      return `The Royal Steward has requested the following food supplies:`;
-    case 'Craftsman':
-      return `The Royal Craftsman has requested the following goods:`;
-    default:
-      return `A Royal Patron has requested the following:`;
+    case 'Warden':       return `The Royal Warden calls upon you to defend the kingdom:`;
+    case 'Quartermaster':return `The Royal Quartermaster has requested the following building supplies:`;
+    case 'Armorer':      return `The Royal Armorer has issued a contract to arm the kingdom's troops:`;
+    case 'Steward':      return `The Royal Steward has requested the following food supplies:`;
+    case 'Craftsman':    return `The Royal Craftsman has requested the following goods:`;
+    default:             return `A Royal Patron has requested the following:`;
   }
 }
 
-/* ------------------------ contract UI ------------------------ */
 function renderContract(){
   const ctr = state.royalContract;
   if (!ctr) {
@@ -173,7 +135,6 @@ function renderContract(){
         </div>
       </li>`;
     }
-    // delivered item already:
     return `<li>
       <div class="task-row">
         <div class="task done">
@@ -203,30 +164,22 @@ function renderContract(){
     </div>
   `;
 
-  // per-task "Turn In"
   el.contractBox.querySelectorAll('button[data-act="turnin"]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const deliverTask = state.royalContract?.tasks.find(t=>t.kind==='deliver' && canTurnInItemTask(t));
       if (deliverTask) {
         turnInItemTask(deliverTask);
         if (completeIfAllDone()) celebrateComplete();
-        renderRoyal();
+        renderRoyalService();
       }
     });
   });
 
-  // bulk "Turn In"
   el.contractBox.querySelector('#royalTurnInAllBtn')?.addEventListener('click', ()=>{
-    const ctr2 = state.royalContract;
-    if (!ctr2) return;
-
-    for (const t of ctr2.tasks) {
-      if (t.kind==='deliver' && canTurnInItemTask(t)) {
-        turnInItemTask(t);
-      }
-    }
+    const ctr2 = state.royalContract; if (!ctr2) return;
+    for (const t of ctr2.tasks) if (t.kind==='deliver' && canTurnInItemTask(t)) turnInItemTask(t);
     if (completeIfAllDone()) celebrateComplete();
-    renderRoyal();
+    renderRoyalService();
   });
 }
 
@@ -235,7 +188,6 @@ function renderHeader(){
   el.status.innerHTML = `<strong>Royal Service</strong> — Favor <b>${favor}</b>`;
 }
 
-/* ---------- Favor bonuses BELOW the contract ---------- */
 function ensureBonusContainer(){
   if (!el.panel) return null;
   let wrap = document.getElementById('royalBonusesWrap');
@@ -255,10 +207,8 @@ function ensureBonusContainer(){
 function renderBonuses(){
   const box = ensureBonusContainer(); if (!box) return;
   const favor = state.royalFavor || 0;
-
   const cards = FAVOR_BONUSES.map(b => {
     const unlocked = favor >= b.need;
-    // persist unlock flags for non-pet bonuses only; pet grant is handled in systems/royal_service.js
     if (unlocked && b.id !== 'pet_sterling') {
       state.unlocks = state.unlocks || {};
       state.unlocks[b.id] = true;
@@ -271,14 +221,20 @@ function renderBonuses(){
       <div class="pill">${pill}</div>
     </div>`;
   }).join('');
-
   box.innerHTML = cards;
   try { window.dispatchEvent(new Event('favor:update')); } catch {}
 }
 
-/* Ensure contract renders first, then bonuses appear below */
-export function renderRoyal(){
-  if (!el.panel) return;
+/** Public: paint the Royal tab */
+export function renderRoyalService(){
+              try { ensureRoyalUnlocks(); } catch {}
+try { ensureRoyalUnlocks(); } catch {}
+try { ensureRoyalUnlocks(); } catch {}
+try { ensureRoyalUnlocks(); } catch {}
+try { ensureRoyalUnlocks(); } catch {}
+try { ensureRoyalUnlocks(); } catch {}
+if (!el.panel) return;
+  try { ensureRoyalUnlocks(); } catch {}
   renderHeader();
   renderContract();
   renderBonuses();
@@ -296,28 +252,29 @@ export function renderRoyal(){
     if (!got) {
       el.contractBox.innerHTML = `<div class="muted">No valid tasks yet. Level up related skills a bit and try again.</div>`;
     }
-    renderRoyal();
+    renderRoyalService();
   });
 
   el.abandonBtn?.addEventListener('click', ()=>{
     abandonContract();
-    renderRoyal();
+    renderRoyalService();
   });
 
   setInterval(()=>{
     if (completeIfAllDone()) {
       celebrateComplete();
-      renderRoyal();
+      renderRoyalService();
     }
   }, 1000);
 
-  window.addEventListener('kills:change', renderRoyal);
+  window.addEventListener('kills:change', renderRoyalService);
   window.addEventListener('royal:complete', ()=>{
-    renderRoyal();
+    renderRoyalService();
     celebrateComplete();
-    renderRoyal();
+    renderRoyalService();
   });
 
   // Initial paint
-  renderRoyal();
+  renderRoyalService();
 })();
+

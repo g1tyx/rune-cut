@@ -1,5 +1,5 @@
 // /ui/logs.js
-import { state, saveState } from '../systems/state.js';
+import { state, saveNow } from '../systems/state.js';
 import { qs } from '../utils/dom.js';
 
 const els = {
@@ -65,7 +65,7 @@ export function wireLogFilters(){
     document.querySelectorAll('#logFilters .chip')
       .forEach(b=>b.classList.toggle('active', b===btn));
     state.logFilter = btn.dataset.log || 'all';
-    saveState(state);
+    saveNow();
   });
 }
 

@@ -1,5 +1,8 @@
 // /systems/production_core.js
-import { addItem, removeItem } from './inventory.js';
+// Centralized production skill engine (crafting, smithing, alchemy, …)
+// Now uses atomic inventory helpers to prevent “didn’t consume items” bugs.
+
+import { hasItems, spendItems, grantItems } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
 import { clampMs } from './utils.js';
 
@@ -8,29 +11,41 @@ const XP_TABLE = buildXpTable();
 /**
  * Create a standardized production skill module (e.g., crafting, smithing, alchemy).
  *
- * Data schema (per recipe):
+ * Recipe shape (normalized view):
  * {
- *   id: 'planks_from_oak',
- *   name: 'Oak Planks',
- *   time: 2000,                // base ms
- *   level: 3,                  // gate level (default 1)
- *   reqSkill: 'craft',         // which skill gates level (default 'craft')
- *   speedSkill: 'craft',       // which skill speeds process (default 'craft')
- *   inputs:  [{ id, qty }, ...],
- *   outputs: [{ id, qty }, ...],
- *   xp: [{ skill:'craft', amount: 8 }, ...] // one or many skills can gain xp
+ *   id, name, time, level,
+ *   reqSkill,        // gate skill (default: 'craft')
+ *   speedSkill,      // speed scaling skill (default: 'craft')
+ *   inputs:  [{id, qty}],
+ *   outputs: [{id, qty}],
+ *   xp:      [{skill, amount}]
  * }
  */
-export function createProductionSkill(cfg){
-  const {
-    actionType,           // 'craft' | 'smelt' | 'brew' | ...
-    data,                 // object map: { id -> recipe }
-    labelVerb,            // 'Craft' | 'Smelt' | 'Brew' ...
-    levelScale = 0.03,    // +3% per level on speedSkill
-    minActionMs = 300,    // clamp floor
-    // map a skill id (e.g. 'craft') to the state xp property (e.g. 'craftXp')
-    xpKeyOf = (skill)=> ({ craft:'craftXp', wc:'wcXp', fish:'fishXp', min:'minXp', smith:'smithXp', construction:'constructionXp' }[skill] || (skill + 'Xp')),
-  } = cfg;
+export function createProductionSkill({
+  actionType = 'craft',
+  data = {},
+  labelVerb = 'Craft',
+  levelScale = 0.03,   // +3%/level on speedSkill
+  minActionMs = 300
+} = {}) {
+
+  const xpKeyOf = (skill)=>{
+    switch (skill) {
+      case 'woodcut': return 'wcXp';
+      case 'fish':    return 'fishXp';
+      case 'min':     return 'minXp';
+      case 'atk':     return 'atkXp';
+      case 'str':     return 'strXp';
+      case 'def':     return 'defXp';
+      case 'smith':   return 'smithXp';
+      case 'craft':   return 'craftXp';
+      case 'cook':    return 'cookXp';
+      case 'enchant': return 'enchantXp';
+      case 'alch':    return 'alchXp';
+      case 'royal':   return 'royalXp';
+      default:        return `${skill}Xp`; // fallback for new skills
+    }
+  };
 
   const get = (id)=> {
     const r = data?.[id];
@@ -49,30 +64,22 @@ export function createProductionSkill(cfg){
     };
   };
 
-  const levelOf = (state, skill)=>{
-    const key = xpKeyOf(skill);
-    return levelFromXp(state[key] || 0, XP_TABLE);
+  const meetsLevel = (state, r)=>{
+    const key = xpKeyOf(r.reqSkill);
+    const lvl = levelFromXp(state[key] || 0, XP_TABLE);
+    return lvl >= (r.level || 1);
   };
 
-  const speedMult = (state, recipe)=>{
-    const skill = recipe?.speedSkill || 'craft';
-    const lvl   = levelOf(state, skill);
-    return 1 + levelScale * (lvl - 1);
-  };
-
-  const meetsLevel = (state, recipe)=>{
-    const need = Number(recipe.level || 1);
-    const have = levelOf(state, recipe.reqSkill || 'craft');
-    return have >= need;
+  const speedMult = (state, r)=>{
+    const key = xpKeyOf(r.speedSkill);
+    const lvl = levelFromXp(state[key] || 0, XP_TABLE);
+    return Math.max(1, 1 + levelScale * Math.max(0, lvl - 1));
   };
 
   const haveInputs = (state, recipe, times = 1)=>{
     const n = Math.max(1, times|0);
-    for (const inp of recipe.inputs){
-      const have = state.inventory?.[inp.id] || 0;
-      if (have < inp.qty * n) return false;
-    }
-    return true;
+    const reqs = recipe.inputs.map(inp => ({ id: inp.id, qty: (inp.qty|0) * n }));
+    return hasItems(state, reqs);
   };
 
   const maxCraftable = (state, id)=>{
@@ -80,8 +87,9 @@ export function createProductionSkill(cfg){
     if (!meetsLevel(state, r)) return 0;
     let m = Infinity;
     for (const inp of r.inputs){
-      const have = state.inventory?.[inp.id] || 0;
-      m = Math.min(m, Math.floor(have / Math.max(1, inp.qty)));
+      const have = Number(state.inventory?.[inp.id] || 0);
+      const need = Math.max(1, inp.qty|0);
+      m = Math.min(m, Math.floor(have / need));
     }
     return Number.isFinite(m) ? Math.max(0, m) : 0;
   };
@@ -117,11 +125,16 @@ export function createProductionSkill(cfg){
     return true;
   };
 
+  // Apply IO + XP atomically
   const _applyIOAndXp = (state, r)=>{
-    // inputs
-    for (const inp of r.inputs) removeItem(state, inp.id, inp.qty);
+    // inputs (atomic): bail if anything missing (shouldn’t happen if guarded by canMake)
+    const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty|0 })).filter(x=>x.qty>0);
+    if (reqs.length && !spendItems(state, reqs)) return false;
+
     // outputs
-    for (const out of r.outputs) addItem(state, out.id, out.qty);
+    const outs = r.outputs.map(o => ({ id:o.id, qty:o.qty|0 })).filter(x=>x.qty>0);
+    if (outs.length) grantItems(state, outs);
+
     // xp
     for (const g of r.xp){
       if (!g?.skill || !(g.amount > 0)) continue;
@@ -129,6 +142,7 @@ export function createProductionSkill(cfg){
       state[key] = (state[key] || 0) + g.amount;
     }
     try { window.dispatchEvent(new Event('xp:gain')); } catch {}
+    return true;
   };
 
   const finish = (state, id)=>{
@@ -138,7 +152,6 @@ export function createProductionSkill(cfg){
 
     _applyIOAndXp(state, r);
     state.action = null;
-
     return {
       id: r.id,
       name: r.name,

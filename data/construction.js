@@ -348,20 +348,20 @@ const XP_TABLE = {
       time: 3200,
       xp: CONSTRUCT_XP('crafting_table_t3'),
       effects: [{ type: 'craft_batch_max', max: 10 }],
-      //improvesTo: 'crafting_table_t4'
+      improvesTo: 'crafting_table_t4'
     },
-    /*
     crafting_table_t4: {
       id: 'crafting_table_t4',
       name: 'Crafting Table (T4)',
       size: { w: 220, h: 140 },
-      sprite: 'assets/camp/buildings/crafting_table_t4.png',
-      recipe: [{ id: 'log_cedar', qty: 200 }, { id: 'wire_coil', qty: 30 }],
+      sprite: 'assets/camp/buildings/crafting_table.png',
+      recipe: [{ id: 'log_cedar', qty: 140 }, { id: 'crypt_cord', qty: 15 }],
       time: 3600,
       xp: CONSTRUCT_XP('crafting_table_t4'),
       effects: [{ type: 'craft_batch_max', max: 25 }],
-      improvesTo: 'crafting_table_t5'
+      //improvesTo: 'crafting_table_t5'
     },
+    /** 
     crafting_table_t5: {
       id: 'crafting_table_t5',
       name: 'Crafting Table (T5)',

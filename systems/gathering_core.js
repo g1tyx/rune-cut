@@ -46,6 +46,14 @@ export function createGatheringSkill(cfg){
     const t = resolveTarget(data, state[selectedIdKey], tOrId);
     if (!t || !canDo(state, t)) return false;
 
+    // hard-reset any previous action/timer/carry
+    if (state._gatherTimer) { try { clearTimeout(state._gatherTimer); } catch {} }
+    delete state._gatherTimer;
+
+    // action nonce to prevent stale timers from completing new runs
+    state._gatherSeq = (state._gatherSeq|0) + 1;
+    const nonce = state._gatherSeq;
+
     const lvl      = levelFromXp(state[xpKey] || 0, XP_TABLE);
     const eqSpeed  = equipmentSpeed(state);
     const baseTime = t.baseTime || 2000;
@@ -60,12 +68,20 @@ export function createGatheringSkill(cfg){
       startedAt: now,
       endsAt: now + dur,
       duration: dur,
+      _nonce: nonce,
       [actionBindKey]: t.id
     };
 
-    setTimeout(()=>{
-      if (state.action?.type === actionType && state.action?.[actionBindKey] === t.id){
-        onDone?.();
+    // schedule completion guarded by the nonce + current action match
+    state._gatherTimer = setTimeout(()=>{
+      const a = state.action;
+      if (
+        a &&
+        a.type === actionType &&
+        a[actionBindKey] === t.id &&
+        a._nonce === nonce
+      ){
+        try { onDone && onDone(); } catch {}
       }
     }, dur);
 
@@ -73,6 +89,10 @@ export function createGatheringSkill(cfg){
   }
 
   function finish(state, tOrId){
+    // cancel any pending timer; completion now handled synchronously here
+    if (state._gatherTimer) { try { clearTimeout(state._gatherTimer); } catch {} }
+    delete state._gatherTimer;
+
     const t = resolveTarget(data, state.action?.[actionBindKey], tOrId);
     if (!t){ state.action = null; return 0; }
 
@@ -87,6 +107,8 @@ export function createGatheringSkill(cfg){
 
     const gainedXp = (t.xp || 0);
     state[xpKey] = (state[xpKey] || 0) + gainedXp;
+
+    // clear action at the end
     state.action = null;
 
     return {

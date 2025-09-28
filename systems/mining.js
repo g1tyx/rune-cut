@@ -14,28 +14,30 @@ const mine = createGatheringSkill({
   equipmentSlot: 'pick',
   actionBindKey: 'rockId',
   labelVerb: 'Mine',
+  autoLabel: 'Auto-mining…',
   essenceId: ROCK_ESSENCE_ID,
-  essenceChance: 0.10,
-  levelScale: 0.03,
-  minActionMs: 100
 });
 
-export const listRocks = mine.listTargets;
-export const canMine   = mine.canDo;
-export const startMine = mine.start;
+export function listRocks(state) {
+  return mine.listTargets(state);
+}
 
-export function finishMine(state, rockOrId){
+export function canMine(state, rockOrId) {
+  return mine.canDo(state, rockOrId);
+}
+
+export function startMining(state, rockOrId, onDone) {
+  return mine.start(state, rockOrId, onDone);
+}
+
+export function finishMining(state, rockOrId) {
   const res = mine.finish(state, rockOrId);
   if (!res) return 0;
 
   const bonusParts = Array.isArray(res.bonuses) && res.bonuses.length
-    ? res.bonuses.map(b => `+${b.qty || 1} ${(ITEMS?.[b.id]?.name || b.id)}`).join(' · ')
+    ? res.bonuses.map(b => `+${(b.qty || 1)} ${(ITEMS?.[b.id]?.name || b.id)}`).join(' · ')
     : '';
 
-  if (bonusParts){
-    // distinct, colored bonus log
-    pushMineLog(`You found: ${bonusParts}`);
-  }
-
+  if (bonusParts) pushMineLog(`You found: ${bonusParts}`);
   return res;
 }
