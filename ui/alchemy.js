@@ -1,8 +1,16 @@
-// /ui/alchemy.js
+// /ui/alchemy.js — identical panel wiring to Crafting, re-renders on combat finish
+
 import { state, saveNow } from '../systems/state.js';
-import { getAlchemyRecipes, canBrew, maxBrewable, startBrew, finishBrew } from '../systems/alchemy.js';
+import {
+  getAlchemyRecipes,
+  canBrew,
+  maxBrewable,
+  startBrew,
+  finishBrew,
+} from '../systems/alchemy.js';
 import { initRecipePanel } from './recipe_ui.js';
-import { pushCraftLog } from './logs.js';
+import { pushLog } from './logs.js';
+import { alchemyBatchOptions } from '../data/construction.js';
 
 const panel = initRecipePanel({
   actionType: 'alch',
@@ -10,22 +18,42 @@ const panel = initRecipePanel({
   barSelector:   '#alchBar',
   labelSelector: '#alchLabel',
 
+  // Data
   getAll:   () => getAlchemyRecipes(),
   canMake:  (s, id) => canBrew(s, id, 1),
   maxMake:  (s, id) => maxBrewable(s, id),
 
-  start:    (s, id, cb) => startBrew(s, id, cb),
+  // Lifecycle — match Crafting: start(state,id,onDone) and finish(state,id)
+  start:    (s, id, onDone) => startBrew(s, id, onDone),
   finish:   (s, id) => finishBrew(s, id),
 
-  // Reuse crafting log style for consistency
-  pushLog:  (txt) => pushCraftLog(txt),
+  // Logs
+  pushLog:  (txt) => pushLog(txt),
 
-  // No batching for alchemy (omit batch config entirely)
+  // Batching — same pattern as Crafting
+  getBatchOptions: (s) => alchemyBatchOptions(s),
+  getBatchChoice:  (s) => {
+    const opts = alchemyBatchOptions(s);
+    const def = opts[0] || 1;
+    const v = s.ui?.alchBatch;
+    return (v == null || !opts.includes(v)) ? def : v;
+  },
+  setBatchChoice:  (s, v) => {
+    s.ui = s.ui || {};
+    s.ui.alchBatch = v;
+    saveNow();
+  },
 
-  // No selector groups needed currently
   selectorGroups: []
 });
 
 export function renderAlchemy(){
   panel.render();
 }
+
+/* ✅ Re-render Alchemy whenever combat finishes */
+try {
+  window.addEventListener('combat:finish', () => {
+    try { renderAlchemy(); } catch {}
+  });
+} catch {}

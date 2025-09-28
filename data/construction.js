@@ -3,19 +3,21 @@
 
 // XP per blueprint
 const XP_TABLE = {
-    oak_hut_t1: 50,  oak_hut_t2: 70,  oak_hut_t3: 90,  oak_hut_t4: 110, oak_hut_t5: 140,
-    pine_hut_t1: 180, pine_hut_t2: 220, pine_hut_t3: 270, pine_hut_t4: 330, pine_hut_t5: 400,
-  
-    birch_hut_t1: 450, birch_hut_t2: 550, birch_hut_t3: 670, birch_hut_t4: 810, birch_hut_t5: 1000,
-  
-    cedar_hut_t1: 1100, cedar_hut_t2: 1350, cedar_hut_t3: 1600, cedar_hut_t4: 1950, cedar_hut_t5: 2300,
-    elderwood_hut_t1: 2500, elderwood_hut_t2: 3000, elderwood_hut_t3: 3600, elderwood_hut_t4: 4300, elderwood_hut_t5: 5000,
-  
-    campfire_t1: 60,  campfire_t2: 90,  campfire_t3: 120, campfire_t4: 170, campfire_t5: 230,
-    bonfire_t1: 280,  bonfire_t2: 360,  bonfire_t3: 450, bonfire_t4: 550, bonfire_t5: 660,
-  
-    crafting_table_t1: 220, crafting_table_t2: 320, crafting_table_t3: 500, crafting_table_t4: 700, crafting_table_t5: 1000
-  };
+  oak_hut_t1: 50,  oak_hut_t2: 70,  oak_hut_t3: 90,  oak_hut_t4: 110, oak_hut_t5: 140,
+  pine_hut_t1: 180, pine_hut_t2: 220, pine_hut_t3: 270, pine_hut_t4: 330, pine_hut_t5: 400,
+
+  birch_hut_t1: 450, birch_hut_t2: 550, birch_hut_t3: 670, birch_hut_t4: 810, birch_hut_t5: 1000,
+
+  cedar_hut_t1: 1100, cedar_hut_t2: 1350, cedar_hut_t3: 1600, cedar_hut_t4: 1950, cedar_hut_t5: 2300,
+  elderwood_hut_t1: 2500, elderwood_hut_t2: 3000, elderwood_hut_t3: 3600, elderwood_hut_t4: 4300, elderwood_hut_t5: 5000,
+
+  campfire_t1: 60,  campfire_t2: 90,  campfire_t3: 120, campfire_t4: 170, campfire_t5: 230,
+  bonfire_t1: 280,  bonfire_t2: 360,  bonfire_t3: 450, bonfire_t4: 550, bonfire_t5: 660,
+
+  crafting_table_t1: 220, crafting_table_t2: 320, crafting_table_t3: 500, crafting_table_t4: 700, crafting_table_t5: 1000,
+
+  alchemy_table_t1: 275, alchemy_table_t2: 400, alchemy_table_t3: 625, alchemy_table_t4: 875, alchemy_table_t5: 1250,
+};
   
   export function CONSTRUCT_XP(id){ return XP_TABLE[id] || 20; }
   
@@ -373,6 +375,92 @@ const XP_TABLE = {
       effects: [{ type: 'craft_batch_unlimited', max: Infinity }]
     }
       */
+    alchemy_table_t1: {
+      id: 'alchemy_table_t1',
+      name: 'Alchemy Table (T1)',
+      size: { w: 220, h: 140 },
+      sprite: 'assets/camp/buildings/alchemy_table.png',
+      recipe: [
+        { id: 'plank_oak', qty: 30 },
+        { id: 'potion_mana_small', qty: 5 },
+        { id: 'potion_accuracy', qty: 5 },
+        { id: 'potion_defense', qty: 5 },
+      ],
+      time: 2200,
+      xp: CONSTRUCT_XP('alchemy_table_t1'),
+      effects: [{ type: 'alchemy_batch_max', max: 2 }],
+      improvesTo: 'alchemy_table_t2',
+      showInPalette: true
+    },
+
+    alchemy_table_t2: {
+      id: 'alchemy_table_t2',
+      name: 'Alchemy Table (T2)',
+      size: { w: 220, h: 140 },
+      sprite: 'assets/camp/buildings/alchemy_table.png',
+      recipe: [
+        { id: 'plank_pine', qty: 45 },
+        { id: 'potion_mana_small', qty: 7 },
+        { id: 'potion_accuracy', qty: 7 },
+        { id: 'potion_defense', qty: 7 },
+      ],
+      time: 2700,
+      xp: CONSTRUCT_XP('alchemy_table_t2'),
+      effects: [{ type: 'alchemy_batch_max', max: 5 }],
+      improvesTo: 'alchemy_table_t3',
+    },
+
+    alchemy_table_t3: {
+      id: 'alchemy_table_t3',
+      name: 'Alchemy Table (T3)',
+      size: { w: 220, h: 140 },
+      sprite: 'assets/camp/buildings/alchemy_table.png',
+      recipe: [
+        { id: 'plank_birch', qty: 60 },
+        { id: 'potion_mana_med', qty: 5 },
+        { id: 'potion_advanced_accuracy', qty: 5 },
+        { id: 'potion_advanced_defense', qty: 5 },
+      ],
+      time: 3200,
+      xp: CONSTRUCT_XP('alchemy_table_t3'),
+      effects: [{ type: 'alchemy_batch_max', max: 10 }],
+      improvesTo: 'alchemy_table_t4',
+    },
+
+    alchemy_table_t4: {
+      id: 'alchemy_table_t4',
+      name: 'Alchemy Table (T4)',
+      size: { w: 220, h: 140 },
+      sprite: 'assets/camp/buildings/alchemy_table.png',
+      recipe: [
+        { id: 'plank_cedar', qty: 80 },
+        { id: 'potion_mana_med', qty: 7 },
+        { id: 'potion_advanced_accuracy', qty: 7 },
+        { id: 'potion_advanced_defense', qty: 7 },
+      ],
+      time: 3800,
+      xp: CONSTRUCT_XP('alchemy_table_t4'),
+      effects: [{ type: 'alchemy_batch_max', max: 25 }],
+      // improvesTo: 'alchemy_table_t5',
+    },
+
+    /* Optional T5 — leave commented out until you’re ready
+    alchemy_table_t5: {
+      id: 'alchemy_table_t5',
+      name: 'Alchemy Table (T5)',
+      size: { w: 220, h: 140 },
+      sprite: 'assets/camp/buildings/crafting_table.png',
+      recipe: [
+        { id: 'plank_cedar', qty: 120 },
+        { id: 'potion_mana_med', qty: 10 },
+        { id: 'potion_advanced_accuracy', qty: 10 },
+        { id: 'potion_advanced_defense', qty: 10 },
+      ],
+      time: 4400,
+      xp: CONSTRUCT_XP('alchemy_table_t5'),
+      effects: [{ type: 'alchemy_batch_max', max: 9999 }], // “X” in UI
+    },
+    */
   };
   
   /** Returns the list of palette blueprints (Tier-1 entries) */
@@ -412,4 +500,31 @@ const XP_TABLE = {
     if (opts.includes('X')) return Infinity;
     return Math.max(...opts);
   }
+
+  export function alchemyBatchOptions(state){
+  const placed = (state?.camp?.placed || []).map(p => String(p?.id || ''));
+  const tiers = [
+    'alchemy_table_t1',
+    'alchemy_table_t2',
+    'alchemy_table_t3',
+    'alchemy_table_t4',
+    'alchemy_table_t5'
+  ];
+  let best = 0;
+  for (let i = tiers.length - 1; i >= 0; i--){
+    if (placed.includes(tiers[i])) { best = i + 1; break; }
+  }
+  if (best === 0) return [1];
+  if (best === 1) return [1, 2];
+  if (best === 2) return [1, 2, 5];
+  if (best === 3) return [1, 2, 5, 10];
+  if (best === 4) return [1, 2, 5, 10, 25];
+  return [1, 2, 5, 10, 25, 'X'];
+}
+
+export function alchemyBatchMax(state){
+  const opts = alchemyBatchOptions(state);
+  if (opts.includes('X')) return Infinity;
+  return Math.max(...opts);
+}
   

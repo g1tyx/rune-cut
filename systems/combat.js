@@ -9,6 +9,7 @@ import { getActiveEffects } from '../systems/effects.js';
 import { PETS } from '../data/pets.js';
 import { seedPetForCombat } from './pet.js';
 import { applyLevelAndRecalc, grantPetXp } from './pet.js';
+import { renderAlchemy } from '../ui/alchemy.js'; // ⬅️ re-render Alchemy after combat ends
 
 const BALANCE = {
   // Player weights (unchanged)
@@ -95,6 +96,13 @@ function sumEquip(s, key){
 }
 
 function emitHpChange(){ try { window.dispatchEvent(new CustomEvent('hp:change')); } catch {} }
+
+/* ---------------- after-combat hook ---------------- */
+function afterCombatFinish(win, monId){
+  // Re-render Alchemy panel and broadcast a finish event for any other listeners.
+  try { renderAlchemy(); } catch {}
+  try { window.dispatchEvent(new CustomEvent('combat:finish', { detail: { id: monId, win: !!win } })); } catch {}
+}
 
 /* -------------------------------- Player stats -------------------------------- */
 export function hpMaxFor(s){
@@ -272,7 +280,7 @@ function awardWin(s, mon, { playerXp = true } = {}){
   if (playerXp){
     if (style === 'attack') gained.atk = base.atk;
     else if (style === 'strength') gained.str = base.str;
-    else if (style === 'defense') gained.def = base.def;
+    else if (style === 'defense')  gained.def = base.def;
     else {
       gained.atk = base.atk > 0 ? Math.max(1, Math.floor(base.atk/3)) : 0;
       gained.str = base.str > 0 ? Math.max(1, Math.floor(base.str/3)) : 0;
@@ -304,6 +312,7 @@ function awardWin(s, mon, { playerXp = true } = {}){
   }
 
   s.combat = null;
+  afterCombatFinish(true, mon.id); // ⬅️ notify UI after win
   const xpPayload = playerXp ? { atk: gained.atk, str: gained.str, def: gained.def } : { atk:0, str:0, def:0 };
   return { xp: xpPayload, loot: lootNames };
 }
@@ -322,6 +331,7 @@ export function turnFight(s){
     let log = [];
     if (!ps){
       s.combat = null;
+      afterCombatFinish(false, mon.id);
       return { done:true, reason:'no-pet', log:[`No pet equipped.`], xp:{atk:0,str:0,def:0}, loot:[], petXp:0 };
     }
 
@@ -351,6 +361,7 @@ export function turnFight(s){
       log.push(`${ps.name} defeated ${mon.name}!`);
       log.push(`${ps.name} gains ${petRes.gained} pet xp.` + (petRes.newLevel > (petRes.oldLevel||0) ? ` Level up! ${petRes.oldLevel} → ${petRes.newLevel}.` : ''));
 
+      // awardWin already fired afterCombatFinish(true,...)
       return {
         done:true, win:true, log,
         loot: payload.loot || [],
@@ -382,7 +393,7 @@ export function turnFight(s){
 
       const name = ps.name;
       s.combat = null;
-
+      afterCombatFinish(false, mon.id); // ⬅️ pet-only loss
       return {
         done: true, win: false,
         log: [...log, `${name} was defeated by ${mon.name}.`],
@@ -408,6 +419,7 @@ export function turnFight(s){
   if (combat.monHp <= 0){
     const payload = awardWin(s, mon, { playerXp:true });
     log.push(`You defeated ${mon.name}!`);
+    // awardWin already fired afterCombatFinish(true,...)
     return { done:true, win:true, log, xp: payload.xp, loot: payload.loot };
   }
 
@@ -436,6 +448,7 @@ export function turnFight(s){
     s.hpCurrent = 1;
     emitHpChange();
     s.combat = null;
+    afterCombatFinish(false, mon.id); // ⬅️ player loss
     return { done: true, win: false, log: [...log, `You were defeated by ${mon.name}.`], xp: { atk:0, str:0, def:0 }, loot: [] };
   }
 

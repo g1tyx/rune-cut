@@ -20,6 +20,7 @@ function inferKind(id, def){
   if (s.includes('bonfire') || s.includes('campfire')) return 'campfire';
   if (s.includes('hut')) return 'hut';
   if (s.includes('crafting_table')) return 'table';
+  if (s.includes('alchemy_table'))  return 'alch_table';
   return 'other';
 }
 function guessSpritePath(id, def){
@@ -56,7 +57,7 @@ function hasPlacedKind(state, wantKind){
   return false;
 }
 
-const ALLOWED_KINDS = new Set(['hut','campfire', 'table']); // extend later if needed
+const ALLOWED_KINDS = new Set(['hut','campfire', 'table', 'alch_table']);
 
 export function canBuild(state, id){
   const d = BUILDINGS[id];

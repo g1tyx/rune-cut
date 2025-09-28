@@ -10,7 +10,7 @@ const fish = createGatheringSkill({
   selectedIdKey: 'selectedSpotId',
   xpKey: 'fishXp',
   data: FISHING_SPOTS,
-  equipmentSlot: null,          // set if rods add speed mods (e.g., 'rod')
+  equipmentSlot: 'fishing',
   actionBindKey: 'spotId',
   labelVerb: 'Fish',
   autoLabel: 'Auto-fishing…',
