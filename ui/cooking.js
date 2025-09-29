@@ -72,6 +72,14 @@ function randomizeZone(customWidth){
   }
 }
 
+/* ---------- interrupt helper ---------- */
+function cancelCooking(){
+  if (state.action?.type === 'cook') state.action = null; // no reward
+  holding = false;
+  holdingMode = null;
+  updateBar();
+}
+
 /* ---------- paint ---------- */
 function updateBar(){
   if (!el.bar) return;
@@ -85,6 +93,12 @@ function updateBar(){
     const pct = Math.max(0, Math.min(1, (now - state.action.startedAt) / Math.max(1, (state.action.duration||1))));
     el.bar.style.width = (pct*100).toFixed(2) + '%';
     setHint(`${state.action.label || 'Cooking'} — ${(pct*100).toFixed(0)}%`);
+  } else if (state.action?.type === 'cook'){
+    // show idle progress if an action was armed but not currently holding
+    const now = performance.now();
+    const pct = Math.max(0, Math.min(1, (now - (state.action.startedAt||now)) / Math.max(1, (state.action.duration||1))));
+    el.bar.style.width = (pct*100).toFixed(2) + '%';
+    setHint(state.action.label || 'Cooking');
   } else {
     el.bar.style.width = '0%';
     setHint(pendingRawId ? `Ready: ${displayName(pendingRawId)} — hold to cook` : 'Drop raw food here');
@@ -125,6 +139,8 @@ document.addEventListener('dragend', ()=>{
     if (!holding && canCook(state, raw)){
       pendingRawId = raw;
       randomizeZone(zoneWidthFor(raw));
+      // ⬇ allow interrupt: if another cook is active, cancel it
+      if (state.action?.type === 'cook' && state.action.key !== raw) cancelCooking();
       startHoldWith(raw, 'drag');
     } else if (!holding){
       setHint(cookGateReason(state, raw) || 'Cannot cook this yet');
@@ -152,8 +168,7 @@ el.fire?.addEventListener('drop', (e)=>{
       if (res){
         const cookedId = cookedIdOf(raw);
         const qty = cookedQtyPerRaw(raw);
-        const xp = res.xp || (COOK_RECIPES[raw]?.xp || 0);
-        pushLog(`Auto-cooked ${qty}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
+        pushLog(`Auto-cooked ${qty}× ${displayName(cookedId)} → +${res.xp} Cooking xp`, 'cooking');
         renderEnchanting(); renderInventory(); renderSkills(); saveNow();
       }
       setHint('Auto-cook: drop raw food to cook instantly');
@@ -162,13 +177,16 @@ el.fire?.addEventListener('drop', (e)=>{
     return;
   }
 
-  if (holding && holdingMode === 'drag'){
-    endHold();
-  } else {
-    pendingRawId = raw;
-    randomizeZone(zoneWidthFor(raw));
-    updateBar();
+  // If we were holding and drop switches target, cancel and re-arm
+  if (holding && holdingMode === 'drag' && pendingRawId !== raw){
+    cancelCooking();
   }
+  // interrupt if another cook is active
+  if (state.action?.type === 'cook' && state.action.key !== raw) cancelCooking();
+
+  pendingRawId = raw;
+  randomizeZone(zoneWidthFor(raw));
+  startHoldWith(raw, 'drag');
   dragRawId = null;
 });
 
@@ -199,8 +217,7 @@ el.fire?.addEventListener('pointerdown', (e)=>{
     if (res){
       const cookedId = cookedIdOf(id);
       const qty = cookedQtyPerRaw(id);
-      const xp = res.xp || (COOK_RECIPES[id]?.xp || 0);
-      pushLog(`Auto-cooked ${qty}× ${displayName(cookedId)} → +${xp} Cooking xp`, 'cooking');
+      pushLog(`Auto-cooked ${qty}× ${displayName(cookedId)} → +${res.xp} Cooking xp`, 'cooking');
       renderEnchanting(); renderInventory(); renderSkills(); saveNow();
     }
     return;
@@ -210,6 +227,9 @@ el.fire?.addEventListener('pointerdown', (e)=>{
     setHint(cookGateReason(state, id) || 'Cannot cook this yet');
     return;
   }
+
+  // ⬇ allow interrupt: if another cook is active, cancel it
+  if (state.action?.type === 'cook' && state.action.key !== id) cancelCooking();
   startHoldWith(id, 'pointer');
 });
 
@@ -232,17 +252,21 @@ function scaledDurationFor(rawId){
   const req = reqLevel(rawId);
   const under = Math.max(0, req - lvl);
   const factor = Math.pow(2, under / 6);
+  // use system duration (already floored via MIN_COOK_TIME_MS) then apply difficulty
   return cookDurationMs(state, rawId) * factor;
 }
 function startHoldWith(rawId, mode){
   if (isAuto()) return;
-  if (holding || state.action) return;
+
+  // ⬇ remove the old blocker; allow cancel+restart
   if (!COOK_RECIPES[rawId] || !canCook(state, rawId)){
     setHint(cookGateReason(state, rawId) || 'Cannot cook this yet');
     return;
   }
-  pendingRawId = rawId;
-  randomizeZone(zoneWidthFor(rawId));
+  // if something else is cooking, cancel it first
+  if (state.action?.type === 'cook' && state.action.key !== rawId) cancelCooking();
+  if (holding) cancelCooking();
+
   const ok = startCook(state, rawId);
   if (!ok) return;
   state.action.startedAt = performance.now();
@@ -263,7 +287,6 @@ function endHold(){
   if (outcome === 'perfect'){
     const res = finishCook(state, state.action?.key);
     if (res){
-      // Only manual perfect cooks start the autocook window:
       try { window.dispatchEvent(new CustomEvent('cook:perfect', { detail:{ rawId: res.id } })); } catch {}
       const cookedId = cookedIdOf(res.id);
       const qty = cookedQtyPerRaw(res.id);

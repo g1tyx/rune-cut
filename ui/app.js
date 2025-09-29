@@ -17,7 +17,7 @@ import { renderPanelLogs, wireLogFilters, pushLog } from './logs.js';
 import { setTab, wireRoutes } from './router.js';
 import { qs } from '../utils/dom.js';
 import { initAutoCookUI } from './autocook.js';
-import { initCamp, renderCamp } from './camp.js';
+import { initCamp, renderCamp, renderCampEntities } from './camp.js';
 import { initPets, renderPetsPanel } from './pets.js';
 import { renderRoyalService } from './royal_service.js';
 import { renderAlchemy } from './alchemy.js';
@@ -157,6 +157,7 @@ function startApp(){
   // Autocook systems before first paint so HUD can pick up persisted window
   safe(()=>initAutoCook(), 'initAutoCook');
   safe(()=>initCamp(), 'initCamp');
+  safe(()=>initPets(), 'initPets');
 
   // Persist locked raw + window endpoints whenever systems announce them
   window.addEventListener('autocook:window', (e)=>{
@@ -181,6 +182,8 @@ function startApp(){
     try { renderSmithing(); } catch {}
     try { renderCooking(); } catch {}
     try { renderEquipment(); } catch {}
+    try { renderEnchanting(); } catch {}
+    try { renderCampEntities(); } catch {}
   };
   window.addEventListener('inventory:changed', repaintForInventory);
 

@@ -6,7 +6,8 @@ import { clampMs } from './utils.js';
 import { COOK_RECIPES } from '../data/cooking.js';
 
 const XP_TABLE = buildXpTable();
-export const MIN_COOK_TIME_MS = 300;
+// ⬇⬇⬇ was 300; raise so the progress bar isn’t too fast
+export const MIN_COOK_TIME_MS = 1000;
 
 function normQty(n){ const v = Number(n); return Number.isFinite(v) ? (v|0) : 0; }
 function cookLevel(s){ return levelFromXp(Number(s.cookXp || 0), XP_TABLE); }
@@ -33,11 +34,10 @@ function getRecipe(id){
   return {
     id,
     name: src.name || id,
-    time: Number(src.time || 1000),
-    level: Number(src.level || src.lvl || 1),
-    inputs,
-    outputs,
-    xp: Number(src.xp || 0),
+    level: Math.max(1, Number(src.level || 1)),
+    time: Math.max(100, Number(src.time || 1000)),
+    xp: Math.max(0, Number(src.xp || 5)),
+    inputs, outputs
   };
 }
 
@@ -80,7 +80,7 @@ export function startCook(s, id){
 }
 
 function applyCookIOAndXp(s, r){
-  const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty })).filter(x=>x.qty>0);
+  const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty }));
   if (reqs.length && !spendItems(s, reqs)) return false;
 
   const outs = r.outputs.map(o => ({ id:o.id, qty:o.qty })).filter(x=>x.qty>0);
@@ -97,10 +97,11 @@ function applyCookIOAndXp(s, r){
 
 export function finishCook(s, id){
   const key = id || s.action?.key;
-  const r = getRecipe(key);
-  s.action = null;
+  const r = key && getRecipe(key);
   if (!r) return null;
   if (!canCook(s, key, 1)) return null;
+
+  // Grant IO & XP
   if (!applyCookIOAndXp(s, r)) return null;
 
   try { window.dispatchEvent(new CustomEvent('cook:result', { detail:{ id:r.id, name:r.name, xp:r.xp } })); } catch {}

@@ -409,7 +409,7 @@ function renderCampPalette(){
 }
 
 /* ---------------- entities (render + drag + inspector) ---------------- */
-function renderCampEntities(){
+export function renderCampEntities(){
   const host = document.getElementById('campEntities');
   if (!host) return;
 
