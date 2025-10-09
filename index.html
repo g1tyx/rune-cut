@@ -15,6 +15,7 @@
     <div class="brand">Rune<b>Cut</b> · <span class="muted">Incremental</span></div>
     <button id="tabCamp" class="tab-btn" type="button">Camp</button>
     <button id="tabPets" type="button">Pets 🔒</button>
+    <button id="tabInfo" type="button">Info</button>
   
     <div class="row">
       <button id="saveBtn" class="btn-success">Save</button>
@@ -100,7 +101,11 @@
             <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="enchantBarMini"></div></div>
           </div>
-          
+          <div class="skill-tile" id="tile-destruction">
+            <div class="tile-header">🔥 <span>Destruction</span></div>
+            <div class="tile-level">Lvl <b id="destructionLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="destructionBarMini"></div></div>
+          </div>
           <div class="skill-tile" id="tile-atk">
             <div class="tile-header">⚔️ <span>Attack</span></div>
             <div class="tile-level">Lvl <b id="atkLevelMini">1</b></div>
@@ -140,9 +145,9 @@
           <button class="tab" data-tab="mining">⛏️ Mining</button>
           <button class="tab" data-tab="smithing">⚒️ Smithing</button>
           <button class="tab" data-tab="enchanting">Enchanting</button>
+          <button class="tab" data-tab="destruction">Destruction</button>
           <button class="tab" data-tab="alchemy">Alchemy</button>
           <button class="tab" data-tab="combat">⚔️ Combat</button>
-          <!-- NEW: Royal Service tab -->
           <button class="tab" data-tab="royal">👑 Royal Service</button>
         </div>
 
@@ -328,12 +333,6 @@
           <p class="small muted" style="margin:6px 0;">
             Turn <b>Books</b> into <b>Tomes</b> using <b>Mana</b> and <b>Essences</b>. Higher Enchanting level unlocks more recipes.
           </p>
-
-          <div class="row small muted" style="justify-content:space-between; align-items:center;">
-            <span>Mana: <b id="enchantManaVal">0/0</b></span>
-            <span id="enchantLabel">Idle</span>
-          </div>
-
           <div class="progress xs" style="margin:6px 0 10px;">
             <div id="enchantBar" class="bar" style="width:0%"></div>
           </div>
@@ -343,7 +342,21 @@
           </div>
           <div id="enchantList" class="shop"></div>
         </div>
-
+        <!-- Destruction panel -->
+        <div class="tabpanel hidden" id="tab-destruction">
+          <h2>🔥 Destruction</h2>
+          <p class="small muted" style="margin:6px 0;">
+            Create Spells to be used in battle. Gain xp when creating spells and when using them.
+          </p>
+          <div class="progress xs" style="margin:6px 0 10px;">
+            <div id="destructionBar" class="bar" style="width:0%"></div>
+          </div>
+          <div class="card" style="padding:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+            <div id="destructionLog" class="log" aria-live="polite"></div>
+          </div>
+          <div id="destructionRecipes" class="recipe-list"></div>
+        </div>
         <!-- Combat panel -->
         <div class="tabpanel hidden" id="tab-combat">
           <h2>⚔️ Combat</h2>
@@ -354,7 +367,21 @@
               <button class="zone-btn" data-zone="Wastes">🏜️ Wastes</button>
               <button class="zone-btn" data-zone="Crypts">🪦 Crypts</button>
               <button class="zone-btn" data-zone="Mountains">⛰️ Mountains</button>
+              <button class="zone-btn" data-zone="Bosses">👹 Bosses</button>
             </div>
+            
+            <section id="bossesPanel" style="display:none">
+              <h2>Bosses</h2>
+              <div>
+                <select class="bosses-list"></select>
+                <button class="bosses-start">Start Fight</button>
+                <button class="bosses-stop">Retreat</button>
+              </div>
+              <div class="bosses-info"></div>
+              <div class="bosses-hp" style="height:12px;background:linear-gradient(#a00,#700);color:#fff;text-align:center;"></div>
+              <div class="bosses-event" style="margin-top:8px;font-weight:bold;"></div>
+            </section>
+
             <div id="monsterGrid" class="monster-grid"></div>
           </div>
           <p class="small muted">Tip: Click a monster to select and Fight.</p>
@@ -457,7 +484,7 @@
       </section>
     </div>
     <footer>
-      Version: 1.5.40
+      Version: 1.6.14
     </footer>
   </div>
   
@@ -551,9 +578,19 @@
       <div id="petsPanel" class="pets-panel"></div>
     </div>
   </section>
+  <section id="infoOverlay" class="info-overlay hidden" aria-modal="true" role="dialog">
+    <div class="info-box" id="infoBox">
+      <button id="infoBackBtn" class="close-btn" aria-label="Close info overlay">×</button>
+      <h2>Info</h2>
+      <div id="infoTabs" class="tabs"></div>
+      <div id="infoPanel" class="info-panel"></div>
+    </div>
+  </section>
 
   <script type="module">
     import './ui/app.js';
+    import './ui/info.js';
+    import './ui/boss_events_ui.js';
   </script>
 <!--客服 开始-->
 <script src="//g8hh.github.io/static/js/jquery.min.js"></script>

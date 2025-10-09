@@ -43,7 +43,8 @@ const panel = initRecipePanel({
     s.ui.alchBatch = v;
     saveNow();
   },
-
+  iconFor:      (r) => r.outputs?.[0]?.id,
+  iconFrameFor: ()  => 'icon', 
   selectorGroups: []
 });
 

@@ -10,13 +10,9 @@ const SK = [
   { key:'smith',   xp:'smithXp',   id:'#tile-smith',     label:'Smithing' },
   { key:'craft',   xp:'craftXp',   id:'#tile-craft',     label:'Crafting' },
   { key:'enchant', xp:'enchantXp', id:'#tile-enchant',   label:'Enchanting' },
-
-  // ✅ Construction: correct friendly label for hover
   { key:'construction', xp:'constructionXp', id:'#tile-construct', label:'Construction' },
-
-  // ✅ Alchemy: included so hover shows XP like others
   { key:'alch',    xp:'alchXp',    id:'#tile-alch',      label:'Alchemy' },
-
+  { key:'destruction',    xp:'destructionXp',    id:'#tile-destruction',      label:'Destruction' },
   { key:'cook',    xp:'cookXp',    id:'#tile-cook',      label:'Cooking' },
   { key:'atk',     xp:'atkXp',     id:'#tile-atk',       label:'Attack' },
   { key:'str',     xp:'strXp',     id:'#tile-str',       label:'Strength' },
@@ -90,10 +86,10 @@ export function renderSkills(){
   if (totalEl) totalEl.textContent = String(total);
   
   attachHoversOnce();
-  renderGold(); // <- update Gold display
+  renderGold();
 }
 
-// Optional: richer hover tooltip with totals + progress (bound once)
+// Richer hover tooltip with totals + progress (bound once)
 function attachHoversOnce(){
   SK.forEach(s=>{
     const tile = document.querySelector(s.id);
@@ -120,9 +116,9 @@ export function skillsXpSignature(){
     (state.smithXp|0)    + (state.craftXp|0)    + (state.enchantXp|0) +
     (state.constructionXp|0) + (state.alchXp|0) +
     (state.cookXp|0)     + (state.atkXp|0)      + (state.strXp|0) +
-    (state.defXp|0)      + (state.royalXp|0)
+    (state.defXp|0)      + (state.royalXp|0) + (state.destructionXp|0)
   );
 }
 
-// Optional: live gold updates when other systems change it
+// live gold updates when other systems change it
 window.addEventListener('gold:change', renderGold);

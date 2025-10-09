@@ -27,7 +27,7 @@ export function createGatheringSkill(cfg){
 
   function equipmentSpeed(state){
     const eqId = state?.equipment?.[equipmentSlot];
-    const base = eqId ? String(eqId).split('@')[0] : '';
+    const base = String(eqId).replace(/[@#].*$/, '');
     const def  = base ? ITEMS[base] : null;
     const baseSpeed = (def?.speed) || 1;
     return baseSpeed + speedModFrom(state, equipmentSlot);

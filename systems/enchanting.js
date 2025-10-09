@@ -2,7 +2,7 @@
 import { ENCHANT_RECIPES } from '../data/enchanting.js';
 import { addItem, removeItem } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
-import { recalcMana } from './mana.js';
+import { recalcMana, spendMana } from './mana.js';
 import { ITEMS } from '../data/items.js';
 import { rollEnchant, canEnchantItem } from '../data/enchant_effects.js';
 import { pushEnchantLog } from '../ui/logs.js';
@@ -66,8 +66,7 @@ function findApplyTarget(state, r){
       // 2) ring cannot already be enchanted
       if (hasRingEnchant(id)) continue;
     } else if (ap.mode === 'tool_swiftness'){
-      // tools must have speed
-      if (!def.speed) continue;
+      if (!def.speed) continue; // tools must have speed
     }
 
     return { slot, id, base };
@@ -129,9 +128,20 @@ export function finishEnchant(state, id){
   if (!r){ state.action = null; return null; }
   if (!canEnchant(state, r.id)){ state.action = null; return null; }
 
-  // Spend inputs & mana
+  // Spend inputs first
   listInputs(r).forEach(inp => removeItem(state, inp.id, inp.qty));
-  state.manaCurrent = Math.max(0, (state.manaCurrent||0) - (r.mana||0));
+
+  // Spend mana via API (authoritative path)
+  const needMana = Math.max(0, Number(r.mana) || 0);
+  if (needMana > 0){
+    const ok = spendMana(state, needMana); // notifies if changed
+    if (!ok){
+      // Revert inputs on failure to be safe (should be rare due to canEnchant gating)
+      listInputs(r).forEach(inp => { state.inventory[inp.id] = (state.inventory[inp.id]||0) + inp.qty; });
+      state.action = null;
+      return null;
+    }
+  }
 
   let appliedTo = null;
 
@@ -140,18 +150,13 @@ export function finishEnchant(state, id){
     const tgt = findApplyTarget(state, r);
     if (tgt){
       if (ap.mode === 'ring_enchant'){ // bind to equipped ring id
-        // safety: hard fail if already enchanted (should be caught earlier)
-        if (hasRingEnchant(state.equipment[tgt.slot])) {
-          state.action = null; return null;
-        }
+        if (hasRingEnchant(state.equipment[tgt.slot])) { state.action = null; return null; }
 
-        // roll using the ring base (sapphire_ring, etc.)
         const roll = rollEnchant(state, tgt.base);
         if (roll.effects?.length){
           const stat = roll.stat;
           const add  = roll.add;
 
-          // encode directly onto the item id (bound to item)
           state.equipment[tgt.slot] = encodeRingEnchant(tgt.base, stat, add);
 
           const ringName = ITEMS[tgt.base]?.name || tgt.base;
@@ -179,7 +184,7 @@ export function finishEnchant(state, id){
     recalcMana(state);
   }
 
-  // Notify UIs so recipe enablement and equipment slot refresh without a page reload
+  // Notify UIs so recipe enablement and equipment slot refresh
   try { window.dispatchEvent(new Event('equipment:change')); } catch {}
   try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
   try { window.dispatchEvent(new Event('mana:change')); } catch {}
@@ -188,4 +193,3 @@ export function finishEnchant(state, id){
   state.action = null;
   return { id: r.id, name: r.name, outputs: r.outputs || [], appliedTo };
 }
-

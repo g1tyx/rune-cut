@@ -197,12 +197,15 @@ function renderBackButton(){
 function effectLine(eff){
   if (!eff) return '';
   switch (eff.type){
-    case 'afk_extend': return `AFK +${eff.seconds || 0}s`;
-    case 'auto_cook':  return `Auto-cook +${eff.seconds || 0}s`;
-    case 'craft_batch_max': return `Batch Craft up to ${eff.max === Infinity ? '∞' : eff.max}`;
+    case 'afk_extend':         return `AFK +${eff.seconds || 0}s`;
+    case 'auto_cook':          return `Auto-cook +${eff.seconds || 0}s`;
+    case 'craft_batch_max':    return `Batch Craft up to ${eff.max === Infinity ? '∞' : eff.max}`;
+    case 'forge_batch_max':    return `Batch Forge up to ${eff.max === Infinity ? '∞' : eff.max}`;   // ⬅ NEW
+    case 'alchemy_batch_max':  return `Batch Alchemy up to ${eff.max === Infinity ? '∞' : eff.max}`; // ⬅ NEW
     default: return '';
   }
 }
+
 function reqLine(recipe=[]){
   if (!Array.isArray(recipe) || !recipe.length) return 'No cost';
   return recipe

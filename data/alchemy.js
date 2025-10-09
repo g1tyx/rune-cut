@@ -85,5 +85,48 @@ export const ALCHEMY_RECIPES = {
     ],
     outputs: [{ id: 'potion_advanced_defense', qty: 1 }],
     xp: [{ skill: 'alch', amount: 70 }]
-  }
+  },
+  arcane_potion_mana: {
+    id: 'arcane_potion_mana',
+    name: 'Arcane Mana Potion',
+    level: 22,
+    time: 3900,
+    inputs: [
+      { id: 'arcane_phial', qty: 1 },
+      { id: 'coastal_pearls', qty: 1 }
+    ],
+    outputs: [
+      { id: 'arcane_potion_mana', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 110 }],
+  },
+  arcane_potion_accuracy: {
+    id: 'arcane_potion_accuracy',
+    name: 'Arcane Accuracy Potion',
+    level: 27,
+    time: 2400,
+    inputs: [
+      { id: 'arcane_phial', qty: 1 },
+      { id: 'willow_resin', qty: 1 }
+    ],
+    outputs: [
+      { id: 'arcane_potion_accuracy', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 135 }],
+  },
+  enchanted_mana_potion: {
+    id: 'enchanted_mana_potion',
+    name: 'Enchanted Mana Potion',
+    level: 40,
+    time: 2600,
+    inputs: [
+      { id: 'enchanted_phial', qty: 1 },
+      { id: 'anglerfish_oil', qty: 1 }
+    ],
+    outputs: [
+      { id: 'enchanted_mana_potion', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 225 }],
+  },
+
 };

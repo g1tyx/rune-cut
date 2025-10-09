@@ -45,4 +45,12 @@ export const ROCKS = [
       { id:'gem_diamond',   chance:0.009 },
       { id:'gem_starstone', chance:0.003 }
     ]},
+  { id:'draconyx_vein', name:'Draconyx Vein', level:64, baseTime:7200, xp:200, drop:'ore_draconyx',
+    bonusDrops:[
+      { id:'gem_sapphire',  chance:0.024 },
+      { id:'gem_ruby',      chance:0.019 },
+      { id:'gem_emerald',   chance:0.014 },
+      { id:'gem_diamond',   chance:0.011 },
+      { id:'gem_starstone', chance:0.004 }
+    ]},
 ];

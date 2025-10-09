@@ -35,7 +35,7 @@ function nameOfRaw(id){
 
 function updateCountdown(until){
   if (!countdown) return;
-  const rem = Math.max(0, Math.ceil((until - performance.now())/1000));
+  const rem = Math.max(0, Math.ceil((until - Date.now())/1000));
   countdown.textContent = `${rem}s`;
 }
 
@@ -43,7 +43,7 @@ function show(untilMs, rawId){
   ensureHud();
   if (!pill) return;
 
-  if (untilMs > performance.now()){
+  if (untilMs > Date.now()){
     pill.style.display = 'inline-flex';
     nameEl.textContent = rawId ? `Auto-cooking ${nameOfRaw(rawId)} —` : 'Auto-cook —';
     updateCountdown(untilMs);
@@ -75,5 +75,5 @@ export function initAutoCookUI(){
   ensureHud();
   const until = Number(state.ui?.autoCookUntil || 0);
   const rawId = state.ui?.lastCookedRawId || null;
-  if (until > performance.now()) show(until, rawId);
+  if (until > Date.now()) show(until, rawId);
 }

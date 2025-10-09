@@ -22,6 +22,9 @@ import { initPets, renderPetsPanel } from './pets.js';
 import { renderRoyalService } from './royal_service.js';
 import { renderAlchemy } from './alchemy.js';
 import { initAutoCook } from '../systems/autocook.js';
+import { renderDestruction } from './destruction.js';
+import { addPet } from '../systems/pet.js';
+import { PETS } from '../data/pets.js';
 
 /* --------------------------------------------------------
    Utilities
@@ -47,6 +50,7 @@ function repaintAll(){
   safe(()=>renderPetsPanel(),   'renderPetsPanel');
   safe(()=>renderRoyalService(),'renderRoyalService');
   safe(()=>renderAlchemy(),     'renderAlchemy');
+  safe(()=>renderDestruction(), 'renderDestruction');
 }
 
 function updateMiniHeader(){
@@ -76,6 +80,7 @@ function tick(){
 }
 
 function initialPaint(){
+  const cheeken = addPet(state, 'cheeken');
   repaintAll();
   safe(()=>initAutoCookUI(), 'initAutoCookUI');
 }
@@ -184,6 +189,8 @@ function startApp(){
     try { renderEquipment(); } catch {}
     try { renderEnchanting(); } catch {}
     try { renderCampEntities(); } catch {}
+    try { renderAlchemy(); } catch {}
+    try { renderDestruction(); } catch {}
   };
   window.addEventListener('inventory:changed', repaintForInventory);
 

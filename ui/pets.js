@@ -1,9 +1,11 @@
 // /ui/pets.js
 import { state, saveNow } from '../systems/state.js';
 import { PETS } from '../data/pets.js';
+import { addPet } from '../systems/pet.js';
 import { on } from '../utils/dom.js';
 import { openPetBattleMode } from './combat.js';
 import { progressFor } from '../systems/xp.js';
+import { XP_TABLE, levelFromXp } from '../systems/xp.js';
 
 let inited = false;
 
@@ -51,6 +53,21 @@ function ensurePetsCss(){
   document.head.appendChild(css);
 }
 
+function maybeUnlockNeko(){
+  if (state.pets?.neko) return;          // already owned
+  const atkLevel = levelFromXp(Number(state.atkXp)||0, XP_TABLE);
+  if (atkLevel >= 55){
+    addPet(state, 'neko');               // ✅ uses the safe helper
+    saveNow();                           // ✅ immediate save (no args)
+  }
+}
+
+export function ensureCheekenOwned(){
+  if (state.pets?.cheeken) return;   // already have it
+  addPet(state, 'cheeken');          // safely merges into state.pets
+  saveNow();                         // persist immediately
+}
+
 /* ---------- unlock UI ---------- */
 function updatePetsTabLockUI(){
   const btn = document.getElementById('tabPets');
@@ -93,7 +110,7 @@ function ensureActivePetDefault(){
 /* ---------- render ---------- */
 export function renderPetsPanel(){
   ensureActivePetDefault();
-
+  maybeUnlockNeko();
   const panel = document.getElementById('petsPanel');
   if (!panel) return;
 

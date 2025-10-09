@@ -11,6 +11,7 @@ import { tomeDurationMsFor, tomeRemainingMs } from '../systems/tomes.js';
 import { drinkPotion } from '../systems/mana.js';
 import { renderCharacterEffects } from './character.js';
 import { applyEffect } from '../systems/effects.js';
+import { iconHtmlForItem } from './sprites.js';
 
 const elInv = qs('#inventory');
 
@@ -24,7 +25,7 @@ const SWIFT_RE = /#swift:([0-9.]+)/;          // tool swiftness encoder
   const css = document.createElement('style');
   css.id = 'invEquipCSS';
   css.textContent = `
-    #inventory .icon-img.glow{
+    #inventory .icon-img.glow, #inventory .icon-sprite.glow{
       filter: drop-shadow(0 0 6px rgba(116,255,255,.85)) drop-shadow(0 0 16px rgba(116,255,255,.45));
     }
     #inventory .inv-slot{ position:relative; }
@@ -37,6 +38,18 @@ const SWIFT_RE = /#swift:([0-9.]+)/;          // tool swiftness encoder
     #inventory .inv-slot.pulse{ animation: inv-pulse 220ms ease-out; }
     @keyframes inv-pulse { 0% { transform: scale(1); } 50% { transform: scale(0.97); } 100% { transform: scale(1); } }
     #inv-sort-btn.active{ background:#1b2333; border:1px solid rgba(255,255,255,.2); }
+  `;
+  document.head.appendChild(css);
+})();
+
+// Nice visuals for drag-to-reorder (inventory only)
+(function ensureInvDnDCSS(){
+  if (document.getElementById('inv-dnd-css')) return;
+  const css = document.createElement('style');
+  css.id = 'inv-dnd-css';
+  css.textContent = `
+    #inventory .inv-slot.dragging{ opacity:.6; }
+    #inventory .inv-slot.drag-over{ outline:2px dashed #64748b; outline-offset:2px; border-radius:8px; }
   `;
   document.head.appendChild(css);
 })();
@@ -135,17 +148,51 @@ function sellPrice(id){
   return price;
 }
 
-// ---------- inventory UI ----------
+/* ===============================
+   Manual drag-to-reorder helpers
+================================ */
+const REORDER_MIME = 'application/x-runecut-reorder';
+
+function getInvOrder(){
+  state.ui = state.ui || {};
+  if (!Array.isArray(state.ui.invOrder)) state.ui.invOrder = [];
+  return state.ui.invOrder;
+}
+function setInvOrder(arr){
+  state.ui = state.ui || {};
+  state.ui.invOrder = Array.isArray(arr) ? arr.slice(0, 2000) : [];
+}
+function syncInvOrderWithEntries(entries){
+  // entries: [ [id, qty], ... ] — keep only present ids; append new ones at the end
+  const presentIds = entries.map(([id]) => id);
+  const cur = getInvOrder();
+  const next = cur.filter(id => presentIds.includes(id));
+  for (const id of presentIds){ if (!next.includes(id)) next.push(id); }
+  setInvOrder(next);
+}
+function sortEntriesByOrder(entries){
+  const order = getInvOrder();
+  const pos = new Map(order.map((id, i)=>[id, i]));
+  return entries.slice().sort((a, b)=>{
+    const ai = pos.has(a[0]) ? pos.get(a[0]) : 9e9;
+    const bi = pos.has(b[0]) ? pos.get(b[0]) : 9e9;
+    return ai - bi;
+  });
+}
+
+/* ==================================
+   Inventory UI (render & behaviors)
+================================== */
 export function findInvIconEl(id){
   const tile = document.querySelector(`#inventory .inv-slot[data-id="${CSS.escape(id)}"]`);
-  if (tile) return tile.querySelector('img.icon-img, .icon');
+  if (tile) return tile.querySelector('img.icon-img, .icon-sprite, .icon');
 
   const base = baseIdStrict(id);
   const tiles = document.querySelectorAll('#inventory .inv-slot');
   for (const t of tiles){
     const tidBase = baseIdStrict(t.getAttribute('data-id') || '');
     if (tidBase === base){
-      return t.querySelector('img.icon-img, .icon');
+      return t.querySelector('img.icon-img, .icon, .icon-sprite');
     }
   }
   return null;
@@ -154,9 +201,13 @@ export function findInvIconEl(id){
 export function renderInventory(){
   if (!elInv) return;
 
+  // Gather non-empty stacks
   let entries = Object.entries(state.inventory || {}).filter(([, qty]) => (qty|0) > 0);
 
-  // Optional sort toggle (by use then name)
+  // Keep order in sync with what's actually in the bag
+  syncInvOrderWithEntries(entries);
+
+  // Optional sort toggle (by use then name). If OFF: use manual drag order.
   if (state.ui?.invSortUse) {
     entries = entries.sort((a, b) => {
       const abase = String(a[0]).split('@')[0];
@@ -168,6 +219,8 @@ export function renderInventory(){
       const bn = ITEMS[bbase]?.name || bbase;
       return an.localeCompare(bn);
     });
+  } else {
+    entries = sortEntriesByOrder(entries);
   }
 
   if (!entries.length){
@@ -176,31 +229,60 @@ export function renderInventory(){
   }
 
   elInv.innerHTML = entries.map(([id, qty])=>{
-    const base = baseIdStrict(id);
-    const it = ITEMS[base] || {};
-    const isEquip = it.type === 'equipment';
-    const isFood = (it.type === 'food') || (healAmountFor(id) > 0);
-    const isPotion= (!isFood && (Number(it.mana)>0 || Number(it.accBonus)>0 || Number(it.dmgReduce)>0));
-    const isMat = /^bar_|^ore_/.test(base);
-    const imgSrc = it.img || (isMat ? 'assets/materials/ore.png' : null);
-    const tintCls = tintClassForItem(id);
-    const glowCls = it.glow ? ' glow' : '';
-    const iconHtml = imgSrc ? `<img src="${imgSrc}" class="icon-img${tintCls}${glowCls}" alt="${it.name || base}">`
-                            : `<span class="icon">${it.icon || '❔'}</span>`;
-    const isTome = isEquip && (it.slot === 'tome');
-    const actionBtnHtml = isFood ? `<button class="use-btn" data-use="${id}" title="Eat">Eat</button>` : '';
+    const base   = baseIdStrict(id);
+    const def    = ITEMS[base] || {};
+    const isEquip  = def.type === 'equipment';
+    const isFood   = (def.type === 'food') || (healAmountFor(id) > 0);
+    const isPotion = (!isFood && (Number(def.mana)>0 || Number(def.accBonus)>0 || Number(def.dmgReduce)>0));
+    const isMat    = /^bar_|^ore_/.test(base);
 
-    return `<div class="inv-slot ${isEquip ? 'equip' : isFood ? 'food' : isPotion ? 'potion' : ''}" data-id="${id}" draggable="true" title="${isPotion ? 'Shift-click to drink' : ''}">
-      ${iconHtml}
-      ${actionBtnHtml}
-      <button class="sell-btn" data-sell="${id}">Sell</button>
-      ${isTome ? `<button class="equip-quick btn-primary" data-equip="${id}" title="Equip">Equip</button>` : ''}
-      <span class="qty-badge">${qty}</span>
-    </div>`;
+    // Fallback image for non-sprite items (or when sprite helpers say "no")
+    const imgSrc = def.img || (isMat ? 'assets/materials/ore.png' : null);
+
+    const tintCls = tintClassForItem(id);
+    const glow    = !!def.glow;
+
+    // Sensible default frame selection for sprite-sheet items
+    function frameForItem(d){
+      if (!d || !d.frames) return null;            // not a sprite-sheet item
+      if (d.defaultFrame && d.frames[d.defaultFrame]) return d.defaultFrame;
+      if (d.frames.icon)   return 'icon';          // common convention
+      if (d.frames.empty)  return 'empty';         // vials/containers
+      const firstKey = Object.keys(d.frames)[0];
+      return firstKey || null;
+    }
+    const frame = frameForItem(def);
+
+    // Build icon HTML via sprites helper (falls back to <img> or ❔)
+    const iconHtml = iconHtmlForItem(base, {
+      px: 28,
+      frame,                // may be null -> helper should ignore and use fallback
+      tintClass: tintCls,
+      glow,
+      fallback: imgSrc,     // final fallback if no sprite frame is available
+      alt: def.name || base
+    });
+
+    const isTome = isEquip && (def.slot === 'tome');
+    const actionBtnHtml = isFood
+      ? `<button class="use-btn" data-use="${id}" title="Eat">Eat</button>`
+      : '';
+
+    const kindClass = isEquip ? 'equip' : isFood ? 'food' : isPotion ? 'potion' : '';
+
+    return `
+      <div class="inv-slot ${kindClass}" data-id="${id}" draggable="true" title="${isPotion ? 'Shift-click to drink' : ''}">
+        ${iconHtml}
+        ${actionBtnHtml}
+        <button class="sell-btn" data-sell="${id}">Sell</button>
+        ${isTome ? `<button class="equip-quick btn-primary" data-equip="${id}" title="Equip">Equip</button>` : ''}
+        <span class="qty-badge">${qty}</span>
+      </div>
+    `;
   }).join('');
 }
 
-// ---------- equip food from inventory (stack) ----------
+/* ---------- equip food from inventory (stack) ---------- */
 function equipFoodAllFromInventory(id){
   const base = baseIdStrict(id);
   const have = state.inventory[id] || 0;
@@ -260,23 +342,79 @@ on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   saveNow();
 });
 
-// keep DnD data on inventory tiles
+/* =========================================
+   Drag & Drop — existing + reorder overlay
+========================================= */
+
+// keep DnD data on inventory tiles (INVENTORY-ORIGIN dragstart)
 on(elInv, 'dragstart', '.inv-slot', (e, tile)=>{
   const id = tile.getAttribute('data-id') || '';
   const qty = state.inventory?.[id] | 0;
   if (!id || qty <= 0) return;
   if (e.dataTransfer){
+    // Original payloads (keep for cooking / other drops)
     e.dataTransfer.setData('application/x-runecut-item', id);
     e.dataTransfer.setData('text/plain', id);
-    e.dataTransfer.effectAllowed = 'copy';
+
+    // Mark as internal-inventory drag so tiles can accept reordering
+    e.dataTransfer.setData(REORDER_MIME, '1');
+
+    // Allow both copy (external) and move (internal reorder)
+    e.dataTransfer.effectAllowed = 'copyMove';
   }
+  tile.classList.add('dragging');
 });
+
+// Also keep DnD data when starting from anywhere that targets inventory tiles
 on(document, 'dragstart', '#inventory .inv-slot', (e, tile)=>{
   const id = tile.getAttribute('data-id') || '';
   if (!id) return;
   e.dataTransfer?.setData('application/x-runecut-item', id);
   e.dataTransfer?.setData('text/plain', id);
-  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
+  e.dataTransfer?.setData(REORDER_MIME, '1');
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove';
+  tile.classList.add('dragging');
+});
+
+// Reorder handlers (apply only inside #inventory)
+on(document, 'dragenter', '#inventory .inv-slot', (e, tile)=>{
+  if (!e.dataTransfer?.types?.includes(REORDER_MIME)) return;
+  e.preventDefault();
+  tile.classList.add('drag-over');
+});
+on(document, 'dragover', '#inventory .inv-slot', (e)=>{
+  if (!e.dataTransfer?.types?.includes(REORDER_MIME)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+});
+on(document, 'dragleave', '#inventory .inv-slot', (_e, tile)=>{
+  tile.classList.remove('drag-over');
+});
+on(document, 'drop', '#inventory .inv-slot', (e, tile)=>{
+  if (!e.dataTransfer?.types?.includes(REORDER_MIME)) return; // not a reorder drop
+  e.preventDefault();
+
+  const fromId = e.dataTransfer.getData('text/plain') || '';
+  const toId   = tile.getAttribute('data-id') || '';
+  tile.classList.remove('drag-over');
+
+  if (!fromId || !toId || fromId === toId) return;
+
+  const order = getInvOrder().slice();
+  const fromIdx = order.indexOf(fromId);
+  const toIdx   = order.indexOf(toId);
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  order.splice(fromIdx, 1);
+  order.splice(toIdx, 0, fromId);
+  setInvOrder(order);
+  saveNow();
+  renderInventory(); // re-render with new order (keeps other features)
+});
+on(document, 'dragend', '#inventory .inv-slot', (_e, tile)=>{
+  // Clean up drag classes
+  tile?.classList?.remove('dragging');
+  elInv?.querySelectorAll('.drag-over')?.forEach(n=>n.classList.remove('drag-over'));
 });
 
 // ---------- tooltips on inventory tiles ----------
@@ -361,17 +499,34 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     }
   }
 
-  // Qty + gold
+  // --- Value on ALL items (equipment included) ---
+  const each = sellPrice(id);
+
+  // Qty + totals (still shown when present)
   const qty = state.inventory?.[id] || 0;
-  if (!isEquip && qty > 0){
-    const each = sellPrice(id);
+  if (qty > 0){
+    const eaStr = each ? ` · ${each}g` : '';
     const total = each ? ` · Total: ${each*qty}g` : '';
-    const eaStr = each ? ` · ${each}g ea` : '';
     lines.push(`Qty: ${qty}${eaStr}${qty>1 ? total : ''}`);
   }
 
+  // --- custom item tips (string | string[] | function) ---
+  try {
+    const t = def && def.tip;
+    if (typeof t === 'string' && t.trim()) {
+      lines.push(t.trim());
+    } else if (Array.isArray(t)) {
+      for (const s of t) if (typeof s === 'string' && s.trim()) lines.push(s.trim());
+    } else if (typeof t === 'function') {
+      const out = t({ state, id, base, qty });
+      if (typeof out === 'string' && out.trim()) lines.push(out.trim());
+      else if (Array.isArray(out)) for (const s of out) if (typeof s === 'string' && s.trim()) lines.push(s.trim());
+    }
+  } catch {}
+
   showTip(e, title, lines.join('\n'));
 });
+
 on(elInv, 'mouseout', '.inv-slot', (e, tile)=>{
   const to = e.relatedTarget;
   if (!to || !tile.contains(to)) hideTip();

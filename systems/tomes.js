@@ -2,6 +2,7 @@
 import { addItem } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
 import { TREES } from '../data/woodcutting.js';
+import { ROCKS } from '../data/mining.js';
 import { ITEMS } from '../data/items.js';
 
 const XP = buildXpTable();
@@ -93,13 +94,14 @@ const RESOLVERS = {
 
   mining(state, _baseId, meta){
     const minLvl = levelFromXp(state.minXp||0, XP);
-    const dropId = meta?.resourceId; // expected: e.g., 'ore_tin'
+    const dropId = meta?.resourceId;
     if (!dropId) return null;
 
-    const baseMs = itemBaseMs(dropId, 3200);
+    const rock   = ROCKS.find(r => r.drop === dropId) || null;
+    const baseMs = (rock?.baseTime ?? itemBaseMs(dropId, 3200));
     const tickMs = clampMs(baseMs / (pickSpeedFromState(state) * speedFromLevel(minLvl)));
-    const xpPer  = Number.isFinite(meta?.xpPer) ? meta.xpPer : (itemXp(dropId) || 5);
-    return { activity:'mining', xpSkill:XP_KEYS.mining, sourceId:meta?.sourceId||'copper', dropId, xpPer, tickMs };
+    const xpPer  = Number.isFinite(meta?.xpPer) ? meta.xpPer : (rock?.xp ?? itemXp(dropId) ?? 5);
+    return { activity:'mining', xpSkill:XP_KEYS.mining, sourceId:rock?.id || meta?.sourceId || 'copper', dropId, xpPer, tickMs };
   },
 };
 

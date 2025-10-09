@@ -1,4 +1,3 @@
-
 // /ui/royal_service.js — Royal panel UI
 
 import { state } from '../systems/state.js';
@@ -164,10 +163,12 @@ function renderContract(){
     </div>
   `;
 
+  // Per-row Turn In must use that row's task id
   el.contractBox.querySelectorAll('button[data-act="turnin"]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const deliverTask = state.royalContract?.tasks.find(t=>t.kind==='deliver' && canTurnInItemTask(t));
-      if (deliverTask) {
+    btn.addEventListener('click', (ev)=>{
+      const id = ev.currentTarget.getAttribute('data-id');
+      const deliverTask = state.royalContract?.tasks.find(t=>t.kind==='deliver' && t.id === id);
+      if (deliverTask && canTurnInItemTask(deliverTask)) {
         turnInItemTask(deliverTask);
         if (completeIfAllDone()) celebrateComplete();
         renderRoyalService();
@@ -227,14 +228,8 @@ function renderBonuses(){
 
 /** Public: paint the Royal tab */
 export function renderRoyalService(){
-              try { ensureRoyalUnlocks(); } catch {}
-try { ensureRoyalUnlocks(); } catch {}
-try { ensureRoyalUnlocks(); } catch {}
-try { ensureRoyalUnlocks(); } catch {}
-try { ensureRoyalUnlocks(); } catch {}
-try { ensureRoyalUnlocks(); } catch {}
-if (!el.panel) return;
   try { ensureRoyalUnlocks(); } catch {}
+  if (!el.panel) return;
   renderHeader();
   renderContract();
   renderBonuses();
@@ -267,6 +262,8 @@ if (!el.panel) return;
     }
   }, 1000);
 
+  // Refresh UI when related state changes
+  window.addEventListener('inventory:changed', renderRoyalService);
   window.addEventListener('kills:change', renderRoyalService);
   window.addEventListener('royal:complete', ()=>{
     renderRoyalService();
@@ -277,4 +274,3 @@ if (!el.panel) return;
   // Initial paint
   renderRoyalService();
 })();
-

@@ -1,4 +1,3 @@
-// /systems/combat.js
 import { MONSTERS } from '../data/monsters.js';
 import { renderMonsterGrid } from '../ui/combat.js';
 import { addItem, addGold } from './inventory.js';
@@ -9,10 +8,10 @@ import { getActiveEffects } from '../systems/effects.js';
 import { PETS } from '../data/pets.js';
 import { seedPetForCombat } from './pet.js';
 import { applyLevelAndRecalc, grantPetXp } from './pet.js';
-import { renderAlchemy } from '../ui/alchemy.js'; // ⬅️ re-render Alchemy after combat ends
+import { renderAlchemy } from '../ui/alchemy.js';
+import { recordWardenKill } from './royal_service.js';
 
 const BALANCE = {
-  // Player weights (unchanged)
   atkLevelWeight: 3.0,
   atkGearWeight: 2.5,
   strLevelWeight: 0.5,
@@ -25,20 +24,57 @@ const BALANCE = {
   monAccScale: 0.90,
   hpBase: 30,
   hpLevelPerDef: 2.5,
-  hpGearWeight: 2.0,
+  hpGearWeight: 1.0,
   maxHitAtkWeight: 0.1,
   dmgMitigationPerDef: 0.05,
 
-  // Pet-vs-monster tuning
   petTargetDefSlope: 1.1,
   petTargetDefBias: 5,
-  petAccBaseReplace: true, // replace base with pet baseAcc rather than add
+  petAccBaseReplace: true,
   petMonAccBase: 0.05,
   petMonAccScale: 0.90,
 
-  // Pet XP
-  petXpPerMonsterLevel: 10, // 10 xp per monster level
+  petXpPerMonsterLevel: 10,
 };
+
+/**
+ * Elemental multiplier for spell damage.
+ * Fire: +25% vs Forest, -25% vs Water
+ * Water: +25% vs Fire, -25% vs Forest, +25% vs Ground
+ * Forest: +25% vs Water, +25% vs Ground; takes -25% from Water (resists Water)
+ *
+ * @param {string|null} elem - 'fire' | 'water' | 'forest' | 'ground' | null
+ * @param {object|string|null} monOrType - monster object or its .type string
+ */
+export function elementalMultiplier(elem, monOrType){
+  if (!elem) return 1.0;
+  const t = (typeof monOrType === 'string') ? monOrType : (monOrType?.type || null);
+  if (!t) return 1.0;
+
+  const E = String(elem).toLowerCase();
+  const T = String(t).toLowerCase();
+
+  // Fire interactions (existing)
+  if (E === 'fire'){
+    if (T === 'forest') return 1.25;
+    if (T === 'water')  return 0.75;
+  }
+
+  // Water interactions (existing + ground)
+  if (E === 'water'){
+    if (T === 'fire')   return 1.25;
+    if (T === 'forest') return 0.75;  // forest resists water
+    if (T === 'ground') return 1.25;  // water strong vs ground
+  }
+
+  // Forest interactions (new)
+  if (E === 'forest'){
+    if (T === 'water')  return 1.25;  // forest strong vs water
+    if (T === 'ground') return 1.25;  // forest strong vs ground
+  }
+
+  return 1.0;
+}
 
 function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
 
@@ -50,11 +86,9 @@ function ringEnchant(state){
   return m ? { stat: m[1], add: Number(m[2])||0 } : null;
 }
 
-/* ---------------- active effects ---------------- */
 function totalAccBonus(s){
   let n = 0;
   for (const eff of getActiveEffects(s)){
-    // Accept either key to be compatible with older effects
     const v = Number((eff?.data?.accBonus ?? eff?.data?.hitBonus) || 0);
     if (v) n += v;
   }
@@ -69,7 +103,6 @@ function totalDmgReduce(s){
   return n;
 }
 
-/* ---------------- discovery helpers ---------------- */
 function dropKey(d){ if (!d) return null; if (d.id) return `item:${d.id}`; if (d.gold) return `gold:${d.gold}`; return null; }
 function recordDiscovery(s, d){
   const k = dropKey(d); if (!k) return;
@@ -81,7 +114,6 @@ function recordDiscovery(s, d){
   }
 }
 
-/* ---------------- gear sum ---------------- */
 function sumEquip(s, key){
   let total = 0;
   const eq = s.equipment || {};
@@ -97,20 +129,16 @@ function sumEquip(s, key){
 
 function emitHpChange(){ try { window.dispatchEvent(new CustomEvent('hp:change')); } catch {} }
 
-/* ---------------- after-combat hook ---------------- */
 function afterCombatFinish(win, monId){
-  // Re-render Alchemy panel and broadcast a finish event for any other listeners.
   try { renderAlchemy(); } catch {}
   try { window.dispatchEvent(new CustomEvent('combat:finish', { detail: { id: monId, win: !!win } })); } catch {}
 }
 
-/* -------------------------------- Player stats -------------------------------- */
 export function hpMaxFor(s){
   const defLvl = levelFromXp(Number(s.defXp)||0, XP_TABLE);
   const hpGear = sumEquip(s, 'hp');
   let max = BALANCE.hpBase + defLvl * BALANCE.hpLevelPerDef + hpGear * BALANCE.hpGearWeight;
 
-  // ring enchant bound to item id: "#e:hpMax:<add>"
   const m = String(s?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
   if (m && m[1] === 'hpMax'){
     max += Number(m[2]) || 0;
@@ -121,31 +149,26 @@ export function hpMaxFor(s){
 export function ensureHp(state){
   const max = hpMaxFor(state);
   if (state.hpCurrent == null) state.hpCurrent = max;
-  // clamp to new max (if max increased, further heals can now go above the old cap)
   state.hpCurrent = Math.max(0, Math.min(max, state.hpCurrent));
   try { window.dispatchEvent(new Event('hp:change')); } catch {}
   return state.hpCurrent;
 }
-
 
 export function derivePlayerStats(s, mon){
   const atkLvl = levelFromXp(Number(s.atkXp)||0, XP_TABLE);
   const strLvl = levelFromXp(Number(s.strXp)||0, XP_TABLE);
   const defLvl = levelFromXp(Number(s.defXp)||0, XP_TABLE);
 
-  // base gear bonuses
   let atkBonus = sumEquip(s,'atk');
   let strBonus = sumEquip(s,'str');
   let defBonus = sumEquip(s,'def');
 
-  // add bound ring enchant (#e:stat:add) to the appropriate bonus
   const m = String(s?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
   if (m){
     const stat = m[1], add = Number(m[2])||0;
     if (stat === 'attack')   atkBonus += add;
     if (stat === 'strength') strBonus += add;
     if (stat === 'defense')  defBonus += add;
-    // hpMax & manaMax are handled in hpMaxFor / manaMaxFor
   }
 
   const atkRating = atkLvl*BALANCE.atkLevelWeight + atkBonus*BALANCE.atkGearWeight;
@@ -161,11 +184,10 @@ export function derivePlayerStats(s, mon){
   return { atkLvl, strLvl, defLvl, atkBonus, strBonus, defBonus, maxHit, acc, atkRating, defRating, strRating };
 }
 
-/* -------------------------------- Pet stats -------------------------------- */
 function activePetId(s){ return s.ui?.activePet || null; }
 
 function ensurePetRecord(s, id){
-  s.pets = s.pets || {};
+  s.pets = s.pets || {}
   if (!s.pets[id] || typeof s.pets[id] !== 'object'){
     s.pets[id] = { level: 1, xp: 0 };
   } else {
@@ -191,7 +213,6 @@ export function derivePetStats(s, mon){
   const maxHit = Math.round((d.baseMaxHit   ?? 0) + (d.growthMaxHit || 0) * (L - 1));
   const maxHp  = Math.round(d.baseHp        + (d.growthHp        || 0) * (L - 1));
 
-  // Use combat’s live hp if present, otherwise state hp; clamp to max
   const hp = Math.min(((combat && Number.isFinite(combat.petHp)) ? combat.petHp : (pet.hp|0)), maxHp);
 
   return {
@@ -200,14 +221,11 @@ export function derivePetStats(s, mon){
   };
 }
 
-/* ---------------------------- Pet XP & Leveling ---------------------------- */
 const PET_XP_MULT = (state?.tuning?.petXpMult ?? 0.70);
 function petXpForLevel(L){
   const base = XP_TABLE[L] || 0;
   return Math.floor(base * PET_XP_MULT);
 }
-
-/* -------------------------------- Combat lifecycle -------------------------------- */
 
 export function beginFight(state, monsterId, opts = {}){
   const petOnly = !!opts.petOnly;
@@ -215,7 +233,7 @@ export function beginFight(state, monsterId, opts = {}){
   if (!mon) return null;
 
   if (petOnly){
-    const seeded = seedPetForCombat(state);   // pull from STATE (single source of truth)
+    const seeded = seedPetForCombat(state);
     if (!seeded) return null;
 
     state.combat = {
@@ -244,7 +262,6 @@ export function beginFight(state, monsterId, opts = {}){
   return state.combat;
 }
 
-
 function monXpCanon(mon){
   const x = mon?.xp || {};
   return {
@@ -268,9 +285,9 @@ function rollQty(d){
   return Math.floor(lo + Math.random() * (hi - lo + 1));
 }
 
-/* Loot award is shared; XP goes to player only in player fights */
 function awardWin(s, mon, { playerXp = true } = {}){
   onMonsterKilled(mon);
+  recordWardenKill(mon.id);
   renderMonsterGrid(mon.zone);
 
   const style = s.trainingStyle || 'shared';
@@ -312,12 +329,21 @@ function awardWin(s, mon, { playerXp = true } = {}){
   }
 
   s.combat = null;
-  afterCombatFinish(true, mon.id); // ⬅️ notify UI after win
+  afterCombatFinish(true, mon.id);
   const xpPayload = playerXp ? { atk: gained.atk, str: gained.str, def: gained.def } : { atk:0, str:0, def:0 };
   return { xp: xpPayload, loot: lootNames };
 }
 
-/* -------------------------------- Turn resolution -------------------------------- */
+function deriveCompanionAttacker(s, mon){
+  const petId = s.ui?.activePet || null;
+  if (!petId || !s.pets || !s.pets[petId]) return null;
+  const d = PETS[petId]; if (!d) return null;
+
+  const ps = derivePetStats(s, mon);
+  if (!ps) return null;
+  return { id: petId, name: ps.name, acc: ps.acc ?? 0, maxHit: Math.max(1, ps.maxHit|0) };
+}
+
 export function turnFight(s){
   const combat = s.combat;
   if (!combat) return { done:true, reason:'no-combat' };
@@ -325,7 +351,6 @@ export function turnFight(s){
   const mon = MONSTERS.find(m=>m.id===combat.monsterId);
   if (!mon) { s.combat = null; return { done:true, reason:'bad-monster' }; }
 
-  // ---- PET-ONLY PATH ----
   if (combat.petOnly){
     const ps = derivePetStats(s, mon);
     let log = [];
@@ -335,7 +360,6 @@ export function turnFight(s){
       return { done:true, reason:'no-pet', log:[`No pet equipped.`], xp:{atk:0,str:0,def:0}, loot:[], petXp:0 };
     }
 
-    // Pet attacks monster
     if (Math.random() < ps.acc){
       const dmg = 1 + Math.floor(Math.random() * ps.maxHit);
       combat.monHp = Math.max(0, combat.monHp - dmg);
@@ -344,24 +368,20 @@ export function turnFight(s){
       log.push(`${ps.name} misses ${mon.name}.`);
     }
 
-    // WIN
     if (combat.monHp <= 0){
       const gained = BALANCE.petXpPerMonsterLevel * Math.max(1, mon.level || 1);
       const petRes = grantPetXp(s, gained);
 
-      // Recalc ALL stats on the pet & FULL HEAL (single source of truth in state)
       const petId = combat.petId || s.ui?.activePet;
       applyLevelAndRecalc(s, petId, s.pets[petId].level);
-      // also ensure combat reflects healed vitals right before we clear (optional)
       combat.petMax = s.pets[petId].maxHp;
       combat.petHp  = s.pets[petId].hp;
 
-      const payload = awardWin(s, mon, { playerXp:false }); // award loot for pets
+      const payload = awardWin(s, mon, { playerXp:false });
 
       log.push(`${ps.name} defeated ${mon.name}!`);
       log.push(`${ps.name} gains ${petRes.gained} pet xp.` + (petRes.newLevel > (petRes.oldLevel||0) ? ` Level up! ${petRes.oldLevel} → ${petRes.newLevel}.` : ''));
 
-      // awardWin already fired afterCombatFinish(true,...)
       return {
         done:true, win:true, log,
         loot: payload.loot || [],
@@ -369,7 +389,6 @@ export function turnFight(s){
       };
     }
 
-    // Monster hits pet
     const petDefRating = ps.def * BALANCE.defLevelWeight;
     const monAtkRating = (mon.attack ?? mon.level)*1.4 + 10;
     const monAcc = clamp(BALANCE.petMonAccBase + (monAtkRating/(monAtkRating + petDefRating))*BALANCE.petMonAccScale, 0.05, 0.95);
@@ -385,15 +404,13 @@ export function turnFight(s){
 
     combat.turn++;
 
-    // LOSS
     if ((combat.petHp|0) <= 0){
       const petId = combat.petId || s.ui?.activePet;
-      // On loss: bring hp back to max (no healing system)
       applyLevelAndRecalc(s, petId, s.pets[petId].level);
 
       const name = ps.name;
       s.combat = null;
-      afterCombatFinish(false, mon.id); // ⬅️ pet-only loss
+      afterCombatFinish(false, mon.id);
       return {
         done: true, win: false,
         log: [...log, `${name} was defeated by ${mon.name}.`],
@@ -404,22 +421,40 @@ export function turnFight(s){
     return { done:false, log, petHp: combat.petHp, petMax: combat.petMax };
   }
 
-  // ---- PLAYER PATH (unchanged) ----
   const ps = derivePlayerStats(s, mon);
+  const buddy = deriveCompanionAttacker(s, mon);
   let log = [];
 
-  if (Math.random() < ps.acc){
-    const dmg = 1 + Math.floor(Math.random()*ps.maxHit);
-    combat.monHp = Math.max(0, combat.monHp - dmg);
-    log.push(`You hit ${mon.name} for ${dmg}.`);
+  const playerHits = Math.random() < ps.acc;
+  const playerDmg  = playerHits ? (1 + Math.floor(Math.random()*ps.maxHit)) : 0;
+
+  let petHits = false, petDmg = 0;
+  if (buddy){
+    petHits = Math.random() < buddy.acc;
+    petDmg  = petHits ? (1 + Math.floor(Math.random()*buddy.maxHit)) : 0;
+  }
+
+  const totalDmg = playerDmg + petDmg;
+
+  if (buddy){
+    if (totalDmg > 0){
+      combat.monHp = Math.max(0, combat.monHp - totalDmg);
+      log.push(`You and ${buddy.name} hit ${mon.name} for ${playerDmg} + ${petDmg}.`);
+    } else {
+      log.push(`You and ${buddy.name} miss ${mon.name}.`);
+    }
   } else {
-    log.push(`You miss ${mon.name}.`);
+    if (playerHits){
+      combat.monHp = Math.max(0, combat.monHp - playerDmg);
+      log.push(`You hit ${mon.name} for ${playerDmg}.`);
+    } else {
+      log.push(`You miss ${mon.name}.`);
+    }
   }
 
   if (combat.monHp <= 0){
     const payload = awardWin(s, mon, { playerXp:true });
     log.push(`You defeated ${mon.name}!`);
-    // awardWin already fired afterCombatFinish(true,...)
     return { done:true, win:true, log, xp: payload.xp, loot: payload.loot };
   }
 
@@ -448,7 +483,7 @@ export function turnFight(s){
     s.hpCurrent = 1;
     emitHpChange();
     s.combat = null;
-    afterCombatFinish(false, mon.id); // ⬅️ player loss
+    afterCombatFinish(false, mon.id);
     return { done: true, win: false, log: [...log, `You were defeated by ${mon.name}.`], xp: { atk:0, str:0, def:0 }, loot: [] };
   }
 

@@ -135,6 +135,51 @@ export const ENCHANT_RECIPES = {
     ],
     xp: { skill: 'enchant', amount: 85 }
   },
+  tome_forest_expert: {
+    id: 'tome_forest_expert',
+    name: 'Enchant Expert Forest Tome',
+    level: 40,
+    time: 1300,
+    mana: 22,
+    inputs: [
+      { id: 'book', qty: 1 },
+      { id: 'forest_essence', qty: 5 }
+    ],
+    outputs: [
+      { id: 'tome_forest_expert', qty: 1 }
+    ],
+    xp: { skill: 'enchant', amount: 150 }
+  },
+  tome_sea_expert: {
+    id: 'tome_sea_expert',
+    name: 'Enchant Expert Sea Tome',
+    level: 40,
+    time: 1300,
+    mana: 22,
+    inputs: [
+      { id: 'book', qty: 1 },
+      { id: 'sea_essence', qty: 5 }
+    ],
+    outputs: [
+      { id: 'tome_sea_expert', qty: 1 }
+    ],
+    xp: { skill: 'enchant', amount: 150 }
+  },
+  tome_rock_expert: {
+    id: 'tome_rock_expert',
+    name: 'Enchant Expert Rock Tome',
+    level: 40,
+    time: 1300,
+    mana: 22,
+    inputs: [
+      { id: 'book', qty: 1 },
+      { id: 'rock_essence', qty: 5 }
+    ],
+    outputs: [
+      { id: 'tome_rock_expert', qty: 1 }
+    ],
+    xp: { skill: 'enchant', amount: 150 }
+  },
   swift_tools_I: {
     id: 'swift_tools_I',
     name: 'Swiftness (I)',
@@ -209,5 +254,25 @@ export const ENCHANT_RECIPES = {
     xp: { skill: 'enchant', amount: 1000 },
     desc: 'Applies a random stat to the Starstone Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
     apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
+  },
+  arcane_phial: {
+    id: 'arcane_phial',
+    name: 'Enchant Arcane Phial',
+    level: 32,
+    time: 1100,
+    mana: 3,
+    inputs:  [ { id:'reinforced_vial', qty:1 } ],
+    outputs: [ { id:'arcane_phial',    qty:1 } ],
+    xp: { skill: 'enchant', amount: 50 }
+  },
+  enchanted_phial: {
+    id: 'enchanted_phial',
+    name: 'Enchant Phial',
+    level: 46,
+    time: 1100,
+    mana: 5,
+    inputs:  [ { id:'arcane_phial', qty:1 } ],
+    outputs: [ { id:'enchanted_phial',    qty:1 } ],
+    xp: { skill: 'enchant', amount: 100 }
   },
 };

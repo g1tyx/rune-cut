@@ -15,6 +15,7 @@ import { renderSkills } from './skills.js';
 import { renderEquipment } from './equipment.js';
 import { renderEnchanting } from './enchanting.js';
 import { ITEMS } from '../data/items.js';
+import { forgeBatchMax } from '../data/construction.js';
 
 const XP_TABLE = buildXpTable();
 const smithLevel = () => levelFromXp(state.smithXp || 0, XP_TABLE);
@@ -33,12 +34,48 @@ const el = {
   smeltAllBtn:  qs('#smeltAllBtn'),
   forgeList:    qs('#forgeList'),
   forgeMetal:   qs('#forgeMetal'),
+  // created dynamically:
+  forgeBatchWrap: null,
   upgradeFilter:   qs('#upgradeFilter'),
   upgradeTarget:   qs('#upgradeTarget'),
   applyUpgradeBtn: qs('#applyUpgradeBtn'),
 };
 
-// ---------- tiny helpers (schema-aware) ----------
+/* ---------- one-time CSS (badges + batch buttons) ---------- */
+(function ensureSmithCss(){
+  const needBatch = !document.getElementById('smith-batch-css');
+  const needBase  = !document.getElementById('smith-badge-css');
+
+  if (needBase){
+    const css = document.createElement('style');
+    css.id = 'smith-badge-css';
+    css.textContent = `
+      .badge{display:inline-block;border-radius:999px;font-size:11px;padding:2px 6px;line-height:1;border:1px solid rgba(255,255,255,.12)}
+      .badge.level{background:transparent}
+      .badge.xp{background:#1b2d1f;color:#22c55e;border-color:#1f3d25}
+      .forge-badges{display:flex;gap:6px;align-items:center}
+      .forge-head{display:flex;gap:10px;align-items:center}
+      .forge-icon.icon-img{width:28px;height:28px;object-fit:contain}
+      .progress.xs{height:4px;background:#182033;border-radius:5px;overflow:hidden;margin-top:6px}
+      .progress.xs .bar{height:100%;width:0%;background:#3b82f6}
+      .forge-icon-fallback{font-size:20px}
+    `;
+    document.head.appendChild(css);
+  }
+  if (needBatch){
+    const css2 = document.createElement('style');
+    css2.id = 'smith-batch-css';
+    css2.textContent = `
+      .smith-batch{display:flex;gap:6px;align-items:center;margin:8px 0}
+      .smith-batch .label{opacity:.8;font-size:12px;margin-right:6px}
+      .smith-batch .btn{padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.12);font-size:12px;background:rgba(255,255,255,.04);cursor:pointer}
+      .smith-batch .btn[aria-pressed="true"]{outline:1px solid #3b82f6;background:rgba(59,130,246,.15)}
+    `;
+    document.head.appendChild(css2);
+  }
+})();
+
+/* ---------- helpers ---------- */
 function prettyName(idOrBase){
   const base = String(idOrBase).split('@')[0];
   return ITEMS?.[base]?.name || base.replace(/_/g,' ');
@@ -80,7 +117,7 @@ function stopAfkIfNotSmithingOrTome(reason = 'smithing'){
   return false;
 }
 
-// ---------- Smelting ----------
+/* ---------- smelting UI ---------- */
 function smeltRec(outId){ return SMELT_BY_ID[outId] || null; }
 
 function reqStrSmelt(outId){
@@ -133,7 +170,7 @@ function updateSmeltButtons(){
   el.smeltAllBtn && (el.smeltAllBtn.disabled = !(maxN > 0) || smithBusy);
 }
 
-// ---------- Forge metal filter (derived) ----------
+/* ---------- forge “Batch” controls ---------- */
 function ensureForgeMetalOptions(){
   if (!el.forgeMetal) return;
   const metals = metalsInOrder();
@@ -149,7 +186,69 @@ function ensureForgeMetalOptions(){
   if (!el.forgeMetal.value) el.forgeMetal.value = metals[0] || '';
 }
 
-// ---------- Unified smithing progress loop (smelt + forge) ----------
+function forgeBatchOptionsFromMax(max){
+  if (!Number.isFinite(max)) return [1, 2, 5, 10, 25, 'X'];
+  if (max >= 25) return [1, 2, 5, 10, 25];
+  if (max >= 10) return [1, 2, 5, 10];
+  if (max >= 5)  return [1, 2, 5];
+  if (max >= 2)  return [1, 2];
+  return [1];
+}
+function currentForgeBatchChoice(){
+  const max = forgeBatchMax(state);
+  const opts = forgeBatchOptionsFromMax(max);
+  const v = state.ui?.forgeBatch;
+  if (v == null) return opts[0];
+  if (v === 'X') return opts.includes('X') ? 'X' : opts[opts.length-1];
+  const n = Math.max(1, parseInt(v, 10) || 1);
+  const allowedNums = opts.filter(x => x !== 'X');
+  const clamped = Math.min(n, Math.max(...allowedNums));
+  return allowedNums.includes(clamped) ? clamped : allowedNums[0];
+}
+function setForgeBatchChoice(v){
+  state.ui = state.ui || {};
+  state.ui.forgeBatch = v;
+  saveNow();
+  syncForgeBatchButtons();
+}
+function ensureForgeBatchControls(){
+  if (el.forgeBatchWrap && document.body.contains(el.forgeBatchWrap)) return;
+  const anchor = qs('#forgeSection') || el.forgeList?.parentElement || document.querySelector('#smithingPanel') || document.body;
+  const wrap = document.createElement('div');
+  wrap.className = 'smith-batch';
+  wrap.id = 'forgeBatchWrap';
+  wrap.innerHTML = `<span class="label">Batch:</span><div class="btns"></div>`;
+  anchor.insertBefore(wrap, anchor.firstChild);
+  el.forgeBatchWrap = wrap;
+
+  wrap.addEventListener('click', (e)=>{
+    const btn = e.target.closest?.('.btn[data-v]');
+    if (!btn) return;
+    const raw = btn.getAttribute('data-v');
+    setForgeBatchChoice(raw === 'X' ? 'X' : Math.max(1, parseInt(raw, 10)));
+  });
+  buildForgeBatchButtons();
+}
+function buildForgeBatchButtons(){
+  if (!el.forgeBatchWrap) return;
+  const btnsHost = el.forgeBatchWrap.querySelector('.btns');
+  if (!btnsHost) return;
+  const max = forgeBatchMax(state);
+  const opts = forgeBatchOptionsFromMax(max);
+  btnsHost.innerHTML = opts.map(v => `<button class="btn" type="button" data-v="${v}">${v}</button>`).join('');
+  syncForgeBatchButtons();
+}
+function syncForgeBatchButtons(){
+  if (!el.forgeBatchWrap) return;
+  const val = currentForgeBatchChoice();
+  for (const b of el.forgeBatchWrap.querySelectorAll('.btn')){
+    const v = b.getAttribute('data-v');
+    const pressed = (v === 'X' && val === 'X') || (v !== 'X' && Number(v) === Number(val));
+    b.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+  }
+}
+
+/* ---------- smithing progress loop ---------- */
 let RAF = null;
 function stopSmithLoop(){ if (RAF) cancelAnimationFrame(RAF); RAF = null; }
 function startSmithLoop(){
@@ -157,28 +256,27 @@ function startSmithLoop(){
   const tick = ()=>{
     RAF = null;
     if (!isSmithBusy()) {
-      // clear global bar/label when idle
       if (el.smithBar)   el.smithBar.style.width = '0%';
       if (el.smithLabel) el.smithLabel.textContent = 'Idle';
+      updateSmeltButtons();
+      renderForgeList();
       return;
     }
 
     const pct = Math.round(pctFromAction()*100);
 
     if (isSmelting()){
-      // update global progress bar & label
       if (el.smithBar) el.smithBar.style.width = `${pct}%`;
       if (el.smithLabel){
         const id = state.action?.key;
         el.smithLabel.textContent = `Smelting ${prettyName(id)}… ${pct}%`;
       }
     } else if (isForging()){
-      // update active forge row progress and label
       const id = activeForgeId();
       const bar = el.forgeList?.querySelector(`[data-id="${id}"] .forge-progress .bar`);
       if (bar) bar.style.width = `${pct}%`;
       if (el.smithLabel){
-        const r = FORGE_RECIPES.find(x=>x.id===id);
+        const r = (FORGE_RECIPES || []).find(x=>x.id===id);
         el.smithLabel.textContent = `Forging ${r?.name || prettyName(id)}… ${pct}%`;
       }
     }
@@ -188,7 +286,7 @@ function startSmithLoop(){
   RAF = requestAnimationFrame(tick);
 }
 
-// ---------- Icons ----------
+/* ---------- icons/badges ---------- */
 function tintClassForRecipe(rec){
   if (rec?.tint) return ` tint-${rec.tint}`;
   const metal = metalOfRecipe(rec);
@@ -206,8 +304,14 @@ function iconHtmlForRecipe(rec){
     ? `<img class="forge-icon icon-img${tint}" src="${src}" alt="${def.name || baseId}">`
     : `<span class="forge-icon forge-icon-fallback">🛠️</span>`;
 }
+function badgesHtmlForForge(rec){
+  const lvl = `<span class="badge level">Lv ${rec.level || 1}</span>`;
+  const xp  = Math.max(0, Number(smithXpOf(rec) || 0));
+  const xpBadge = xp ? `<span class="badge xp" title="+${xp} Smithing xp">+${xp}xp</span>` : '';
+  return `<div class="forge-badges">${lvl}${xpBadge ? ` ${xpBadge}` : ''}</div>`;
+}
 
-// ---------- renderers ----------
+/* ---------- renderers ---------- */
 function renderForgeList(){
   if (!el.forgeList) return;
   const metals = metalsInOrder();
@@ -217,13 +321,12 @@ function renderForgeList(){
   const list = (FORGE_RECIPES || []).filter(r => metalOfRecipe(r) === want);
 
   const busy = isForging();
-  const activeId = activeForgeId();
+  const actId = activeForgeId();
   const pct = Math.round(pctFromAction()*100);
 
   el.forgeList.innerHTML = list.map(r=>{
     const ok   = canForge(state, r.id) && !isSmithBusy();
-    const need = r.level || 1;
-    const isActive = busy && r.id === activeId;
+    const isActive = busy && r.id === actId;
     const costs = inputsOf(r).map(inp => `${inp.qty}× ${prettyName(inp.id)}`).join(', ');
     return `
       <button class="forge-item ${ok ? '' : 'disabled'} ${isActive ? 'busy':''}"
@@ -233,7 +336,7 @@ function renderForgeList(){
         <div class="forge-head">
           ${iconHtmlForRecipe(r)}
           <div class="forge-titles"><span class="forge-name">${r.name || prettyName(r.id)}</span></div>
-          <span class="forge-lvl">Lv ${need}</span>
+          ${badgesHtmlForForge(r)}
         </div>
         <div class="forge-body">
           <div class="forge-costs"><span class="cost">${costs}</span></div>
@@ -268,26 +371,32 @@ function renderUpgradeDropdown(){
     return `<option value="${x.token}">${x.name} · ${qStr(x.q)} — ${loc}${extra}</option>`;
   }).join('');
 
-  if (el.applyUpgradeBtn) el.applyUpgradeBtn.disabled = false;
+  if (!el.applyUpgradeBtn) return;
+  el.applyUpgradeBtn.disabled = false;
 }
 
 export function renderSmithing(){
   if (el.smithLabel && (!state.action || state.action.type!=='smith')) {
     el.smithLabel.textContent = 'Idle';
   }
-  // keep global bar in sync on initial paint
   if (el.smithBar) el.smithBar.style.width = isSmithBusy() ? `${Math.round(pctFromAction()*100)}%` : '0%';
 
   ensureSmeltDropdown();
   updateSmeltButtons();
   ensureForgeMetalOptions();
+
+  // Batch UI
+  ensureForgeBatchControls();
+  buildForgeBatchButtons();
+  syncForgeBatchButtons();
+
   renderForgeList();
   renderUpgradeDropdown();
 
   if (isSmithBusy()) startSmithLoop(); else stopSmithLoop();
 }
 
-// ---------- interactions ----------
+/* ---------- interactions ---------- */
 on(document, 'click', '#smeltOneBtn', ()=>{
   const outId = el.smeltSelect?.value;
   if (!outId) return;
@@ -323,8 +432,27 @@ on(document, 'click', '#smeltAllBtn', ()=>{
   let left = N;
 
   const step = ()=>{
-    if (left <= 0) return;
-    if (!canSmelt(state, outId)) return;
+    if (left <= 0) {
+      if (state.action?.type === 'smith') {
+        state.action = null;
+        try { window.dispatchEvent(new Event('action:stop')); } catch {}
+      }
+      saveNow();
+      renderSmithing();
+      renderEnchanting();
+      renderInventory();
+      renderSkills();
+      return;
+    }
+    if (!canSmelt(state, outId)) {
+      if (state.action?.type === 'smith') {
+        state.action = null;
+        try { window.dispatchEvent(new Event('action:stop')); } catch {}
+      }
+      saveNow();
+      renderSmithing();
+      return;
+    }
     const ok = startSmelt(state, outId, ()=>{
       finishSmelt(state);
       const xp = smithXpOf(smeltRec(outId)) || 0;
@@ -381,7 +509,7 @@ on(document, 'click', '#smeltStopBtn, .smelt-stop-btn', ()=>{
   if (isSmelting()) stopSmith('smelt');
 });
 
-// Build upgrade metal filter from data
+/* ---------- Upgrade filter ---------- */
 (function ensureUpgradeFilterOptions(){
   if (!el.upgradeFilter) return;
   const metals = ['all', ...metalsInOrder()];
@@ -401,32 +529,67 @@ on(document, 'change', '#upgradeFilter', ()=>{
   renderUpgradeDropdown();
 });
 
+/* ---------- Forge click (with batch chaining) ---------- */
 on(document, 'click', '#forgeList .forge-item', (e, btn)=>{
-  const id = btn.dataset.id;
+  const id = btn?.dataset?.id;
   if (!id || btn.hasAttribute('disabled') || btn.classList.contains('disabled') || isSmithBusy()) return;
   if (!canForge(state, id)) return;
   stopAfkIfNotSmithingOrTome('forge');
 
-  const ok = startForge(state, id, ()=>{
-    const res = finishForge(state); // { outId, q, xp }
-    if (res){
-      const base = String(res.outId).split('@')[0];
-      const name = prettyName(base);
-      const q = res.q!=null ? ` · ${qStr(res.q)}` : '';
-      pushSmithLog(`Forged ${name}${q} → +${res.xp} Smithing xp`);
-    }
-    saveNow();
-    renderSmithing();
-    renderInventory();
-    renderEquipment();
-    renderSkills();
-  });
+  // Determine how many to attempt this click
+  const choice = currentForgeBatchChoice();
+  const targetCount = (choice === 'X') ? Infinity : Math.max(1, Number(choice) || 1);
 
-  if (ok){
-    renderSmithing();
-    startSmithLoop();
-    saveNow();
-  }
+  let made = 0;
+  const step = ()=>{
+    if (made >= targetCount) {
+      // finished desired batch
+      if (state.action?.type === 'smith') {
+        state.action = null;
+        try { window.dispatchEvent(new Event('action:stop')); } catch {}
+      }
+      saveNow();
+      renderSmithing();
+      renderInventory();
+      renderEquipment();
+      renderSkills();
+      return;
+    }
+    if (!canForge(state, id)) {
+      // ran out of mats mid-batch
+      if (state.action?.type === 'smith') {
+        state.action = null;
+        try { window.dispatchEvent(new Event('action:stop')); } catch {}
+      }
+      saveNow();
+      renderSmithing();
+      return;
+    }
+
+    const ok = startForge(state, id, ()=>{
+      const res = finishForge(state); // { outId, q, xp }
+      if (res){
+        const base = String(res.outId).split('@')[0];
+        const name = prettyName(base);
+        const q = res.q!=null ? ` · ${qStr(res.q)}` : '';
+        pushSmithLog(`Forged ${name}${q} → +${res.xp} Smithing xp`);
+      }
+      made += 1;
+      saveNow();
+      renderSmithing();
+      renderInventory();
+      renderEquipment();
+      renderSkills();
+      step();
+    });
+
+    if (ok){
+      renderSmithing();
+      startSmithLoop();
+    }
+  };
+
+  step();
 });
 
 on(document, 'click', '#applyUpgradeBtn', ()=>{

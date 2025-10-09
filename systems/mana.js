@@ -25,9 +25,18 @@ export function onManaChange(cb){
 }
 
 export function manaMaxFor(state){
-  const bonus = state.manaBonus || 0;
+  const bonus   = state.manaBonus || 0;
+
+  // Existing Enchanting-based bonus
   const enchLvl = levelFromXp(state.enchantXp || 0, XP_TABLE);
-  let max = MANA_BASE_MAX + Math.max(0, bonus) + enchLvl;
+
+  // ✅ NEW: +1 Max Mana per Destruction level
+  const destLvl = levelFromXp(state.destructionXp || 0, XP_TABLE);
+
+  let max = MANA_BASE_MAX
+    + Math.max(0, bonus)
+    + enchLvl
+    + destLvl; // ← add Destruction level
 
   // ring enchant: +Mana max when id contains "#e:manaMax:<add>"
   const m = String(state?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);

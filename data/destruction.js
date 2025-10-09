@@ -1,0 +1,134 @@
+// /data/destruction.js
+export const DESTRUCTION_RECIPES = {
+  leaf_dart: {
+    id: 'leaf_dart',
+    name: 'Leaf Dart Spell',
+    level: 1,
+    time: 1500,
+    element: 'forest',
+    inputs: [{ id: 'small_forest_spirit', qty: 1 }],
+    outputs: [{ id: 'leaf_dart', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 10 }],
+  },
+
+  ember: {
+    id: 'ember',
+    name: 'Ember Spell',
+    level: 2,
+    time: 1300,
+    element: 'fire',
+    inputs: [{ id: 'small_fire_spirit', qty: 1 }],
+    outputs: [{ id: 'ember', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 12 }],
+  },
+
+  stone_throw: {
+    id: 'stone_throw',
+    name: 'Stone Throw Spell',
+    level: 3,
+    time: 1500,
+    element: 'ground',
+    inputs: [{ id: 'small_ground_spirit', qty: 1 }],
+    outputs: [{ id: 'stone_throw', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 14 }],
+  },
+
+  splash: {
+    id: 'splash',
+    name: 'Splash Spell',
+    level: 5,
+    time: 1500,
+    element: 'water',
+    inputs: [{ id: 'small_water_spirit', qty: 1 }],
+    outputs: [{ id: 'splash', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 17}],
+  },
+
+  razorleaf: {
+    id: 'razorleaf',
+    name: 'Razorleaf Spell',
+    level: 13,
+    time: 1800,
+    element: 'forest',
+    inputs: [{ id: 'small_forest_spirit', qty: 2 }],
+    outputs: [{ id: 'razorleaf', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 28 }],
+  },
+
+  fireball: {
+    id: 'fireball',
+    name: 'Fireball Spell',
+    level: 14,
+    time: 1600,
+    element: 'fire',
+    inputs: [{ id: 'small_fire_spirit', qty: 2 }],
+    outputs: [{ id: 'fireball', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 30 }],
+  },
+
+  rock_barrage: {
+    id: 'rock_barrage',
+    name: 'Rock Barrage Spell',
+    level: 16,
+    time: 1800,
+    element: 'ground',
+    inputs: [{ id: 'small_ground_spirit', qty: 2 }],
+    outputs: [{ id: 'rock_barrage', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 33 }],
+  },
+
+  water_bolt: {
+    id: 'water_bolt',
+    name: 'Water Bolt Spell',
+    level: 18,
+    time: 1800,
+    element: 'water',
+    inputs: [{ id: 'small_water_spirit', qty: 2 }],
+    outputs: [{ id: 'water_bolt', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 40 }],
+  },
+
+  thornstorm: {
+    id: 'thornstorm',
+    name: 'Thornstorm Spell',
+    level: 26,
+    time: 2200,
+    element: 'forest',
+    inputs: [{ id: 'small_forest_spirit', qty: 3 }],
+    outputs: [{ id: 'thornstorm', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 58 }],
+  },
+
+  inferno: {
+    id: 'inferno',
+    name: 'Inferno Spell',
+    level: 27,
+    time: 2000,
+    element: 'fire',
+    inputs: [{ id: 'small_fire_spirit', qty: 3 }],
+    outputs: [{ id: 'inferno', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 60 }],
+  },
+
+  explosion: {
+    id: 'explosion',
+    name: 'Explosion Spell',
+    level: 31,
+    time: 2200,
+    element: 'ground',
+    inputs: [{ id: 'small_ground_spirit', qty: 3 }],
+    outputs: [{ id: 'explosion', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 70 }],
+  },
+
+  tidal_surge: {
+    id: 'tidal_surge',
+    name: 'Tidal Surge Spell',
+    level: 32,
+    time: 2200,
+    element: 'water',
+    inputs: [{ id: 'small_water_spirit', qty: 3 }],
+    outputs: [{ id: 'tidal_surge', qty: 1 }],
+    xp: [{ skill: 'destruction', amount: 80 }],
+  },
+};

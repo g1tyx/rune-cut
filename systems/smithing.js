@@ -21,7 +21,7 @@ function maybeRareForgeId(baseId){
   return Math.random() < RARE_FORGE_CHANCE ? rareId : baseId;
 }
 
-export const UPGRADE_METALS = ['copper','bronze','iron','steel','blacksteel','starsteel'];
+export const UPGRADE_METALS = ['copper','bronze','iron','steel','blacksteel','starsteel', 'draconyx'];
 export const upgradeBarIdForMetal = (metal='copper') => `${metal}_upgrade_bar`;
 export const metalFromBase = (baseId='') => {
   const m = String(baseId).split('_')[0];

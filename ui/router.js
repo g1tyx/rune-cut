@@ -68,7 +68,7 @@ export function wireRoutes(){
     'tile-wc':'forests','tile-craft':'crafting','tile-min':'mining',
     'tile-smith':'smithing','tile-fish':'fishing','tile-cook':'cooking',
     'tile-atk':'combat','tile-str':'combat','tile-def':'combat', 'tile-enchant': 'enchanting',
-    'tile-royal':'royal', 'tile-alch': 'alchemy'
+    'tile-royal':'royal', 'tile-alch': 'alchemy', 'tile-destruction': 'destruction'
   };
   Object.entries(TILE_TO_TAB).forEach(([id, tab])=>{
     const el = qs(`#${id}`);

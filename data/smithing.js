@@ -50,6 +50,13 @@ export const SMELT_RECIPES = {
     outputs:[{ id:'bar_starsteel', qty:1 }],
     xp:[{ skill:'smith', amount:90 }]
   },
+  bar_draconyx: {
+    id:'bar_draconyx', name:'Draconyx Bar',
+    level:60, time:3400, reqSkill:'smith', speedSkill:'smith',
+    inputs:[{ id:'ore_draconyx', qty:2 }, { id:'ore_coal', qty:3 }],
+    outputs:[{ id:'bar_starsteel', qty:1 }],
+    xp:[{ skill:'smith', amount:125 }]
+  },
 };
 
 export const FORGE_RECIPES = [
@@ -131,6 +138,82 @@ export const FORGE_RECIPES = [
   { id:'axe_starsteel',  name:'Starsteel Axe',     level:50, time:3800, reqSkill:'smith', speedSkill:'smith', metal:'starsteel', inputs:[{id:'bar_starsteel',qty:2},{id:'wood_handle',qty:1}], outputs:[{id:'axe_starsteel',qty:1}],  xp:[{skill:'smith',amount:300}], quality:false },
   { id:'pick_starsteel', name:'Starsteel Pickaxe', level:50, time:4100, reqSkill:'smith', speedSkill:'smith', metal:'starsteel', inputs:[{id:'bar_starsteel',qty:2},{id:'wood_handle',qty:1}], outputs:[{id:'pick_starsteel',qty:1}], xp:[{skill:'smith',amount:300}], quality:false },
 
+  { id:'draconyx_helm', name:'Draconyx Helm', level:62, time:5040, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:2},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_helm',qty:1}],
+    xp:[{skill:'smith',amount:500}],
+    rareChance:0.10, rareId:'draconyx_helm_rare' },
+
+  { id:'draconyx_plate', name:'Draconyx Platebody', level:65, time:6270, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:5},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_plate',qty:1}],
+    xp:[{skill:'smith',amount:1250}],
+    rareChance:0.10, rareId:'draconyx_plate_rare' },
+
+  { id:'draconyx_legs', name:'Draconyx Greaves', level:63, time:5600, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:4},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_legs',qty:1}],
+    xp:[{skill:'smith',amount:1000}],
+    rareChance:0.10, rareId:'draconyx_legs_rare' },
+
+  { id:'draconyx_gloves', name:'Draconyx Gauntlets', level:61, time:3920, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:1},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_gloves',qty:1}],
+    xp:[{skill:'smith',amount:250}],
+    rareChance:0.10, rareId:'draconyx_gloves_rare' },
+
+  { id:'draconyx_boots', name:'Draconyx Boots', level:61, time:3920, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:1},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_boots',qty:1}],
+    xp:[{skill:'smith',amount:250}],
+    rareChance:0.10, rareId:'draconyx_boots_rare' },
+
+  { id:'draconyx_sword', name:'Draconyx Sword', level:63, time:5250, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:3},{id:'wood_handle',qty:1},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_sword',qty:1}],
+    xp:[{skill:'smith',amount:825}],
+    rareChance:0.10, rareId:'draconyx_sword_rare' },
+
+  { id:'draconyx_axe', name:'Draconyx Battleaxe', level:64, time:5250, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:3},{id:'wood_handle',qty:1},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'draconyx_axe',qty:1}],
+    xp:[{skill:'smith',amount:825}],
+    rareChance:0.10, rareId:'draconyx_axe_rare' },
+  
+    {
+      id: 'draconyx_shield',
+      name: 'Draconyx Shield',
+      level: 64,
+      time: 5800,
+      reqSkill: 'smith',
+      speedSkill: 'smith',
+      metal: 'draconyx',
+      inputs: [
+        { id: 'bar_draconyx', qty: 3 },
+        { id: 'dragon_bones', qty: 1 }
+      ],
+      outputs: [
+        { id: 'draconyx_shield', qty: 1 }
+      ],
+      xp: [
+        { skill: 'smith', amount: 750 }
+      ],
+      rareChance:0.10,
+      rareId: 'draconyx_shield_rare'
+    },
+
+  { id:'axe_draconyx', name:'Draconyx Axe', level:60, time:4250, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:2},{id:'wood_handle',qty:1},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'axe_draconyx',qty:1}],
+    xp:[{skill:'smith',amount:550}],
+    quality: false },
+
+  { id:'pick_draconyx', name:'Draconyx Pickaxe', level:60, time:4550, reqSkill:'smith', speedSkill:'smith', metal:'draconyx',
+    inputs:[{id:'bar_draconyx',qty:2},{id:'wood_handle',qty:1},{id:'dragon_bones',qty:1}],
+    outputs:[{id:'pick_draconyx',qty:1}],
+    xp:[{skill:'smith',amount:550}],
+    quality: false },
+
   // Upgrade materials (kind:'material' disables quality)
   { id:'copper_upgrade_bar', name:'Copper Upgrade Bar',   level:5,  time:1200, reqSkill:'smith', speedSkill:'smith', metal:'copper',     inputs:[{id:'bar_copper',qty:3}],     outputs:[{id:'copper_upgrade_bar',qty:1}],   xp:[{skill:'smith',amount:18}],  kind:'material', quality:false },
   { id:'bronze_upgrade_bar', name:'Bronze Upgrade Bar',   level:15, time:2000, reqSkill:'smith', speedSkill:'smith', metal:'bronze',     inputs:[{id:'bar_bronze',qty:3}],     outputs:[{id:'bronze_upgrade_bar',qty:1}],   xp:[{skill:'smith',amount:45}],  kind:'material', quality:false },
@@ -138,4 +221,5 @@ export const FORGE_RECIPES = [
   { id:'steel_upgrade_bar',  name:'Steel Upgrade Bar',    level:30, time:2300, reqSkill:'smith', speedSkill:'smith', metal:'steel',      inputs:[{id:'bar_steel',qty:3}],      outputs:[{id:'steel_upgrade_bar',qty:1}],    xp:[{skill:'smith',amount:150}], kind:'material', quality:false },
   { id:'blacksteel_upgrade_bar', name:'Blacksteel Upgrade Bar', level:40, time:2700, reqSkill:'smith', speedSkill:'smith', metal:'blacksteel', inputs:[{id:'bar_blacksteel',qty:3}], outputs:[{id:'blacksteel_upgrade_bar',qty:1}], xp:[{skill:'smith',amount:270}], kind:'material', quality:false },
   { id:'starsteel_upgrade_bar',  name:'Starsteel Upgrade Bar',  level:50, time:2900, reqSkill:'smith', speedSkill:'smith', metal:'starsteel', inputs:[{id:'bar_starsteel',qty:3}], outputs:[{id:'starsteel_upgrade_bar',qty:1}],  xp:[{skill:'smith',amount:450}], kind:'material', quality:false },
+  { id:'draconyx_upgrade_bar',  name:'Draconyx Upgrade Bar',  level:60, time:3400, reqSkill:'smith', speedSkill:'smith', metal:'draconyx', inputs:[{id:'bar_draconyx',qty:3}], outputs:[{id:'draconyx_upgrade_bar',qty:1}],  xp:[{skill:'smith',amount:750}], kind:'material', quality:false },
 ];

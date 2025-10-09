@@ -17,10 +17,11 @@ function tierOf(id){ const m = String(id).match(/_t(\d+)$/); return m ? parseInt
 function inferKind(id, def){
   if (def?.kind) return def.kind;
   const s = String(id).toLowerCase();
+  if (s.includes('anvil'))            return 'anvil';
+  if (s.includes('alchemy_table'))    return 'alch_table';
+  if (s.includes('crafting_table'))   return 'table';
   if (s.includes('bonfire') || s.includes('campfire')) return 'campfire';
-  if (s.includes('hut')) return 'hut';
-  if (s.includes('crafting_table')) return 'table';
-  if (s.includes('alchemy_table'))  return 'alch_table';
+  if (s.includes('hut'))              return 'hut';
   return 'other';
 }
 function guessSpritePath(id, def){
@@ -57,7 +58,7 @@ function hasPlacedKind(state, wantKind){
   return false;
 }
 
-const ALLOWED_KINDS = new Set(['hut','campfire', 'table', 'alch_table']);
+const ALLOWED_KINDS = new Set(['hut','campfire','table','alch_table','anvil']);
 
 export function canBuild(state, id){
   const d = BUILDINGS[id];

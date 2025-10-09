@@ -35,6 +35,25 @@ export const PETS = {
         growthAcc: 0.012,
         growthMaxHit: 0.30
   },
+  neko: {
+    name: "Neko",
+    img: "assets/pets/neko.png",
+    description:
+      "A nimble blade-dancing cat with quick paws and sharper instincts. Swift, precise, and always landing on its feet.",
+    baseAtk: 5,
+    baseStr: 5,
+    baseDef: 4,
+    baseHp: 20,
+    baseAcc: 0.63,
+    baseMaxHit: 5,
+    growthAtk: 0.7,
+    growthStr: 0.8,
+    growthDef: 0.55,
+    growthHp: 2.8,
+    growthAcc: 0.013,
+    growthMaxHit: 0.35,
+    requires: { attack: 55 }
+  }
   
   };
   

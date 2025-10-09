@@ -43,6 +43,7 @@ export function createProductionSkill({
       case 'enchant': return 'enchantXp';
       case 'alch':    return 'alchXp';
       case 'royal':   return 'royalXp';
+      case 'destruction': return 'destructionXp';
       default:        return `${skill}Xp`; // fallback for new skills
     }
   };
@@ -52,14 +53,20 @@ export function createProductionSkill({
     if (!r) return null;
     // normalize a view without mutating source
     return {
-      id, name: r.name || id,
+      id,
+      name: r.name || id,
       time: Number(r.time || 1000),
       level: Number(r.level || r.lvl || 1),
-      reqSkill: r.reqSkill || 'craft',
-      speedSkill: r.speedSkill || 'craft',
-      inputs: Array.isArray(r.inputs) ? r.inputs.map(i=>({ id:i.id, qty:Number(i.qty||0) })) : [],
-      outputs: Array.isArray(r.outputs)? r.outputs.map(o=>({ id:o.id, qty:Number(o.qty||0) })) : [],
-      xp: Array.isArray(r.xp) ? r.xp.map(g=>({ skill:g.skill, amount:Number(g.amount||0) })) : [],
+      reqSkill: r.reqSkill || actionType,
+      speedSkill: r.speedSkill || actionType,
+
+      inputs:  Array.isArray(r.inputs)  ? r.inputs.map(i => ({ id:i.id, qty:Number(i.qty||0) })) : [],
+      outputs: Array.isArray(r.outputs) ? r.outputs.map(o => ({ id:o.id, qty:Number(o.qty||0) })) : [],
+
+      xp: Array.isArray(r.xp)
+        ? r.xp.map(g => ({ skill:g.skill, amount:Number(g.amount||0) }))
+        : (r.xp && r.xp.skill ? [{ skill:r.xp.skill, amount:Number(r.xp.amount||0) }] : []),
+
       _raw: r
     };
   };

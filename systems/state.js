@@ -20,6 +20,7 @@ export function defaultState(){
     smithXp: 0, craftXp: 0, cookXp: 0,
     enchantXp: 0, alchXp: 0,
     constructionXp: 0, royalXp: 0,
+    destructionXp: 0,
 
     hp: 10,
 

@@ -1,7 +1,4 @@
-// /systems/autocook.js
-// Non-restarting auto-cook window that starts ONLY when the player
-// manually cooks something perfectly. It locks to that raw_* for the
-// entire window. No boot/start on refresh. No restart on expiry.
+// /systems/autocook.js — fixed to use Date.now() (epoch) across reloads
 
 import { state, saveNow } from './state.js';
 import { constructionBonuses } from './construction.js';
@@ -12,12 +9,37 @@ const TICK_MS = 250;
 const COOK_EVERY_MS = 1200;
 
 let tickHandle = 0;
-let nextCookAt = 0;
+let nextCookAtEpoch = 0;   // epoch ms
 let lockedRawId = null;
 
-function now(){ return performance.now(); }
+const now = () => Date.now();
+
+/* Back-compat: if old perf.now() value (< ~year 2001 in ms range), nuke it */
+function sanitizeSavedUntil(){
+  const ui = (state.ui = state.ui || {});
+  const until = Number(ui.autoCookUntil || 0);
+  if (!until) return 0;
+  // If it's less than 1e12, it's almost certainly a perf.now timestamp
+  if (until < 1e12) {
+    ui.autoCookUntil = 0;
+    saveNow();
+    return 0;
+  }
+  return until;
+}
+
+function getWindowUntil(){
+  const ui = (state.ui = state.ui || {});
+  return Number(ui.autoCookUntil || 0);
+}
+function setWindowUntil(epochMs){
+  const ui = (state.ui = state.ui || {});
+  ui.autoCookUntil = Math.floor(Number(epochMs)); // keep full epoch ms
+  saveNow();
+}
+
 function hasWindow(){
-  const until = Number(state.ui?.autoCookUntil || 0);
+  const until = getWindowUntil();
   return until > now();
 }
 
@@ -30,30 +52,29 @@ function cookedIdOf(raw){
 }
 
 /** Start a new fixed window (overwrite, don't extend). */
-function startWindow(seconds, { preferRawId=null } = {}){
-  if (!seconds || seconds <= 0) return;
-  const ui = (state.ui = state.ui || {});
-  const n = now();
+function startWindow(seconds, { preferRawId = null } = {}){
+  const secs = Math.max(0, Number(seconds) || 0);
+  if (secs <= 0) return;
 
-  // Lock to the given raw (the one the player just cooked)
+  const n = now();
   lockedRawId = (preferRawId && COOK_RECIPES[preferRawId]) ? preferRawId : null;
 
-  ui.autoCookUntil = n + seconds*1000;
-  nextCookAt = n + COOK_EVERY_MS;
+  const until = n + secs * 1000;
+  setWindowUntil(until);
 
-  // Tell UI
+  nextCookAtEpoch = n + COOK_EVERY_MS;
+
   try {
     window.dispatchEvent(new CustomEvent('autocook:window', {
-      detail: { until: ui.autoCookUntil, rawId: lockedRawId }
+      detail: { until, rawId: lockedRawId }
     }));
   } catch {}
 }
 
 /** End the window cleanly (no restart). */
 function endWindow(){
-  const ui = (state.ui = state.ui || {});
-  if (!ui.autoCookUntil) return;
-  ui.autoCookUntil = 0;
+  if (!getWindowUntil()) return;
+  setWindowUntil(0);
   lockedRawId = null;
   try {
     window.dispatchEvent(new CustomEvent('autocook:window', {
@@ -86,30 +107,36 @@ function doOneAutoCook(){
 
 /** Heartbeat loop. Never auto-restarts; only manual cook starts a window. */
 function tick(){
+  // sanitize legacy values once per tick
+  sanitizeSavedUntil();
+
   const t = now();
 
   if (hasWindow()){
-    if (t >= nextCookAt){
+    if (!nextCookAtEpoch) nextCookAtEpoch = t + COOK_EVERY_MS;
+
+    // Don’t schedule cooks past the end of the window
+    const until = getWindowUntil();
+    if (t >= nextCookAtEpoch && t < until){
       doOneAutoCook();
-      nextCookAt = t + COOK_EVERY_MS;
+      nextCookAtEpoch = Math.min(until, t + COOK_EVERY_MS);
     }
 
     // UI countdown pulse
     try {
       window.dispatchEvent(new CustomEvent('autocook:pulse', {
-        detail: { until: state.ui.autoCookUntil, rawId: lockedRawId }
+        detail: { until, rawId: lockedRawId }
       }));
     } catch {}
 
-    // End exactly when the timer lapses (no restart)
     if (!hasWindow()) endWindow();
-
     schedule();
     return;
   }
 
-  // Idle: no implicit starts.
+  // Idle
   endWindow();
+  nextCookAtEpoch = 0;
   schedule();
 }
 
@@ -120,17 +147,17 @@ export function initAutoCook(){
   if (tickHandle) return;
 
   // When the player cooks PERFECT manually, start a window for that raw.
-  // UI must emit: window.dispatchEvent(new CustomEvent('cook:perfect', { detail:{ rawId } }))
   window.addEventListener('cook:perfect', (e)=>{
     const { rawId } = e.detail || {};
     if (!rawId) return;
-    const secs = Number(constructionBonuses(state)?.auto_cook_seconds || 0);
+    const secs = Number((state?.tuning?.autoCookSeconds) ?? (constructionBonuses(state)?.auto_cook_seconds) ?? 0);
     if (secs > 0){
       startWindow(secs, { preferRawId: rawId });
     }
   });
 
-  nextCookAt = now() + COOK_EVERY_MS;
+  // Do not start a window on load; just begin ticking.
+  nextCookAtEpoch = 0;
   tick();
 }
 

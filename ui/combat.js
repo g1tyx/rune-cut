@@ -1,13 +1,16 @@
 // /ui/combat.js
 import { state, saveNow } from '../systems/state.js';
 import { MONSTERS } from '../data/monsters.js';
-import { beginFight, turnFight, hpMaxFor } from '../systems/combat.js';
+import { beginFight, turnFight, hpMaxFor, elementalMultiplier} from '../systems/combat.js';
 import { qs } from '../utils/dom.js';
 import { renderInventory } from './inventory.js';
+import { addItem } from '../systems/inventory.js';
 import { renderEquipment } from './equipment.js';
 import { renderSkills } from './skills.js';
-import { ensureMana, manaMaxFor, startManaRegen } from '../systems/mana.js';
+import { ensureMana, manaMaxFor, startManaRegen, drinkPotion } from '../systems/mana.js';
 import { ITEMS } from '../data/items.js';
+import { PETS } from '../data/pets.js';
+import { renderCombatConsumablesPanel } from './combat/consumables_panel.js';
 
 const overlayEls = {
   overlay:       qs('#combatOverlay'),
@@ -28,6 +31,7 @@ const overlayEls = {
   monHpBar:      qs('#monHpBar'),
   monHpVal:      qs('#monHpVal'),
   monNameHud:    qs('#monName'),
+  youLabel:      qs('#youLabel') || qs('#playerName') || qs('#playerLabel') || document.querySelector('#combatOverlay .you-label'),
 };
 
 function setPetMode(on){
@@ -86,6 +90,8 @@ function currentMonster(){ const id = state.selectedMonsterId; return MONSTERS.f
 function setBar(bar,label,cur,max){ const pct=max>0?Math.max(0,Math.min(100,Math.round(100*cur/max))):0; if(bar)bar.style.width=pct+'%'; if(label)label.textContent=`${cur}/${max}`; }
 
 /* food helpers */
+// strict base id (drops @quality / #encodes)
+function baseIdStrict(s){ return String(s||'').split('@')[0].split('#')[0]; }
 function healAmountForBase(baseId){ const def=ITEMS[baseId]||{}; return Number.isFinite(def.heal)?def.heal:0; }
 function canEat(){ const eq=state.equipment||{}, base=eq.food, qty=Math.max(0,eq.foodQty|0); if(!base||qty<=0)return false; const heal=healAmountForBase(base); if(heal<=0)return false; const max=hpMaxFor(state); return (state.hpCurrent??max)<max; }
 function doEatOnce(){
@@ -111,6 +117,22 @@ function toggleManaRow(hidden){
 }
 
 function paintHud(){
+  // --- label: "You and {Pet}" (player) / "{Pet}" (pet-only) / "You" (no pet) ---
+  try {
+    const youEl =
+      overlayEls.youLabel ||
+      document.querySelector('.combat-hud .hud-col:first-child .hud-name');
+    const activePetId = state.ui?.activePet || null;
+    const petName = activePetId ? (PETS?.[activePetId]?.name || activePetId) : null;
+
+    if (youEl) {
+      if (state.petBattleMode && petName)       youEl.textContent = petName;
+      else if (!state.petBattleMode && petName) youEl.textContent = `You and ${petName}`;
+      else                                       youEl.textContent = 'You';
+    }
+  } catch {}
+
+  // --- bars ---
   if (state.petBattleMode) {
     const id  = state.ui?.activePet;
     const pet = id && state.pets ? state.pets[id] : null;
@@ -139,6 +161,7 @@ function paintHud(){
     setBar(overlayEls.playerManaBar, overlayEls.playerManaVal, curMp, maxMp);
   }
 
+  // --- monster HUD ---
   const active = state.combat;
   const mon = active ? MONSTERS.find(m=>m.id===active.monsterId) : currentMonster();
   const monMax = active ? (mon?.hp ?? 20) : (mon?.hp ?? 0);
@@ -146,15 +169,30 @@ function paintHud(){
   setBar(overlayEls.monHpBar, overlayEls.monHpVal, monCur, monMax);
   if (overlayEls.monNameHud) overlayEls.monNameHud.textContent = mon?.name || '—';
 
+  // --- controls (this is the bit that got lost) ---
   const inFight = !!state.combat;
-  if (overlayEls.fightBtn) overlayEls.fightBtn.disabled = inFight || !mon;
-  if (overlayEls.eatBtn){
-    overlayEls.eatBtn.disabled = state.petBattleMode ? true : !canEat();
-    overlayEls.eatBtn.title = state.petBattleMode ? 'Pet battle' :
-                              (canEat() ? 'Eat food to heal' : 'Nothing to eat or HP is full');
+
+  if (overlayEls.fightBtn) {
+    // disable Start when already in fight or when no monster selected
+    overlayEls.fightBtn.disabled = inFight || !mon;
   }
-  if (overlayEls.training) overlayEls.training.disabled = state.petBattleMode;
-  if (overlayEls.fleeBtn) overlayEls.fleeBtn.disabled = !inFight;
+
+  if (overlayEls.eatBtn) {
+    // Eat is only available in normal (player) mode and when canEat() is true
+    const can = !state.petBattleMode && canEat();
+    overlayEls.eatBtn.disabled = !can;
+    overlayEls.eatBtn.title = state.petBattleMode
+      ? 'Pet battle'
+      : (can ? 'Eat food to heal' : 'Nothing to eat or HP is full');
+  }
+
+  if (overlayEls.training) {
+    overlayEls.training.disabled = state.petBattleMode;
+  }
+
+  if (overlayEls.fleeBtn) {
+    overlayEls.fleeBtn.disabled = !inFight;
+  }
 }
 
 /* monster card paint */
@@ -178,6 +216,7 @@ export function renderCombat(){
   ensureMana(state);
   startManaRegen(state, ()=>{ saveNow(); const maxMp=manaMaxFor(state); setBar(overlayEls.playerManaBar, overlayEls.playerManaVal, state.manaCurrent, maxMp); });
   paintHud();
+  renderCombatConsumablesPanel();
 }
 
 function enableCombatLogAutoScroll(){
@@ -191,32 +230,80 @@ function enableCombatLogAutoScroll(){
 /* loop + FX */
 let fightLoop=null; function stopFightLoop(){ if(fightLoop){ clearInterval(fightLoop); fightLoop=null; } }
 
-/* FX parser now recognizes pet damage lines ("X hits Cheeken for N.") */
+/* FX parser — extended to parse combined player+pet lines:
+   "You and {Pet} hit {Monster} for {P} + {Q}."
+   Pet bubbles use a distinct 'pet' kind/color. */
 function applyTurnFx(logs){
-  const parseDamage=s=>{const m=/for\s+(\d+)/i.exec(s||''); return m?parseInt(m[1],10):null;};
-  const hasCrit=s=>/\bcrit/i.test(s||'')||/\bcritical\b/i.test(s||'');
-  const petName = state.combat?.petName || state.ui?.activePet || '';
-  const dealt = logs.find(l => {
-    if (/^You hit\b/i.test(l)) return true;                        // player mode
-    if (petName && new RegExp(`^${petName}\\s+hits\\b`, 'i').test(l)) return true; // pet mode
-    return false;
-  });
-  const monHitYou=logs.find(l=>/\bhits you for\b/i.test(l));
-  const youMiss=logs.find(l=>/\byou miss\b/i.test(l));
-  const monHitPet = petName ? logs.find(l=> new RegExp(`hits\\s+${petName}\\s+for\\s+\\d+\\b`, 'i').test(l) ) : null;
-  const monMissYou=logs.find(l=>/misses you\b/i.test(l));
-  const petMiss = logs.find(l=>/\bmisses\b.+$/i.test(l)&&!/misses you/i.test(l));
+  const parseIntAfterFor = s => { const m = /for\s+(\d+)/i.exec(s||''); return m ? parseInt(m[1],10) : null; };
+  const hasCrit = s => /\bcrit/i.test(s||'') || /\bcritical\b/i.test(s||'');
 
-  const dmgMon=parseDamage(dealt);
-  const dmgYou=parseDamage(monHitYou);
-  const dmgPet=parseDamage(monHitPet);
+  const activePetId = state.ui?.activePet || null;
+  const petName     = activePetId ? (PETS?.[activePetId]?.name || activePetId) : null;
 
-  if(dmgMon!=null){ const crit=hasCrit(dealt); pulse(overlayEls.monHpBar,'flash-dmg',350); bubbleDamage(overlayEls.monHpBar,dmgMon,'dealt',{crit}); }
-  else if(youMiss||petMiss){ bubbleDamage(overlayEls.monHpBar,0,'miss',{text:'Miss'}); }
+  // --- Player + Pet → Monster (combined line preferred) ---
+  // "You and {Pet} hit {Monster} for P + Q."
+  const combo = logs.find(l => /^You and .+ hit .+ for \d+\s*\+\s*\d+\.\s*$/i.test(l));
+  if (combo){
+    const m = combo.match(/for\s+(\d+)\s*\+\s*(\d+)/i);
+    const pD = m ? parseInt(m[1],10) : 0;   // player dmg
+    const qD = m ? parseInt(m[2],10) : 0;   // pet dmg
+    // slight temporal offset & split positions to avoid overlap
+    if (pD > 0 || qD > 0){
+      pulse(overlayEls.monHpBar,'flash-dmg',350);
+      if (pD > 0) bubbleDamage(overlayEls.monHpBar, pD, 'dealt left'); // player bubble (left/red)
+      if (qD > 0) setTimeout(()=> bubbleDamage(overlayEls.monHpBar, qD, 'pet right'), 80); // pet bubble (right/green)
+    } else {
+      bubbleDamage(overlayEls.monHpBar, 0, 'miss', { text:'Miss' });
+    }
+  } else {
+    // Legacy separate lines
+    const youDealt = logs.find(l => /^You hit\b/i.test(l));
+    const youMiss  = logs.find(l => /\byou miss\b/i.test(l));
+    const petDealt = petName ? logs.find(l => new RegExp(`^${petName}\\s+hits\\b`, 'i').test(l)) : null;
+    const petMiss  = petName ? logs.find(l => new RegExp(`^${petName}\\s+misses\\b`, 'i').test(l)) : null;
 
-  if(dmgYou!=null && !state.petBattleMode){ const crit=hasCrit(monHitYou); pulse(overlayEls.playerHpBar,'flash-dmg',350); bubbleDamage(overlayEls.playerHpBar,dmgYou,'taken',{crit,slam:true}); }
-  if(dmgPet!=null && state.petBattleMode){ pulse(overlayEls.playerHpBar,'flash-dmg',350); bubbleDamage(overlayEls.playerHpBar,dmgPet,'taken',{slam:true}); }
-  else if(monMissYou && !state.petBattleMode){ bubbleDamage(overlayEls.playerHpBar,0,'miss',{text:'Miss'}); }
+    const dmgMon = parseIntAfterFor(youDealt);
+    const dmgPet = parseIntAfterFor(petDealt);
+
+    if (dmgMon != null){
+      pulse(overlayEls.monHpBar,'flash-dmg',350);
+      bubbleDamage(overlayEls.monHpBar, dmgMon, 'dealt left');
+    }
+    if (dmgPet != null){
+      pulse(overlayEls.monHpBar,'flash-dmg',350);
+      setTimeout(()=> bubbleDamage(overlayEls.monHpBar, dmgPet, 'pet right'), 80);
+    }
+    if ((!youDealt && youMiss) || (!petDealt && petMiss)){
+      bubbleDamage(overlayEls.monHpBar, 0, 'miss', { text:'Miss' });
+    }
+  }
+
+  // --- Monster → You OR Pet (show always) ---
+  const monHitYou  = logs.find(l => /\bhits you for\b/i.test(l));
+  const monMissYou = logs.find(l => /misses you\b/i.test(l));
+  const monHitPet  = petName ? logs.find(l => new RegExp(`\\bhits\\s+${petName}\\s+for\\s+\\d+\\b`, 'i').test(l)) : null;
+  const monMissPet = petName ? logs.find(l => new RegExp(`\\bmisses\\s+${petName}\\b`, 'i').test(l)) : null;
+
+  const dmgYou = parseIntAfterFor(monHitYou);
+  const dmgPet = parseIntAfterFor(monHitPet);
+
+  // If pet-only mode, the player HP bar is showing the pet, so prefer pet bubbles.
+  if (state.petBattleMode) {
+    if (dmgPet != null){
+      pulse(overlayEls.playerHpBar,'flash-dmg',350);
+      bubbleDamage(overlayEls.playerHpBar, dmgPet, 'taken', { slam:true });
+    } else if (monMissPet) {
+      bubbleDamage(overlayEls.playerHpBar, 0, 'miss', { text:'Miss' });
+    }
+  } else {
+    if (dmgYou != null){
+      const crit = hasCrit(monHitYou);
+      pulse(overlayEls.playerHpBar,'flash-dmg',350);
+      bubbleDamage(overlayEls.playerHpBar, dmgYou, 'taken', { crit, slam:true });
+    } else if (monMissYou) {
+      bubbleDamage(overlayEls.playerHpBar, 0, 'miss', { text:'Miss' });
+    }
+  }
 }
 
 function runCombatTurn(){
@@ -335,16 +422,25 @@ overlayEls.overlay?.addEventListener('click', (e)=>{ if (e.target === overlayEls
 document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && !overlayEls.overlay.classList.contains('hidden')) closeCombat(); });
 overlayEls.training?.addEventListener('change', ()=>{ state.trainingStyle = overlayEls.training.value || 'shared'; saveNow(); });
 
+window.addEventListener('inventory:changed', renderCombatConsumablesPanel);
+window.addEventListener('mana:change', renderCombatConsumablesPanel);
+
 /* ---------------- Buttons ---------------- */
 overlayEls.fightBtn?.addEventListener('click', ()=>{
   const monId = state.petBattleMode ? (document.getElementById('monsterPickerSelect')?.value) : (state.selectedMonsterId);
   const mon = MONSTERS.find(m=>m.id===monId); if (!mon || state.combat) return;
+
   if (state.petBattleMode){
     beginFight(state, mon.id, { petOnly:true });
     overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`Your pet engages ${mon.name}!`}));
   } else {
     beginFight(state, mon.id);
     overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`You engage ${mon.name}!`}));
+
+    if (mon.zone === 'Bosses') {
+      window.dispatchEvent(new CustomEvent('boss:engage', { detail: { bossId: mon.id, boss: mon } }));
+    }
+
     if (isAutobattleUnlocked() && getAuto(mon.id) && !autoActive(mon.id)) {
       startAutoSession(mon.id);
       overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle: session started (3 minutes).`}));
@@ -352,6 +448,7 @@ overlayEls.fightBtn?.addEventListener('click', ()=>{
   }
   saveNow(); renderCombat(); renderEquipment(); startFightLoop();
 });
+
 overlayEls.eatBtn?.addEventListener('click', ()=>{ if (state.petBattleMode) return; if (!canEat()) return; doEatOnce(); });
 overlayEls.fleeBtn?.addEventListener('click', ()=>{
   if (!state.combat) return;
@@ -360,7 +457,57 @@ overlayEls.fleeBtn?.addEventListener('click', ()=>{
   closeCombat();
 });
 
-/* --- cosmetic CSS (kept minimal; no hiding of HP bar now) --- */
+/* ==== Boss Event plumbing (Vine Horror) ==== */
+function logToCombat(text){
+  const n = document.createElement('div');
+  n.textContent = text;
+  const log = document.querySelector('#combatLog');
+  if (log) { log.appendChild(n); log.scrollTop = log.scrollHeight; }
+}
+
+function unequipFoodToInventory(){
+  const eq = state.equipment || {};
+  const base = eq.food;
+  const qty  = Math.max(0, eq.foodQty|0);
+  if (!base || qty <= 0) return false;
+
+  // Return the equipped stack to inventory, then clear the slot
+  try { addItem(state, base, qty); } catch {}
+  eq.food = '';
+  eq.foodQty = 0;
+
+  try { renderInventory(); } catch {}
+  try { renderEquipment(); } catch {}
+  try { window.dispatchEvent(new Event('food:change')); } catch {}
+  return true;
+}
+
+// Apply consequences when player FAILS the minigame
+window.addEventListener('boss:event:apply', (e)=>{
+  const { damage = 0, unequipFood = false, reason = 'event' } = e.detail || {};
+
+  // Damage current player HP (uses state.hpCurrent / hpMaxFor the rest of your UI already manages)
+  if (damage > 0){
+    const mx = hpMaxFor(state);
+    const cur = Math.max(0, Math.min(mx, state.hpCurrent == null ? mx : state.hpCurrent));
+    state.hpCurrent = Math.max(0, cur - damage);
+    logToCombat(`You take ${damage} damage (${reason}).`);
+    try { window.dispatchEvent(new Event('hp:change')); } catch {}
+    renderCombat();
+  }
+
+  if (unequipFood){
+    const ok = unequipFoodToInventory();
+    logToCombat(ok ? 'Vine whip knocks your food off!' : 'Vine whip lashes, but you had no food equipped.');
+  }
+});
+
+// Let minigames write lines into the combat log
+window.addEventListener('boss:event:log', (e)=>{
+  if (e.detail?.text) logToCombat(e.detail.text);
+});
+
+/* --- cosmetic & FX CSS (adds distinct pet damage color) --- */
 (function ensureCss(){
   if (document.getElementById('combat-ui-css')) return;
   const css=document.createElement('style'); css.id='combat-ui-css';
@@ -377,6 +524,19 @@ overlayEls.fleeBtn?.addEventListener('click', ()=>{
     /* Hide mana UI in pet-only mode */
     #combatOverlay.pet-only #playerManaBar,
     #combatOverlay.pet-only #playerManaVal { display:none!important; }
+
+    /* Floating damage bubbles (existing kinds: dealt, taken, heal, miss)
+       New: .floating-dmg.pet for companion strikes */
+    .floating-dmg{position:absolute;left:50%;transform:translateX(-50%);animation:floatUp .9s ease-out forwards;
+      font-weight:800; pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,.4);}
+    .floating-dmg.dealt{color:#f87171;}   /* player -> monster (red) */
+    .floating-dmg.taken{color:#60a5fa;}   /* monster -> player (blue) */
+    .floating-dmg.pet{color:#34d399;}     /* pet -> monster (green) */
+    .floating-dmg.heal{color:#22c55e;}
+    .floating-dmg.miss{color:#9ca3af;}
+    .floating-dmg.left{ left:35%; }
+    .floating-dmg.right{ left:65%; }
+    @keyframes floatUp{0%{opacity:0;top:6px}10%{opacity:1}100%{opacity:0;top:-22px}}
   `;
   document.head.appendChild(css);
 })();
