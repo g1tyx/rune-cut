@@ -4,26 +4,26 @@ export const ITEMS = {
   dolphin: { id:'dolphin', name:'Dolphin', type:'food', heal:55, sell:115, img:'assets/food/dolphin.png' },
 
   /* ----------------------------- Logs ------------------------------ */
-  log_oak: { id:'log_oak', name:'Oak Logs', type:'resource', sell:1, img:'assets/forestry/oak.png' },
-  log_pine: { id:'log_pine', name:'Pine Logs', type:'resource', sell:3, img:'assets/forestry/pine.png' },
-  log_birch: { id:'log_birch', name:'Birch Logs', type:'resource', sell:7, img:'assets/forestry/birch.png' },
-  log_cedar: { id:'log_cedar', name:'Cedar Logs', type:'resource', sell:12, img:'assets/forestry/cedar.png' },
-  log_willow: { id:'log_willow', name:'Willow Logs', type:'resource', sell:19, img:'assets/forestry/willow.png' },
-  log_maple: { id:'log_maple', name:'Maple Logs', type:'resource', sell:31, img:'assets/forestry/maple.png' },
-  log_yew: { id:'log_yew', name:'Yew Logs', type:'resource', sell:49, img:'assets/forestry/yew.png' },
-  log_runewood: { id:'log_runewood', name:'Runewood Logs', type:'resource', sell:80, img:'assets/forestry/runewood.png' },
-  log_elderwood: { id:'log_elderwood', name:'Elderwood Logs', type:'resource', sell:125, img:'assets/forestry/elder.png' },
+  log_oak: { id:'log_oak', name:'Oak Logs', type:'resource', sell:2, img:'assets/forestry/oak.png' },
+  log_pine: { id:'log_pine', name:'Pine Logs', type:'resource', sell:6, img:'assets/forestry/pine.png' },
+  log_birch: { id:'log_birch', name:'Birch Logs', type:'resource', sell:15, img:'assets/forestry/birch.png' },
+  log_cedar: { id:'log_cedar', name:'Cedar Logs', type:'resource', sell:22, img:'assets/forestry/cedar.png' },
+  log_willow: { id:'log_willow', name:'Willow Logs', type:'resource', sell:35, img:'assets/forestry/willow.png' },
+  log_maple: { id:'log_maple', name:'Maple Logs', type:'resource', sell:50, img:'assets/forestry/maple.png' },
+  log_yew: { id:'log_yew', name:'Yew Logs', type:'resource', sell:90, img:'assets/forestry/yew.png' },
+  log_runewood: { id:'log_runewood', name:'Runewood Logs', type:'resource', sell:150, img:'assets/forestry/runewood.png' },
+  log_elderwood: { id:'log_elderwood', name:'Elderwood Logs', type:'resource', sell:225, img:'assets/forestry/elder.png' },
 
   /* ---------------------------- Planks ----------------------------- */
-  plank_oak: { id:'plank_oak', name:'Oak Plank', type:'resource', invUse:'plank', sell:2, img:'assets/forestry/oak_plank.png' },
-  plank_pine: { id:'plank_pine', name:'Pine Plank', type:'resource', invUse:'plank', sell:4, img:'assets/forestry/pine_plank.png' },
-  plank_birch: { id:'plank_birch', name:'Birch Plank', type:'resource', invUse:'plank', sell:6, img:'assets/forestry/birch_plank.png' },
-  plank_cedar: { id:'plank_cedar', name:'Cedar Plank', type:'resource', invUse:'plank', sell:10, img:'assets/forestry/cedar_plank.png' },
-  plank_willow: { id:'plank_willow', name:'Willow Plank', type:'resource', invUse:'plank', sell:16, img:'assets/forestry/willow_plank.png' },
-  plank_maple: { id:'plank_maple', name:'Maple Plank', type:'resource', invUse:'plank', sell:24, img:'assets/forestry/maple_plank.png' },
-  plank_yew: { id:'plank_yew', name:'Yew Plank', type:'resource', invUse:'plank', sell:36, img:'assets/forestry/yew_plank.png' },
-  plank_runewood: { id:'plank_runewood', name:'Runewood Plank', type:'resource', invUse:'plank', sell:60, img:'assets/forestry/runewood_plank.png' },
-  plank_elderwood: { id:'plank_elderwood', name:'Elderwood Plank', type:'resource', invUse:'plank', sell:90, img:'assets/forestry/elderwood_plank.png' },
+  plank_oak: { id:'plank_oak', name:'Oak Plank', type:'resource', invUse:'plank', sell:3, img:'assets/forestry/oak_plank.png' },
+  plank_pine: { id:'plank_pine', name:'Pine Plank', type:'resource', invUse:'plank', sell:8, img:'assets/forestry/pine_plank.png' },
+  plank_birch: { id:'plank_birch', name:'Birch Plank', type:'resource', invUse:'plank', sell:18, img:'assets/forestry/birch_plank.png' },
+  plank_cedar: { id:'plank_cedar', name:'Cedar Plank', type:'resource', invUse:'plank', sell:26, img:'assets/forestry/cedar_plank.png' },
+  plank_willow: { id:'plank_willow', name:'Willow Plank', type:'resource', invUse:'plank', sell:40, img:'assets/forestry/willow_plank.png' },
+  plank_maple: { id:'plank_maple', name:'Maple Plank', type:'resource', invUse:'plank', sell:60, img:'assets/forestry/maple_plank.png' },
+  plank_yew: { id:'plank_yew', name:'Yew Plank', type:'resource', invUse:'plank', sell:105, img:'assets/forestry/yew_plank.png' },
+  plank_runewood: { id:'plank_runewood', name:'Runewood Plank', type:'resource', invUse:'plank', sell:175, img:'assets/forestry/runewood_plank.png' },
+  plank_elderwood: { id:'plank_elderwood', name:'Elderwood Plank', type:'resource', invUse:'plank', sell:250, img:'assets/forestry/elderwood_plank.png' },
 
   /* --------------------------- Materials --------------------------- */
   wood_handle: { id:'wood_handle', name:'Wood Handle', type:'material', sell:2, img:'assets/materials/handle.png' },
@@ -42,6 +42,7 @@ export const ITEMS = {
   rock_essence: { id:'rock_essence', name:'Rock Essence', type:'resource', sell:12, img:'assets/materials/rock-essence.png' },
   quicksilver: { id:'quicksilver', name:'Quicksilver', type:'material', sell:12, img:'assets/materials/quicksilver.png' },
   quicksilver_e: { id:'quicksilver_e', name:'Quicksilver(e)', type:'material', sell:30, img:'assets/materials/quicksilver.png', glow:true, tip: "Drag onto equipped axe, pickaxe, or fishing rod to enchant" },
+  quicksilver_e2: { id:'quicksilver_e2', name:'Quicksilver(e2)', type:'material', sell:300, img:'assets/materials/quicksilver.png', glow:true, tip: "Drag onto equipped axe, pickaxe, or fishing rod to enchant" },
   wire_coil: { id:'wire_coil', name:'Wire Coil', type:'resource', sell:2, img:'assets/materials/wire-coil.png' },
   silk_coil: { id:'silk_coil', name:'Silk Coil', type:'resource', sell:6, img:'assets/materials/silk-coil.png' },
   nylon_coil: { id:'nylon_coil', name:'Nylon Coil', type:'resource', sell:12, img:'assets/materials/nylon-coil.png' },
@@ -87,7 +88,7 @@ export const ITEMS = {
 
   /* -------------------------- Cooked foods ------------------------- */
   shrimps: { id:'shrimps', name:'Shrimp', type:'food', heal:5, sell:2, img:'assets/food/shrimp.png' },
-  trout: { id:'trout', name:'Trout', type:'food', heal:12, sell:3, img:'assets/food/trout.png' },
+  trout: { id:'trout', name:'Trout', type:'food', heal:12, sell:5, img:'assets/food/trout.png' },
   eel: { id:'eel', name:'Eel', type:'food', heal:20, sell:10, img:'assets/food/eel.png' },
   salmon: { id:'salmon', name:'Salmon', type:'food', heal:30, sell:19, img:'assets/food/salmon.png' },
   halibut: { id:'halibut', name:'Halibut', type:'food', heal:38, sell:36, img:'assets/food/halibut.png' },
@@ -256,15 +257,15 @@ export const ITEMS = {
   cedar_resin: { id:'cedar_resin', name:'Cedar Bark Resin', type:'reagent', sell:45, img:'assets/materials/cedar_resin.png' },
   willow_resin: { id:'willow_resin', name:'Willow Bark Resin', type:'reagent', sell:65, img:'assets/materials/willow_resin.png' },
 
-  potion_mana_small: { id:'potion_mana_small', name:'Small Mana Potion', type:'potion', mana:5, sell:10, img:'assets/potions/mana_potion.png' },
-  potion_mana_med: { id:'potion_mana_med', name:'Mana Potion', type:'potion', mana:10, sell:40, img:'assets/potions/med_mana_potion.png' },
-  potion_accuracy: { id:'potion_accuracy', name:'Accuracy Potion', type:'potion', accBonus:0.08, durationSec:60, sell:25, img:'assets/potions/accuracy_potion.png' },
-  potion_advanced_accuracy: { id:'potion_advanced_accuracy', name:'Advanced Accuracy', type:'potion', accBonus:0.12, durationSec:75, sell:60, img:'assets/potions/accuracy_advanced.png' },
-  potion_advanced_defense: { id:'potion_advanced_defense', name:'Advanced Defense', type:'potion', dmgReduce:5, durationSec:75, sell:80, img:'assets/potions/defense_advanced.png' },
-  potion_defense: { id:'potion_defense', name:'Defense Potion', type:'potion', dmgReduce:2, durationSec:60, sell:25, img:'assets/potions/defense_potion.png' },
-  arcane_potion_mana: { id:'arcane_potion_mana', name:'Arcane Mana Potion', type:'potion', mana:20, sell:85, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[1,0] } },
-  arcane_potion_accuracy: { id:'arcane_potion_accuracy', name:'Arcane Accuracy Potion', type:'potion', accBonus:0.18, durationSec:90, sell:95, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[2,0], empty:[2,0] } },
-  enchanted_mana_potion: { id:'enchanted_mana_potion', name:'Enchanted Mana Potion', type:'potion', mana:40, sell:125, img:'assets/potions/enchanted_mana_potion.png'},
+  potion_mana_small: { id:'potion_mana_small', name:'Small Mana Potion', type:'potion', mana:5, sell:10, img:'assets/potions/mana_potion.png', tip: 'Shift-click to consume' },
+  potion_mana_med: { id:'potion_mana_med', name:'Mana Potion', type:'potion', mana:10, sell:40, img:'assets/potions/med_mana_potion.png', tip: 'Shift-click to consume'},
+  potion_accuracy: { id:'potion_accuracy', name:'Accuracy Potion', type:'potion', accBonus:0.08, durationSec:60, sell:25, img:'assets/potions/accuracy_potion.png', tip: 'Shift-click to consume' },
+  potion_advanced_accuracy: { id:'potion_advanced_accuracy', name:'Advanced Accuracy', type:'potion', accBonus:0.12, durationSec:75, sell:60, img:'assets/potions/accuracy_advanced.png', tip: 'Shift-click to consume' },
+  potion_advanced_defense: { id:'potion_advanced_defense', name:'Advanced Defense', type:'potion', dmgReduce:5, durationSec:75, sell:80, img:'assets/potions/defense_advanced.png', tip: 'Shift-click to consume' },
+  potion_defense: { id:'potion_defense', name:'Defense Potion', type:'potion', dmgReduce:2, durationSec:60, sell:25, img:'assets/potions/defense_potion.png', tip: 'Shift-click to consume' },
+  arcane_potion_mana: { id:'arcane_potion_mana', name:'Arcane Mana Potion', type:'potion', mana:20, sell:85, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[1,0] }, tip: 'Shift-click to consume' },
+  arcane_potion_accuracy: { id:'arcane_potion_accuracy', name:'Arcane Accuracy Potion', type:'potion', accBonus:0.18, durationSec:90, sell:95, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[2,0], empty:[2,0] }, tip: 'Shift-click to consume' },
+  enchanted_mana_potion: { id:'enchanted_mana_potion', name:'Enchanted Mana Potion', type:'potion', mana:40, sell:125, img:'assets/potions/enchanted_mana_potion.png', tip: 'Shift-click to consume'},
 
   gem_sapphire: { id:'gem_sapphire', name:'Sapphire', type:'gem', sell:200, img:'assets/gems/gem_sapphire.png' },
   gem_ruby: { id:'gem_ruby', name:'Ruby', type:'gem', sell:400, img:'assets/gems/gem_ruby.png' },
@@ -303,4 +304,11 @@ export const ITEMS = {
   splash: { id: 'splash', name: 'Splash', type: 'spell', element: 'water', sell: 7, xp: 4, damage: 8, manaUsed: 3, img: 'assets/destruction/splash.png', tip: "Cast to inflict 8 water damage on enemy. Spending 3 mana"},
   water_bolt: { id: 'water_bolt', name: 'Water Bolt', type: 'spell', element: 'water', sell: 19, xp: 12, damage: 20, manaUsed: 5, img: 'assets/destruction/water_bolt.png', tip: "Cast to inflict 20 water damage on enemy. Spending 5 mana"},
   tidal_surge: { id: 'tidal_surge', name: 'Tidal Surge', type: 'spell', element: 'water', sell: 50, xp: 20, damage: 50, manaUsed: 7, img: 'assets/destruction/tidal_surge.png', tip: "Cast to inflict 50 water damage on enemy. Spending 7 mana"},
+
+
+  /* -------------------------- Farming ------------------------- */
+  seed_beet: { id:'seed_beet', name:'Beet Seeds', type:'seed', time:5000, sell: 10, img: 'assets/farming/beet_seed.png' },
+  beet:      { id:'beet', name:'Beet', type:'crop', sell: 4, img: 'assets/farming/beet.png', tip: 'Disgusting' },
+  seed_corn: { id:'seed_corn', name:'Corn Seeds', type:'seed', time:5000, sell: 25, img: 'assets/farming/corn_seed.png' },
+  corn:      { id:'beet', name:'Beet', type:'crop', sell: 9, img: 'assets/farming/corn.png', tip: 'Chickens love corn' },
 };

@@ -54,18 +54,27 @@ function ensurePetsCss(){
 }
 
 function maybeUnlockNeko(){
-  if (state.pets?.neko) return;          // already owned
+  if (state.pets?.neko) return;
   const atkLevel = levelFromXp(Number(state.atkXp)||0, XP_TABLE);
   if (atkLevel >= 55){
-    addPet(state, 'neko');               // ✅ uses the safe helper
-    saveNow();                           // ✅ immediate save (no args)
+    addPet(state, 'neko');               
+    saveNow();                           
+  }
+}
+
+function UnlockSilynara(){
+  if (state.pets?.silynara) return;
+  const vineHorrorKills = state.monsterKills.vine_horror;
+  if (vineHorrorKills >= 10){
+    addPet(state, 'silynara');
+    saveNow();
   }
 }
 
 export function ensureCheekenOwned(){
-  if (state.pets?.cheeken) return;   // already have it
-  addPet(state, 'cheeken');          // safely merges into state.pets
-  saveNow();                         // persist immediately
+  if (state.pets?.cheeken) return;
+  addPet(state, 'cheeken');          
+  saveNow();                
 }
 
 /* ---------- unlock UI ---------- */
@@ -111,6 +120,7 @@ function ensureActivePetDefault(){
 export function renderPetsPanel(){
   ensureActivePetDefault();
   maybeUnlockNeko();
+  UnlockSilynara();
   const panel = document.getElementById('petsPanel');
   if (!panel) return;
 

@@ -191,6 +191,17 @@ export const ENCHANT_RECIPES = {
     xp: { skill: 'enchant', amount: 100 },
     desc: 'Imbues quicksilver with speed magic. Drag onto a tool to apply +0.25 speed (non-stacking).'
   },
+  swift_tools_II: {
+    id: 'swift_tools_II',
+    name: 'Swiftness (II)',
+    level: 30,
+    time: 2300,
+    mana: 40,
+    inputs: [{ id: 'quicksilver', qty: 5 }],
+    outputs: [{ id: 'quicksilver_e2', qty: 1 }],
+    xp: { skill: 'enchant', amount: 400 },
+    desc: 'Imbues quicksilver with advanced speed magic. Drag onto a tool to apply +0.5 speed (non-stacking).'
+  },
   enchant_sapphire_ring: {
     id: 'enchant_sapphire_ring',
     name: 'Enchant Sapphire Ring',

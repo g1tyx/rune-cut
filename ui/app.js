@@ -25,6 +25,8 @@ import { initAutoCook } from '../systems/autocook.js';
 import { renderDestruction } from './destruction.js';
 import { addPet } from '../systems/pet.js';
 import { PETS } from '../data/pets.js';
+import './farming.js';
+import { renderFarming } from './farming.js';
 
 /* --------------------------------------------------------
    Utilities
@@ -51,6 +53,7 @@ function repaintAll(){
   safe(()=>renderRoyalService(),'renderRoyalService');
   safe(()=>renderAlchemy(),     'renderAlchemy');
   safe(()=>renderDestruction(), 'renderDestruction');
+  safe(()=>renderFarming(), 'renderFarming');
 }
 
 function updateMiniHeader(){

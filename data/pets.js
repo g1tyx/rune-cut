@@ -34,26 +34,44 @@ export const PETS = {
         growthHp: 2.5,
         growthAcc: 0.012,
         growthMaxHit: 0.30
-  },
-  neko: {
-    name: "Neko",
-    img: "assets/pets/neko.png",
-    description:
-      "A nimble blade-dancing cat with quick paws and sharper instincts. Swift, precise, and always landing on its feet.",
-    baseAtk: 5,
-    baseStr: 5,
-    baseDef: 4,
-    baseHp: 20,
-    baseAcc: 0.63,
-    baseMaxHit: 5,
-    growthAtk: 0.7,
-    growthStr: 0.8,
-    growthDef: 0.55,
-    growthHp: 2.8,
-    growthAcc: 0.013,
-    growthMaxHit: 0.35,
-    requires: { attack: 55 }
-  }
+    },
+    neko: {
+      name: "Neko",
+      img: "assets/pets/neko.png",
+      description:
+        "A nimble blade-dancing cat with quick paws and sharper instincts. Swift, precise, and always landing on its feet.",
+      baseAtk: 5,
+      baseStr: 5,
+      baseDef: 4,
+      baseHp: 20,
+      baseAcc: 0.63,
+      baseMaxHit: 5,
+      growthAtk: 0.7,
+      growthStr: 0.8,
+      growthDef: 0.55,
+      growthHp: 2.8,
+      growthAcc: 0.013,
+      growthMaxHit: 0.35,
+      requires: { attack: 55 }
+    },
+    silynara: {
+      name: "Silynara",
+      img: "assets/pets/silynara.png",
+      description:
+        "A young and curious basilisk from the depths of the swamp. Attracted to power and driven by growth, has chosen to follow you after witnessing your victory over the Vine Horror",
+      baseAtk: 6,
+      baseStr: 6,
+      baseDef: 6,
+      baseHp: 25,
+      baseAcc: 0.65,
+      baseMaxHit: 6,
+      growthAtk: 0.85,
+      growthStr: 0.95,
+      growthDef: 0.7,
+      growthHp: 3.0,
+      growthAcc: 0.014,
+      growthMaxHit: 0.41,
+    }
   
   };
   

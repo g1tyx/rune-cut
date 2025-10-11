@@ -12,6 +12,13 @@ export const ENCHANT_CONSUMABLES = {
       slots: ['axe','pick','fishing'], // where it can apply
       badge: 'I',             // UI hint (roman numeral)
     },
+    quicksilver_e2: {
+      group: 'swift',         // unique non-stacking group
+      tier: 2,                // used for replace-if-higher logic
+      addSpeed: 0.5,         // bonus
+      slots: ['axe','pick','fishing'], // where it can apply
+      badge: 'II',             // UI hint (roman numeral)
+    },
   
     // Future tiers (examples; add when you create items/recipes)
     // quicksilver_e_II: { group:'swift', tier:2, addSpeed:0.50, slots:['axe','pick','fishing'], badge:'II' },

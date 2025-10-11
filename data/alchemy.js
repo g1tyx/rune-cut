@@ -127,6 +127,5 @@ export const ALCHEMY_RECIPES = {
       { id: 'enchanted_mana_potion', qty: 1 }
     ],
     xp: [{ skill: 'alch', amount: 225 }],
-  },
-
+  }
 };

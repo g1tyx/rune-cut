@@ -14,6 +14,7 @@ const SK = [
   { key:'alch',    xp:'alchXp',    id:'#tile-alch',      label:'Alchemy' },
   { key:'destruction',    xp:'destructionXp',    id:'#tile-destruction',      label:'Destruction' },
   { key:'cook',    xp:'cookXp',    id:'#tile-cook',      label:'Cooking' },
+  { key:'farming', xp:'farmingXp',    id:'#tile-farming',   label:'Farming' },
   { key:'atk',     xp:'atkXp',     id:'#tile-atk',       label:'Attack' },
   { key:'str',     xp:'strXp',     id:'#tile-str',       label:'Strength' },
   { key:'def',     xp:'defXp',     id:'#tile-def',       label:'Defense' },
@@ -116,7 +117,8 @@ export function skillsXpSignature(){
     (state.smithXp|0)    + (state.craftXp|0)    + (state.enchantXp|0) +
     (state.constructionXp|0) + (state.alchXp|0) +
     (state.cookXp|0)     + (state.atkXp|0)      + (state.strXp|0) +
-    (state.defXp|0)      + (state.royalXp|0) + (state.destructionXp|0)
+    (state.defXp|0)      + (state.royalXp|0) + (state.destructionXp|0) +
+    (state.farmingXp|0)
   );
 }
 

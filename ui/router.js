@@ -2,7 +2,7 @@
 import { qs, on } from '../utils/dom.js';
 
 // Known panel names you use today (safe to grow later)
-const PANEL_NAMES = ['enchanting', 'royal_service' ,'construction','forests','crafting','mining','smithing','fishing','cooking','combat', 'alchemy'];
+const PANEL_NAMES = ['enchanting', 'royal_service' ,'construction','forests','farming','crafting','mining','smithing','fishing','cooking','combat', 'alchemy'];
 
 // Find all panels robustly (works even if some are missing the .tabpanel class)
 function getPanels(){
@@ -68,7 +68,8 @@ export function wireRoutes(){
     'tile-wc':'forests','tile-craft':'crafting','tile-min':'mining',
     'tile-smith':'smithing','tile-fish':'fishing','tile-cook':'cooking',
     'tile-atk':'combat','tile-str':'combat','tile-def':'combat', 'tile-enchant': 'enchanting',
-    'tile-royal':'royal', 'tile-alch': 'alchemy', 'tile-destruction': 'destruction'
+    'tile-royal':'royal', 'tile-alch': 'alchemy', 'tile-destruction': 'destruction',
+    'tile-farming': 'farming'
   };
   Object.entries(TILE_TO_TAB).forEach(([id, tab])=>{
     const el = qs(`#${id}`);

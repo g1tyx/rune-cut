@@ -96,6 +96,11 @@
             <div class="tile-level">Lvl <b id="constructionLevelMini">1</b></div>
             <div class="progress xs"><div class="bar" id="constructionBarMini"></div></div>
           </div>
+          <div class="skill-tile" id="tile-farming">
+            <div class="tile-header">🌽 <span>Farming</span></div>
+            <div class="tile-level">Lvl <b id="farmingLevelMini">1</b></div>
+            <div class="progress xs"><div class="bar" id="farmingBarMini"></div></div>
+          </div>
           <div class="skill-tile" id="tile-enchant">
             <div class="tile-header">🪄 <span>Enchanting</span></div>
             <div class="tile-level">Lvl <b id="enchantLevelMini">1</b></div>
@@ -144,6 +149,7 @@
           <button class="tab" data-tab="cooking">🍳 Cooking</button>
           <button class="tab" data-tab="mining">⛏️ Mining</button>
           <button class="tab" data-tab="smithing">⚒️ Smithing</button>
+          <button class="tab" data-tab="farming">🌽 Farming</button>
           <button class="tab" data-tab="enchanting">Enchanting</button>
           <button class="tab" data-tab="destruction">Destruction</button>
           <button class="tab" data-tab="alchemy">Alchemy</button>
@@ -311,7 +317,20 @@
             <div id="forgeList" class="shop"></div>
           </div>
         </div>
-
+        <!-- Farming panel -->
+        <div class="tabpanel hidden" id="tab-farming">
+          <h2>🌽 Farming</h2>
+          <div class="row" style="gap:10px; margin-bottom:10px;">
+          </div>
+          <div class="progress" style="margin-bottom:10px;">
+            <div class="bar" id="farmBar"></div>
+            <div class="label" id="farmLabel">Idle</div>
+          </div>
+          <div class="card" style="padding:10px;">
+            <h2 style="margin-bottom:6px;">📜 Log</h2>
+            <div id="farmLog" class="log" aria-live="polite"></div>
+          </div>
+        </div>
         <!-- /ui: Alchemy panel (recipe grid is empty; JS fills it at runtime) -->
         <div class="tabpanel hidden" id="tab-alchemy">
           <div class="panel-head">
@@ -484,7 +503,7 @@
       </section>
     </div>
     <footer>
-      Version: 1.6.14
+      Version: 1.6.18
     </footer>
   </div>
   
