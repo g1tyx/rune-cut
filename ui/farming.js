@@ -9,6 +9,7 @@ import {
   harvest,
   FARM_PLOTS,
   UNLOCK_COSTS,
+  UNLOCK_LEVEL_REQS,   // ← NEW: import level requirements
   getFarmingXp,
 } from '../systems/farming.js';
 import { buildXpTable, levelFromXp } from '../systems/xp.js';
@@ -76,10 +77,21 @@ function renderPlot(i, grid) {
 
   if (!p.unlocked) {
     const cost = UNLOCK_COSTS[i];
+    const lvlReq = UNLOCK_LEVEL_REQS[i];
+    const playerLvl = levelFromXp(state.farmingXp || 0, XP_TABLE);
+    const meetsLvl = (lvlReq == null) || (playerLvl >= lvlReq);
+
     div.innerHTML = `
       <div class="title">Plot ${i + 1}</div>
-      <div class="muted">Unlock cost: ${cost != null ? cost : '—'} gold</div>
-      ${cost != null ? `<button class="btn btn-primary plot-unlock">Unlock (${cost})</button>` : `<span class="pill">Locked</span>`}
+      <div class="muted">
+        ${cost != null ? `Unlock cost: ${cost} gold` : 'Unlock cost: —'}
+        ${lvlReq != null ? ` • Req: Farming Lvl ${lvlReq}` : ''}
+      </div>
+      ${
+        cost != null
+          ? `<button class="btn btn-primary plot-unlock" ${meetsLvl ? '' : 'disabled'}>${meetsLvl ? `Unlock (${cost})` : `Requires L${lvlReq}`}</button>`
+          : `<span class="pill">Locked</span>`
+      }
     `;
     grid.appendChild(div);
 
@@ -122,8 +134,8 @@ function renderPlot(i, grid) {
     wireBtn(btn, () => {
       if (!sel?.value) return;
       const rec = recipeForSeed(sel.value, ITEMS);
-      const playerLvl = levelFromXp(state.farmingXp || 0, XP_TABLE);
-      if (playerLvl < (rec.lvl || 1)) {
+      const playerLvl2 = levelFromXp(state.farmingXp || 0, XP_TABLE);
+      if (playerLvl2 < (rec.lvl || 1)) {
         pushLog(`You need Farming level ${rec.lvl} to plant ${rec.name}.`, 'farming');
         return;
       }
@@ -154,7 +166,6 @@ function renderPlot(i, grid) {
   if (ready) {
     const btn = div.querySelector('.plot-harvest');
     wireBtn(btn, () => {
-      // Disable immediately to avoid double-clicks, then harvest + aggressively save
       btn.disabled = true;
       harvest(i);
       saveNow();

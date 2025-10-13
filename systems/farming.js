@@ -6,9 +6,14 @@ import { pushLog } from '../ui/logs.js';
 import { renderInventory } from '../ui/inventory.js';
 import { renderSkills } from '../ui/skills.js';
 import { renderAlchemy } from '../ui/alchemy.js';
+import { buildXpTable, levelFromXp } from './xp.js';
+
+const XP_TABLE = buildXpTable();
 
 export const FARM_PLOTS = 6;
-export const UNLOCK_COSTS = [1, null, null, null, null, null];
+
+export const UNLOCK_COSTS      = [        1,   10000,    50000,   150000,   500000, 2000000 ];
+export const UNLOCK_LEVEL_REQS = [        1,      20,       40,       60,       80,      90 ];
 
 export function ensureFarmState(){
   const f = (state.farm = state.farm || {});
@@ -46,16 +51,30 @@ export function grantFarmingXp(amount){
 
 export function unlockPlot(i){
   ensureFarmState();
-  const cost = UNLOCK_COSTS[i];
-  if (cost == null) return pushLog('This plot cannot be unlocked yet.', 'farming');
-  if ((state.gold|0) < cost) return pushLog(`Not enough gold (need ${cost}).`, 'farming');
+  const cost   = UNLOCK_COSTS[i];
+  const lvlReq = UNLOCK_LEVEL_REQS[i];
+  if (cost == null && lvlReq == null) return pushLog('This plot cannot be unlocked yet.', 'farming');
+
+  const playerLvl = levelFromXp(state.farmingXp || 0, XP_TABLE);
+  if (lvlReq != null && playerLvl < lvlReq) {
+    return pushLog(`You need Farming level ${lvlReq} to unlock Plot ${i+1}.`, 'farming');
+  }
+
+  if ((state.gold|0) < (cost|0)) {
+    return pushLog(`Not enough gold (need ${cost}).`, 'farming');
+  }
+
   const p = state.farm.plots[i];
   if (p.unlocked) return;
-  state.gold -= cost;
+
+  state.gold -= (cost|0);
   p.unlocked = true;
   pushLog(`Unlocked Plot ${i+1} (−${cost} gold).`, 'farming');
   saveNow(); renderInventory();
 }
+
+// (rest of file unchanged)
+
 
 export function plantSeed(i, seedId){
   ensureFarmState();
@@ -88,13 +107,11 @@ export function harvest(i){
 
   state.inventory[crop] = (state.inventory[crop]||0) + 3;
 
-  // Write XP immediately, then save immediately (defeat debounced saves)
   grantFarmingXp(add);
   saveNow();
 
   pushLog(`Harvested 3× ${crop} → +${add} Farming XP`, 'farming');
 
-  // Clear plot → save immediately again, plus a next-tick save as a belt-and-suspenders
   p.seedId = null; p.plantedAt = 0; p.doneAt = 0;
   saveNow();
   setTimeout(saveNow, 0);
