@@ -21,12 +21,10 @@ const now = () => Date.now();
 const XP_TABLE = buildXpTable();
 const PLOTS = FARM_PLOTS;
 
-/* ---------- helpers ---------- */
 function fmtMs(ms) {
   const s = Math.max(0, Math.ceil(ms / 1000));
   if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60),
-    r = s % 60;
+  const m = Math.floor(s / 60), r = s % 60;
   return `${m}m ${r}s`;
 }
 
@@ -42,17 +40,12 @@ function wireBtn(btn, handler) {
   const on = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      handler(e);
-    } catch (err) {
-      console.error('[Farming]', err);
-    }
+    try { handler(e); } catch (err) { console.error('[Farming]', err); }
   };
   btn.addEventListener('click', on);
   btn.addEventListener('touchstart', on, { passive: false });
 }
 
-/* ---------- styles ---------- */
 function injectStylesOnce() {
   if ($('#farmStyles')) return;
   const st = document.createElement('style');
@@ -69,11 +62,11 @@ function injectStylesOnce() {
     .farm-store-info{flex:1;display:flex;flex-direction:column;}
     .farm-store-info .name{font-weight:600;}
     .farm-store-info .price{opacity:.75;font-size:0.9em;}
+    .seed-select{user-select: none;}
   `;
   document.head.appendChild(st);
 }
 
-/* ---------- plots ---------- */
 function renderPlot(i, grid) {
   ensureFarmState();
   const p = state.farm.plots[i];
@@ -81,17 +74,12 @@ function renderPlot(i, grid) {
   div.className = 'farm-plot';
   div.dataset.idx = String(i);
 
-  // Locked
   if (!p.unlocked) {
     const cost = UNLOCK_COSTS[i];
     div.innerHTML = `
       <div class="title">Plot ${i + 1}</div>
       <div class="muted">Unlock cost: ${cost != null ? cost : '—'} gold</div>
-      ${
-        cost != null
-          ? `<button class="btn btn-primary plot-unlock">Unlock (${cost})</button>`
-          : `<span class="pill">Locked</span>`
-      }
+      ${cost != null ? `<button class="btn btn-primary plot-unlock">Unlock (${cost})</button>` : `<span class="pill">Locked</span>`}
     `;
     grid.appendChild(div);
 
@@ -99,12 +87,11 @@ function renderPlot(i, grid) {
     wireBtn(btn, () => {
       unlockPlot(i);
       renderInventory();
-      renderFarming();   // 👈 auto-refresh right after unlock
+      renderFarming();
     });
     return;
   }
 
-  // Empty
   if (!p.seedId) {
     const seeds = seedOptions();
     const playerLvl = levelFromXp(state.farmingXp || 0, XP_TABLE);
@@ -114,18 +101,15 @@ function renderPlot(i, grid) {
       <div class="title">Plot ${i + 1}</div>
       <div class="row">
         <select class="seed-select" name="seed-select-${i}" ${has ? '' : 'disabled'}>
-          ${seeds
-            .map((s) => {
-              const rec = recipeForSeed(s.id, ITEMS);
-              const lvlReq = rec?.lvl || 1;
-              const disabled = playerLvl < lvlReq ? 'disabled' : '';
-              const label =
-                playerLvl < lvlReq
-                  ? `${ITEMS[s.id]?.name || s.id} (Lvl ${lvlReq})`
-                  : `${ITEMS[s.id]?.name || s.id} (${s.qty})`;
-              return `<option value="${s.id}" ${disabled}>${label}</option>`;
-            })
-            .join('')}
+          ${seeds.map((s) => {
+            const rec = recipeForSeed(s.id, ITEMS);
+            const lvlReq = rec?.lvl || 1;
+            const disabled = playerLvl < lvlReq ? 'disabled' : '';
+            const label = playerLvl < lvlReq
+              ? `${ITEMS[s.id]?.name || s.id} (Lvl ${lvlReq})`
+              : `${ITEMS[s.id]?.name || s.id} (${s.qty})`;
+            return `<option value="${s.id}" ${disabled}>${label}</option>`;
+          }).join('')}
         </select>
         <button class="btn btn-primary plot-plant" ${has ? '' : 'disabled'}>Plant</button>
       </div>
@@ -149,7 +133,6 @@ function renderPlot(i, grid) {
     return;
   }
 
-  // Growing / Ready (unchanged)
   const rec = recipeForSeed(p.seedId, ITEMS);
   const name = rec?.name || p.seedId;
   const total = Math.max(1, p.doneAt - p.plantedAt);
@@ -163,11 +146,7 @@ function renderPlot(i, grid) {
     <div class="muted">${ready ? 'Ready to harvest!' : `Growing — ${fmtMs(remain)}`}</div>
     <div class="progress"><div class="bar" style="width:${pct.toFixed(1)}%"></div></div>
     <div class="row">
-      ${
-        ready
-          ? `<button class="btn btn-primary plot-harvest">Harvest (×3)</button>`
-          : `<span class="pill">Growing</span>`
-      }
+      ${ready ? `<button class="btn btn-primary plot-harvest">Harvest (×3)</button>` : `<span class="pill">Growing</span>`}
     </div>
   `;
   grid.appendChild(div);
@@ -175,7 +154,11 @@ function renderPlot(i, grid) {
   if (ready) {
     const btn = div.querySelector('.plot-harvest');
     wireBtn(btn, () => {
+      // Disable immediately to avoid double-clicks, then harvest + aggressively save
+      btn.disabled = true;
       harvest(i);
+      saveNow();
+      setTimeout(saveNow, 0);
       renderInventory();
       renderSkills();
       renderFarming();
@@ -183,32 +166,27 @@ function renderPlot(i, grid) {
   }
 }
 
-/* ---------- farm store ---------- */
 function renderFarmStore() {
   const el = $('#farmStore');
   if (!el) return;
 
   const seeds = Object.values(ITEMS)
-    .filter((it) => it?.type === 'seed' && it.sell)
+    .filter((it) => it?.farmStore && it.sell)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  el.innerHTML = seeds
-    .map((it) => {
-      const afford = (state.gold | 0) >= (it.sell | 0);
-      return `
+  el.innerHTML = seeds.map((it) => {
+    const afford = (state.gold | 0) >= (it.sell | 0);
+    return `
       <div class="farm-store-item">
         <img src="${it.img}" alt="" class="farm-store-img">
         <div class="farm-store-info">
           <div class="name">${it.name}</div>
           <div class="price">${it.sell} gold</div>
         </div>
-        <button class="btn btn-primary buy-btn" data-id="${it.id}" ${
-        afford ? '' : 'disabled'
-      }>Buy</button>
+        <button class="btn btn-primary buy-btn" data-id="${it.id}" ${afford ? '' : 'disabled'}>Buy</button>
       </div>
     `;
-    })
-    .join('');
+  }).join('');
 
   el.querySelectorAll('.buy-btn').forEach((btn) => {
     wireBtn(btn, (e) => {
@@ -231,7 +209,6 @@ function renderFarmStore() {
   });
 }
 
-/* ---------- render all ---------- */
 export function renderFarming() {
   ensureFarmState();
   const grid = $('#farmGrid');
@@ -242,7 +219,6 @@ export function renderFarming() {
   renderFarmStore();
 }
 
-/* ---------- mount ---------- */
 function mountOnce() {
   const tab = $('#tab-farming');
   if (!tab || tab.dataset.wired) return;
@@ -256,13 +232,11 @@ function mountOnce() {
   tab.dataset.wired = '1';
 }
 
-/* ---------- init ---------- */
 export function initFarming() {
   injectStylesOnce();
   mountOnce();
   renderFarming();
 
-  // smooth progress updates + refresh when crop finishes
   setInterval(() => {
     const grid = document.querySelector('#farmGrid');
     if (!grid) return;
@@ -282,8 +256,33 @@ export function initFarming() {
   }, 1000);
 }
 
-if (document.readyState === 'loading')
-  document.addEventListener('DOMContentLoaded', initFarming, { once: true });
-else initFarming();
+function hookFarmingTabClicks() {
+  const selectors = [
+    'a[href="#tab-farming"]',
+    '[data-target="#tab-farming"]',
+    '[data-tab="farming"]',
+    '#nav-farming',
+  ];
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest(selectors.join(','));
+    if (!t) return;
+    requestAnimationFrame(() => initFarming());
+  });
+  window.addEventListener('tab:show', (e) => {
+    const id = e?.detail?.id;
+    const target = e?.detail?.target;
+    if (id === 'farming' || target === '#tab-farming') {
+      requestAnimationFrame(() => initFarming());
+    }
+  });
+}
 
-console.log('[Farming] UI ready');
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    hookFarmingTabClicks();
+    initFarming();
+  }, { once: true });
+} else {
+  hookFarmingTabClicks();
+  initFarming();
+}

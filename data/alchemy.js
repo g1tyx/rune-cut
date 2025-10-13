@@ -104,7 +104,7 @@ export const ALCHEMY_RECIPES = {
     id: 'arcane_potion_accuracy',
     name: 'Arcane Accuracy Potion',
     level: 27,
-    time: 2400,
+    time: 3900,
     inputs: [
       { id: 'arcane_phial', qty: 1 },
       { id: 'willow_resin', qty: 1 }
@@ -118,7 +118,7 @@ export const ALCHEMY_RECIPES = {
     id: 'enchanted_mana_potion',
     name: 'Enchanted Mana Potion',
     level: 40,
-    time: 2600,
+    time: 4000,
     inputs: [
       { id: 'enchanted_phial', qty: 1 },
       { id: 'anglerfish_oil', qty: 1 }
@@ -127,5 +127,33 @@ export const ALCHEMY_RECIPES = {
       { id: 'enchanted_mana_potion', qty: 1 }
     ],
     xp: [{ skill: 'alch', amount: 225 }],
+  },
+  weapon_poison: {
+    id: 'weapon_poison',
+    name: 'Weapon Poison',
+    level: 9,
+    time: 2900,
+    inputs: [
+      { id: 'empty_vial', qty: 1 },
+      { id: 'redcap_fungus', qty: 2 }
+    ],
+    outputs: [
+      { id: 'weapon_poison', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 36 }],
+  },
+  toxic_poison: {
+    id: 'toxic_poison',
+    name: 'Toxic Poison',
+    level: 21,
+    time: 3500,
+    inputs: [
+      { id: 'reinforced_vial', qty: 1 },
+      { id: 'spotted_mireheart', qty: 2 }
+    ],
+    outputs: [
+      { id: 'toxic_poison', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 100 }],
   }
 };

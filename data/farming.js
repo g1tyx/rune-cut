@@ -2,8 +2,12 @@
 export const FARM_PLOTS = 6;
 
 export const FARM_RECIPES = {
-  seed_beet: { cropId: 'beet', time: 5_000, name: 'Beet', xp: 6, lvl: 1 },
-  seed_corn: { cropId: 'corn', time: 12_000, name: 'Corn', xp: 9, lvl: 3 },
+  seed_beet: { cropId: 'beet', time: 6_000, name: 'Beet', xp: 5, lvl: 1 },
+  seed_corn: { cropId: 'corn', time: 12_000, name: 'Corn', xp: 10, lvl: 3 },
+  redcap_fungus: { cropId: 'redcap_fungus', time: 15_000, name: 'Redcap Fungus', xp: 20, lvl: 10 },
+  seed_pumpkin: { cropId: 'pumpkin', time: 16_000, name: 'Pumpkin', xp: 30, lvl: 17 },
+  spotted_mireheart: { cropId: 'spotted_mireheart', time: 20_000, name: 'Spotted Mireheart', xp: 40, lvl: 25 },
+  
 };
 
 /**

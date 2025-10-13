@@ -46,7 +46,8 @@ export const MONSTERS = [
     xp:{attack:120,strength:120,defense:120},
     drops:[
       {gold:14, chance:0.7},
-      {id:'small_forest_spirit', chance:0.27}
+      {id:'small_forest_spirit', chance:0.27},
+      {id: 'redcap_fungus', chance: 0.05},
     ],
     img:'assets/monsters/toxic_frog.png'
   },
@@ -65,7 +66,8 @@ export const MONSTERS = [
     xp:{attack:260,strength:260,defense:260},
     drops:[
       {gold:18, chance:0.7},
-      {id:'small_forest_spirit', chance:0.38, min:1, max:2}
+      {id:'small_forest_spirit', chance:0.38, min:1, max:2},
+      {id: 'spotted_mireheart', chance: 0.05},
     ],
     img:'assets/monsters/bog_hydra.png'
   },
@@ -313,7 +315,7 @@ const BOSSES_APPEND = [
     attack: 150,
     defense: 150,
     maxHit: 95,
-    xp:{attack:2900,strength:2900,defense:2900},
+    xp:{attack:5000,strength:5000,defense:5000},
     type: 'forest',
     time: 7000,
     img: 'assets/bosses/vine_horror.png',

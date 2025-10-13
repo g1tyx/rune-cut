@@ -623,31 +623,70 @@ elPopover?.addEventListener('click', (e)=>{
   }
 });
 
-// shift-click item use (potions / buffs)
+// shift-click item use (potions / buffs / poisons)
 elInv?.addEventListener('click', (e)=>{
   if (!e.shiftKey) return;
-  const tile = e.target.closest('[data-id]'); if (!tile) return;
+  const tile = e.target.closest('[data-id]'); 
+  if (!tile) return;
+
   const id = tile.getAttribute('data-id');
   const bid = baseId(id);
   const def = ITEMS[bid] || {};
-  if (Number(def.mana) > 0){
+
+  // --- Mana Potions ---
+  if (Number(def.mana) > 0) {
     const res = drinkPotion(state, bid);
     if (!res || !res.ok) return;
-  } else if (Number(def.accBonus) > 0){
-    const durMs = Math.max(1000, (def.durationSec|0) * 1000 || 300000);
-    applyEffect(state, { id: bid, name: def.name || 'Accuracy', durationMs: durMs, data: { accBonus: Number(def.accBonus)||0 } });
-    removeItem(state, id, 1);
-  } else if (Number(def.dmgReduce) > 0){
-    const durMs = Math.max(1000, (def.durationSec|0) * 1000 || 300000);
-    applyEffect(state, { id: bid, name: def.name || 'Defense', durationMs: durMs, data: { dmgReduce: Number(def.dmgReduce)||0 } });
-    removeItem(state, id, 1);
-  } else { return; }
 
-  tile.classList.add('pulse'); setTimeout(()=> tile.classList.remove('pulse'), 200);
-  renderCharacterEffects(); renderEquipment(); renderInventory(); saveNow();
+  // --- Accuracy Buff ---
+  } else if (Number(def.accBonus) > 0) {
+    const durMs = Math.max(1000, (def.durationSec | 0) * 1000 || 300000);
+    applyEffect(state, {
+      id: bid,
+      name: def.name || 'Accuracy',
+      durationMs: durMs,
+      data: { accBonus: Number(def.accBonus) || 0 }
+    });
+    removeItem(state, id, 1);
+
+  // --- Defense Buff ---
+  } else if (Number(def.dmgReduce) > 0) {
+    const durMs = Math.max(1000, (def.durationSec | 0) * 1000 || 300000);
+    applyEffect(state, {
+      id: bid,
+      name: def.name || 'Defense',
+      durationMs: durMs,
+      data: { dmgReduce: Number(def.dmgReduce) || 0 }
+    });
+    removeItem(state, id, 1);
+
+  // --- Weapon Poison ---
+  } else if (Number(def.damage) > 0) {
+    const durMs = Math.max(1000, (def.durationSec | 0) * 1000 || 180000);
+    applyEffect(state, {
+      id: bid,
+      name: def.name || 'Weapon Poison',
+      durationMs: durMs,
+      data: { poisonDmg: Number(def.damage) || 0 }
+    });
+    removeItem(state, id, 1);
+    try { window.dispatchEvent(new Event('effects:tick')); } catch {}
+
+  } else {
+    return; 
+  }
+
+  // --- visuals + refresh ---
+  tile.classList.add('pulse'); 
+  setTimeout(() => tile.classList.remove('pulse'), 200);
+  renderCharacterEffects(); 
+  renderEquipment(); 
+  renderInventory(); 
+  saveNow();
   try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
   try { window.dispatchEvent(new Event('effects:tick')); } catch {}
 });
+
 
 // popover close
 document.addEventListener('click', (e)=>{

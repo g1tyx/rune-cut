@@ -1,8 +1,6 @@
 // /systems/inventory.js
 // Pure state mutation helpers for inventory & gold.
 // Emits DOM events for the UI layer to react to (Option B decoupling).
-
-// Optional: enable to validate item ids (helps catch typos during dev)
 // import { ITEMS } from '../data/items.js';
 
 function normQty(q) {
@@ -25,10 +23,6 @@ export function getQty(state, id){
 export function addItem(state, id, qty) {
   const c = normQty(qty);
   if (!id || c === 0) return;
-
-  // Optional strictness:
-  // if (!ITEMS[id]) { console.warn('[inventory] unknown item id:', id); return; }
-
   const cur = getQty(state, id);
   state.inventory[id] = cur + Math.max(0, c);
   announceInventory();
@@ -50,14 +44,12 @@ export function addGold(state, n) {
   if (v === 0) return;
   state.gold = Math.max(0, (Number(state.gold) | 0) + v);
   announceGold();
-  // Many flows that grant/spend gold also change inventory; pulse both.
   announceInventory();
 }
 
 /* ------------ Batch helpers (recommended for recipes) ------------- */
 
 export function hasItems(state, list=[]) {
-  // list: [{ id, qty }, ...]
   if (!Array.isArray(list) || list.length === 0) return true;
   for (const it of list) {
     const need = Math.max(0, normQty(it?.qty));
@@ -68,7 +60,6 @@ export function hasItems(state, list=[]) {
 }
 
 export function spendItems(state, list=[]) {
-  // Atomic: only spends if ALL requirements are met.
   if (!hasItems(state, list)) return false;
   for (const it of list) {
     removeItem(state, it.id, it.qty);

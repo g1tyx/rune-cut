@@ -266,6 +266,8 @@ export const ITEMS = {
   arcane_potion_mana: { id:'arcane_potion_mana', name:'Arcane Mana Potion', type:'potion', mana:20, sell:85, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[1,0] }, tip: 'Shift-click to consume' },
   arcane_potion_accuracy: { id:'arcane_potion_accuracy', name:'Arcane Accuracy Potion', type:'potion', accBonus:0.18, durationSec:90, sell:95, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[2,0], empty:[2,0] }, tip: 'Shift-click to consume' },
   enchanted_mana_potion: { id:'enchanted_mana_potion', name:'Enchanted Mana Potion', type:'potion', mana:40, sell:125, img:'assets/potions/enchanted_mana_potion.png', tip: 'Shift-click to consume'},
+  weapon_poison: { id:'weapon_poison', name:'Weapon Poison', type:'potion', sell:30, damage:2, durationSec:60, img:'assets/potions/weapon_poison.png', tip: 'Shift-click to consume'},
+  toxic_poison: { id:'toxic_poison', name:'Toxic Poison', type:'potion', sell:90, damage:5, durationSec:75, img:'assets/potions/toxic_poison.png', tip: 'Shift-click to consume'},
 
   gem_sapphire: { id:'gem_sapphire', name:'Sapphire', type:'gem', sell:200, img:'assets/gems/gem_sapphire.png' },
   gem_ruby: { id:'gem_ruby', name:'Ruby', type:'gem', sell:400, img:'assets/gems/gem_ruby.png' },
@@ -307,8 +309,12 @@ export const ITEMS = {
 
 
   /* -------------------------- Farming ------------------------- */
-  seed_beet: { id:'seed_beet', name:'Beet Seeds', type:'seed', time:5000, sell: 10, img: 'assets/farming/beet_seed.png' },
+  seed_beet: { id:'seed_beet', name:'Beet Seeds', farmStore: true, type:'seed', sell: 10, img: 'assets/farming/beet_seed.png' },
   beet:      { id:'beet', name:'Beet', type:'crop', sell: 4, img: 'assets/farming/beet.png', tip: 'Disgusting' },
-  seed_corn: { id:'seed_corn', name:'Corn Seeds', type:'seed', time:5000, sell: 25, img: 'assets/farming/corn_seed.png' },
-  corn:      { id:'beet', name:'Beet', type:'crop', sell: 9, img: 'assets/farming/corn.png', tip: 'Chickens love corn' },
+  seed_corn: { id:'seed_corn', name:'Corn Seeds', farmStore: true, type:'seed', sell: 25, img: 'assets/farming/corn_seed.png' },
+  corn:      { id:'beet', name:'Corn', type:'crop', sell: 9, img: 'assets/farming/corn.png', tip: 'Chickens love corn' },
+  redcap_fungus: { id:'redcap_fungus', name:'Redcap Fungus', type:'seed', sell: 37, img: 'assets/farming/redcap_fungus.png', tip: "I wouldn't eat this..." },
+  spotted_mireheart: { id:'spotted_mireheart', name:'Spotted Mireheart', type:'seed', sell: 50, img: 'assets/farming/spotted_mireheart.png', tip: "I really wouldn't eat this..." },
+  seed_pumpkin: { id:'seed_pumpkin', name:'Pumpkin Seeds', farmStore: true, type:'seed', sell: 75, img: 'assets/farming/pumpkin_seed.png' },
+  pumpkin:      { id:'pumpkin', name:'Pumpkin', type:'crop', sell: 15, img: 'assets/farming/pumpkin.png', tip: 'Spooky but also good for dogs' },
 };

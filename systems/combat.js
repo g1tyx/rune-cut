@@ -1,3 +1,4 @@
+// /systems/combat.js
 import { MONSTERS } from '../data/monsters.js';
 import { renderMonsterGrid } from '../ui/combat.js';
 import { addItem, addGold } from './inventory.js';
@@ -9,6 +10,7 @@ import { PETS } from '../data/pets.js';
 import { seedPetForCombat } from './pet.js';
 import { applyLevelAndRecalc, grantPetXp } from './pet.js';
 import { renderAlchemy } from '../ui/alchemy.js';
+import { renderFarming } from '../ui/farming.js';
 import { recordWardenKill } from './royal_service.js';
 
 const BALANCE = {
@@ -37,15 +39,6 @@ const BALANCE = {
   petXpPerMonsterLevel: 10,
 };
 
-/**
- * Elemental multiplier for spell damage.
- * Fire: +25% vs Forest, -25% vs Water
- * Water: +25% vs Fire, -25% vs Forest, +25% vs Ground
- * Forest: +25% vs Water, +25% vs Ground; takes -25% from Water (resists Water)
- *
- * @param {string|null} elem - 'fire' | 'water' | 'forest' | 'ground' | null
- * @param {object|string|null} monOrType - monster object or its .type string
- */
 export function elementalMultiplier(elem, monOrType){
   if (!elem) return 1.0;
   const t = (typeof monOrType === 'string') ? monOrType : (monOrType?.type || null);
@@ -54,23 +47,18 @@ export function elementalMultiplier(elem, monOrType){
   const E = String(elem).toLowerCase();
   const T = String(t).toLowerCase();
 
-  // Fire interactions (existing)
   if (E === 'fire'){
     if (T === 'forest') return 1.25;
     if (T === 'water')  return 0.75;
   }
-
-  // Water interactions (existing + ground)
   if (E === 'water'){
     if (T === 'fire')   return 1.25;
-    if (T === 'forest') return 0.75;  // forest resists water
-    if (T === 'ground') return 1.25;  // water strong vs ground
+    if (T === 'forest') return 0.75;
+    if (T === 'ground') return 1.25;
   }
-
-  // Forest interactions (new)
   if (E === 'forest'){
-    if (T === 'water')  return 1.25;  // forest strong vs water
-    if (T === 'ground') return 1.25;  // forest strong vs ground
+    if (T === 'water')  return 1.25;
+    if (T === 'ground') return 1.25;
   }
 
   return 1.0;
@@ -103,6 +91,16 @@ function totalDmgReduce(s){
   return n;
 }
 
+// NEW: sum of all active poison effects (player-only)
+function totalPoisonDamage(s){
+  let n = 0;
+  for (const eff of getActiveEffects(s)){
+    const v = Number(eff?.data?.poisonDmg) || 0;
+    if (v > 0) n += v;
+  }
+  return n | 0;
+}
+
 function dropKey(d){ if (!d) return null; if (d.id) return `item:${d.id}`; if (d.gold) return `gold:${d.gold}`; return null; }
 function recordDiscovery(s, d){
   const k = dropKey(d); if (!k) return;
@@ -131,6 +129,7 @@ function emitHpChange(){ try { window.dispatchEvent(new CustomEvent('hp:change')
 
 function afterCombatFinish(win, monId){
   try { renderAlchemy(); } catch {}
+  try { renderFarming(); } catch {}
   try { window.dispatchEvent(new CustomEvent('combat:finish', { detail: { id: monId, win: !!win } })); } catch {}
 }
 
@@ -187,7 +186,7 @@ export function derivePlayerStats(s, mon){
 function activePetId(s){ return s.ui?.activePet || null; }
 
 function ensurePetRecord(s, id){
-  s.pets = s.pets || {}
+  s.pets = s.pets || {};
   if (!s.pets[id] || typeof s.pets[id] !== 'object'){
     s.pets[id] = { level: 1, xp: 0 };
   } else {
@@ -452,6 +451,13 @@ export function turnFight(s){
     }
   }
 
+  // NEW: player-only poison tick (stacks across active poison effects)
+  const poison = totalPoisonDamage(s);
+  if (poison > 0){
+    combat.monHp = Math.max(0, combat.monHp - poison);
+    log.push(`Poison seeps into ${mon.name} for ${poison}.`);
+  }
+
   if (combat.monHp <= 0){
     const payload = awardWin(s, mon, { playerXp:true });
     log.push(`You defeated ${mon.name}!`);
@@ -471,7 +477,7 @@ export function turnFight(s){
     const cur = Math.max(0, Math.min(mx, s.hpCurrent ?? mx));
     s.hpCurrent = Math.max(0, cur - dmg);
     s.lastDamageMs = performance.now();
-    emitHpChange();
+    try { window.dispatchEvent(new Event('hp:change')); } catch {}
     log.push(`${mon.name} hits you for ${dmg}.`);
   } else {
     log.push(`${mon.name} misses you.`);
@@ -481,7 +487,7 @@ export function turnFight(s){
 
   if (s.hpCurrent <= 0){
     s.hpCurrent = 1;
-    emitHpChange();
+    try { window.dispatchEvent(new Event('hp:change')); } catch {}
     s.combat = null;
     afterCombatFinish(false, mon.id);
     return { done: true, win: false, log: [...log, `You were defeated by ${mon.name}.`], xp: { atk:0, str:0, def:0 }, loot: [] };

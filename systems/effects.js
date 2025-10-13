@@ -12,12 +12,20 @@ export function ensureEffectsContainer(state){
   return state.effects;
 }
 
-export function applyEffect(state, { id, name, durationMs, data={} }){
+export function applyEffect(state, { id, name, durationMs, data = {} }){
   if (!id || !durationMs) return false;
   const effects = ensureEffectsContainer(state);
   const cur = effects[id];
   const base = Math.max(nowMs(), cur?.endsAt || 0);
-  effects[id] = { id, name: name || id, endsAt: base + durationMs, data };
+  const eff = { id, name: name || id, endsAt: base + durationMs, data };
+  effects[id] = eff;
+
+  // --- Fix: correctly register poison damage tracking ---
+  if (data?.poisonDmg) {
+    // Track highest active poison damage (for convenience if needed elsewhere)
+    state._activePoison = Math.max(state._activePoison || 0, data.poisonDmg);
+  }
+
   dispatchTick();
   return true;
 }
@@ -25,6 +33,11 @@ export function applyEffect(state, { id, name, durationMs, data={} }){
 export function clearEffect(state, id){
   if (!id) return false;
   const effects = ensureEffectsContainer(state);
+  const eff = effects[id];
+  if (eff?.data?.poisonDmg) {
+    // Remove global poison tracking only if this effect was the active one
+    delete state._activePoison;
+  }
   if (effects[id]) { delete effects[id]; dispatchTick(); return true; }
   return false;
 }

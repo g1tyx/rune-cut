@@ -5,6 +5,7 @@ import { recipeForSeed } from '../data/farming.js';
 import { pushLog } from '../ui/logs.js';
 import { renderInventory } from '../ui/inventory.js';
 import { renderSkills } from '../ui/skills.js';
+import { renderAlchemy } from '../ui/alchemy.js';
 
 export const FARM_PLOTS = 6;
 export const UNLOCK_COSTS = [1, null, null, null, null, null];
@@ -81,11 +82,22 @@ export function harvest(i){
   if (!rec?.cropId) return pushLog('Error: unknown crop.', 'farming');
   const now = Date.now();
   if (now < p.doneAt) return pushLog('Not ready yet.', 'farming');
+
   const add = Math.max(0, rec.xp) * 3;
   const crop = rec.cropId;
+
   state.inventory[crop] = (state.inventory[crop]||0) + 3;
+
+  // Write XP immediately, then save immediately (defeat debounced saves)
   grantFarmingXp(add);
+  saveNow();
+
   pushLog(`Harvested 3× ${crop} → +${add} Farming XP`, 'farming');
+
+  // Clear plot → save immediately again, plus a next-tick save as a belt-and-suspenders
   p.seedId = null; p.plantedAt = 0; p.doneAt = 0;
-  saveNow(); renderInventory(); renderSkills();
+  saveNow();
+  setTimeout(saveNow, 0);
+
+  renderInventory(); renderSkills(); renderAlchemy();
 }
