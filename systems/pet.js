@@ -2,18 +2,12 @@
 import { PETS } from '../data/pets.js';
 import { levelFromXp, progressFor } from './xp.js';
 
-/**
- * State pet shape (no normalization/backfill):
- * s.pets[id] = { id, xp, level, atk, str, def, acc, maxHit, maxHp, hp }
- */
-
 function defOf(id){
   const d = PETS[id];
   if (!d) throw new Error(`Unknown pet id: ${id}`);
   return d;
 }
 
-/** Pure stat derivation from PETS + level (no state writes). */
 export function computeDerived(def, level){
   const L = Math.max(1, level|0);
   const steps = L - 1;
@@ -23,7 +17,6 @@ export function computeDerived(def, level){
   const deff = Math.round((def.baseDef ?? 0) + (def.growthDef ?? 0) * steps);
   const acc = (def.baseAcc ?? 0) + (def.growthAcc ?? 0) * steps;
 
-  // Max hit now includes a STR contribution: + 0.3 * STR (rounded at the end)
   const perStr = 0.3;
   const baseMax = (def.baseMaxHit ?? 1) + (def.growthMaxHit ?? 0) * steps;
   const maxHit = Math.round(baseMax + perStr * str);
@@ -33,7 +26,6 @@ export function computeDerived(def, level){
   return { atk, str, def: deff, acc, maxHit, maxHp };
 }
 
-/** Create a pet at XP=0 using PETS; fill stats; set active if none. */
 export function addPet(s, id){
   const def = defOf(id);
   s.pets = s.pets || {};
@@ -52,7 +44,7 @@ export function addPet(s, id){
   return pet;
 }
 
-/** Add XP → recompute level from XP_TABLE (same as player); re-derive stats on level up. */
+/** Add XP → recompute level from XP_TABLE; re-derive stats on level up. */
 export function grantPetXp(s, gained){
   const id = s.ui?.activePet;
   const pet = id && s.pets ? s.pets[id] : null;
@@ -65,7 +57,7 @@ export function grantPetXp(s, gained){
 
   const newLevel = levelFromXp(pet.xp|0);
   if (newLevel !== pet.level){
-    applyLevelAndRecalc(s, id, newLevel);   // full heal per your rule
+    applyLevelAndRecalc(s, id, newLevel);
   } else {
     // Keep maxHp in sync and clamp current hp
     const def = defOf(id);

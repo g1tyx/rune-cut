@@ -171,7 +171,7 @@ export function derivePlayerStats(s, mon){
   }
 
   const atkRating = atkLvl*BALANCE.atkLevelWeight + atkBonus*BALANCE.atkGearWeight;
-  const defRating = defLvl*BALANCE.defLevelWeight + defBonus*BALANCE.defGearWeight;
+  const defRating = defLvl*BALANCE.defLevelPerDef + defBonus*BALANCE.defGearWeight;
   const strRating = strLvl*BALANCE.strLevelWeight + strBonus*BALANCE.strGearWeight;
 
   const targetDef = ((mon?.defense ?? mon?.level ?? 1) * 1.3) + 10;
@@ -206,17 +206,40 @@ export function derivePetStats(s, mon){
   if (!d) return null;
 
   const L = Math.max(1, pet.level|0);
+  const steps = L - 1;
 
-  const def    = Math.round(d.baseDef       + (d.growthDef       || 0) * (L - 1));
-  const acc    = (d.baseAcc ?? 0)           + (d.growthAcc       || 0) * (L - 1);
-  const maxHit = Math.round((d.baseMaxHit   ?? 0) + (d.growthMaxHit || 0) * (L - 1));
-  const maxHp  = Math.round(d.baseHp        + (d.growthHp        || 0) * (L - 1));
+  // --- Base (unbuffed) derived stats from PETS growth curves ---
+  const atk0     = Math.round((d.baseAtk     ?? 0) + (d.growthAtk     ?? 0) * steps);
+  const str0     = Math.round((d.baseStr     ?? 0) + (d.growthStr     ?? 0) * steps);
+  const def0     = Math.round((d.baseDef     ?? 0) + (d.growthDef     ?? 0) * steps);
+  const acc0     = (d.baseAcc ?? 0) + (d.growthAcc ?? 0) * steps;
+  const baseMax  = (d.baseMaxHit ?? 0) + (d.growthMaxHit ?? 0) * steps;
+  const maxHit0  = Math.round(baseMax + 0.3 * str0);
+  const maxHp0   = Math.round((d.baseHp ?? 1) + (d.growthHp ?? 0) * steps);
 
-  const hp = Math.min(((combat && Number.isFinite(combat.petHp)) ? combat.petHp : (pet.hp|0)), maxHp);
+  // Current HP snapshot
+  const currentHp = (combat && Number.isFinite(combat.petHp)) ? combat.petHp : (pet.hp|0);
+
+  // --- Well-Fed multiplier  ---
+  let mult = 1.0;
+  const wfUntil = Number((s.pets?.[petId]?.wellFedUntil) || 0);
+  const wfPct   = Number((s.pets?.[petId]?.wellFedPct) || 0);
+  if (wfUntil > Date.now() && wfPct > 0) {
+    mult *= (1 + wfPct / 100);
+  }
+
+  const atk    = Math.max(1, Math.floor(atk0    * mult));
+  const str    = Math.max(1, Math.floor(str0    * mult));
+  const def    = Math.max(1, Math.floor(def0    * mult));
+  const maxHit = Math.max(1, Math.floor(maxHit0 * mult));
+  const maxHp  = Math.max(1, Math.floor(maxHp0  * mult));
+  const acc = acc0;
+  const hp = Math.min(currentHp, maxHp);
 
   return {
     name: d.name || petId,
-    def, acc, maxHit, hp, maxHp
+    atk, str, def, acc, maxHit,
+    hp, maxHp
   };
 }
 
@@ -451,7 +474,6 @@ export function turnFight(s){
     }
   }
 
-  // NEW: player-only poison tick (stacks across active poison effects)
   const poison = totalPoisonDamage(s);
   if (poison > 0){
     combat.monHp = Math.max(0, combat.monHp - poison);

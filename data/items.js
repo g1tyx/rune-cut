@@ -317,4 +317,6 @@ export const ITEMS = {
   spotted_mireheart: { id:'spotted_mireheart', name:'Spotted Mireheart', type:'seed', sell: 50, img: 'assets/farming/spotted_mireheart.png', tip: "I really wouldn't eat this..." },
   seed_pumpkin: { id:'seed_pumpkin', name:'Pumpkin Seeds', farmStore: true, type:'seed', sell: 75, img: 'assets/farming/pumpkin_seed.png' },
   pumpkin:      { id:'pumpkin', name:'Pumpkin', type:'crop', sell: 15, img: 'assets/farming/pumpkin.png', tip: 'Spooky but also good for dogs' },
+  seed_strawberry: { id:'seed_strawberry', name:'Strawberry Seeds', farmStore: true, type:'seed', sell: 125, img: 'assets/farming/strawberry_seed.png' },
+  strawberry:      { id:'strawberry', name:'Strawberry', type:'crop', sell: 25, img: 'assets/farming/strawberry.png', tip: 'A bright red berry. Could be a nice snack for a cat' },
 };
