@@ -330,7 +330,6 @@ const BOSSES_APPEND = [
   }
 ];
 
-// Avoid dupes if this file is evaluated twice
 try {
   const _ids = new Set((Array.isArray(MONSTERS) ? MONSTERS : []).map(m => m.id));
   for (const b of BOSSES_APPEND) {

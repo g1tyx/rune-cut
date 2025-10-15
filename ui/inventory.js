@@ -37,7 +37,17 @@ const SWIFT_RE = /#swift:([0-9.]+)/;          // tool swiftness encoder
     #inventory .inv-slot .sell-btn{ position:absolute; right:4px; bottom:4px; z-index:2; }
     #inventory .inv-slot.pulse{ animation: inv-pulse 220ms ease-out; }
     @keyframes inv-pulse { 0% { transform: scale(1); } 50% { transform: scale(0.97); } 100% { transform: scale(1); } }
+    #inv-sort-btn{
+      margin-left:8px; padding:6px 10px; line-height:1; border-radius:10px;
+      background:#1b2a6b; color:#eaf2ff; border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 6px 14px rgba(59,130,246,.25), inset 0 1px 0 rgba(255,255,255,.15);
+      font-weight:700; cursor:pointer;
+    }
+    #inv-sort-btn:hover{ filter:brightness(1.15); }
     #inv-sort-btn.active{ background:#1b2333; border:1px solid rgba(255,255,255,.2); }
+    /* make it sit "next to" the Inventory title no matter the layout */
+    .inv-title-host{ position:relative; }
+    .inv-title-host .inv-sort-anchor{ position:absolute; right:0; top:50%; transform:translateY(-50%); }
   `;
   document.head.appendChild(css);
 })();
@@ -59,13 +69,13 @@ const baseId = id => String(id).split('@')[0];
 const baseIdStrict = s => String(s||'').split('@')[0].split('#')[0];
 
 function metalFromItemId(id=''){
-  const base = baseIdStrict(id);
+  const s = baseIdStrict(id);
   let m = s.match(/^bar_(\w+)/)?.[1] || s.match(/^ore_(\w+)/)?.[1];
   if (m) return m;
   m = s.match(/^(axe|pick)_(\w+)/)?.[2];
   if (m) return m;
   m = s.split('_')[0];
-  if (['copper','bronze','iron','steel','mith','adamant','rune'].includes(m)) return m;
+  if (['copper','bronze','iron','steel','mith','adamant','rune','blacksteel','starsteel','draconyx'].includes(m)) return m;
   return null;
 }
 function tintClassForItem(id=''){
@@ -78,7 +88,7 @@ function tintClassForItem(id=''){
   m = s.match(/^(axe|pick)_(\w+)/)?.[2];
   if (m) return ` tint-${m}`;
   m = s.split('_')[0];
-  if (['copper','bronze','iron','steel','blacksteel','starsteel'].includes(m)) return ` tint-${m}`;
+  if (['copper','bronze','iron','steel','blacksteel','starsteel','draconyx'].includes(m)) return ` tint-${m}`;
   return '';
 }
 
@@ -719,28 +729,64 @@ const invUseOf = (base) => {
   return 'misc';
 };
 
+/* --------- place the Sort button next to the Inventory title ---------- */
+function placeSortButtonNextToTitle(btn){
+  if (!elInv) return;
+
+  // Try likely header candidates
+  const candidates = [
+    elInv.previousElementSibling,                                      // most common: header right above grid
+    elInv.parentElement?.querySelector('.inventory-title, .inv-title'),
+    elInv.parentElement?.querySelector('h2, h3'),
+  ].filter(Boolean);
+
+  let header = null;
+  for (const c of candidates){
+    // Prefer an element that visibly contains the word "Inventory" (fallback to first candidate)
+    const text = (c.textContent || '').trim().toLowerCase();
+    if (!header) header = c;
+    if (text.includes('inventory')) { header = c; break; }
+  }
+
+  if (header){
+    // Make header a host and absolutely position the button on the right
+    header.classList.add('inv-title-host');
+    let anchor = header.querySelector('.inv-sort-anchor');
+    if (!anchor){
+      anchor = document.createElement('span');
+      anchor.className = 'inv-sort-anchor';
+      header.appendChild(anchor);
+    }
+    anchor.appendChild(btn);
+  } else {
+    // Fallback: place above the grid
+    const host = elInv.parentElement || document.body;
+    host.insertBefore(btn, elInv);
+  }
+}
+
 (function ensureInvSortBtn(){
   if (!elInv || document.getElementById('inv-sort-btn')) return;
   const btn = document.createElement('button');
   btn.id = 'inv-sort-btn'; btn.textContent = 'Sort'; btn.className = 'btn';
-  btn.style.margin = '0 0 8px 0';
-  btn.style.background = 'rgb(28, 18, 139)';
-  btn.style.color = '#eaf2ff';
-  btn.style.border = '1px solid rgba(255,255,255,0.12)';
-  btn.style.boxShadow = '0 6px 14px rgba(59,130,246,.25), inset 0 1px 0 rgba(255,255,255,.15)';
-  btn.style.fontWeight = '700';
-  btn.addEventListener('mouseenter', () => { btn.style.filter = 'brightness(1.25)'; });
-  btn.addEventListener('mouseleave', () => { btn.style.filter = ''; });
-  const host = elInv.parentElement || document.body;
-  host.insertBefore(btn, elInv);
   btn.addEventListener('click', ()=>{
     state.ui = state.ui || {};
-    state.ui.invSortUse = !state.ui.invSortUse;
+    state.ui.invSortUse = !state.ui.invSortUse;            // toggle sort ↔ manual order
     btn.classList.toggle('active', !!state.ui.invSortUse);
     renderInventory(); saveNow();
   });
+  btn.addEventListener('mouseenter', () => { btn.style.filter = 'brightness(1.15)'; });
+  btn.addEventListener('mouseleave', () => { btn.style.filter = ''; });
+
+  // Place it next to the Inventory header label
+  placeSortButtonNextToTitle(btn);
+
+  // Visibility gated by Favor unlock (favor >= 10 sets state.unlocks.sort_inventory)
   function syncSortBtnVis(){ btn.style.display = (state.unlocks && state.unlocks.sort_inventory) ? '' : 'none'; }
   syncSortBtnVis();
   window.addEventListener('favor:update', syncSortBtnVis);
+  window.addEventListener('unlocks:changed', syncSortBtnVis);
+
   if (state.ui?.invSortUse) btn.classList.add('active');
 })();
+

@@ -91,7 +91,7 @@ function totalDmgReduce(s){
   return n;
 }
 
-// NEW: sum of all active poison effects (player-only)
+// sum of all active poison effects
 function totalPoisonDamage(s){
   let n = 0;
   for (const eff of getActiveEffects(s)){
@@ -124,8 +124,6 @@ function sumEquip(s, key){
   }
   return total;
 }
-
-function emitHpChange(){ try { window.dispatchEvent(new CustomEvent('hp:change')); } catch {} }
 
 function afterCombatFinish(win, monId){
   try { renderAlchemy(); } catch {}
@@ -171,7 +169,7 @@ export function derivePlayerStats(s, mon){
   }
 
   const atkRating = atkLvl*BALANCE.atkLevelWeight + atkBonus*BALANCE.atkGearWeight;
-  const defRating = defLvl*BALANCE.defLevelPerDef + defBonus*BALANCE.defGearWeight;
+  const defRating = defLvl*BALANCE.defLevelWeight + defBonus*BALANCE.defGearWeight;
   const strRating = strLvl*BALANCE.strLevelWeight + strBonus*BALANCE.strGearWeight;
 
   const targetDef = ((mon?.defense ?? mon?.level ?? 1) * 1.3) + 10;
@@ -181,19 +179,6 @@ export function derivePlayerStats(s, mon){
   const maxHit = Math.max(1, Math.floor(1 + strRating + atkLvl*BALANCE.maxHitAtkWeight));
 
   return { atkLvl, strLvl, defLvl, atkBonus, strBonus, defBonus, maxHit, acc, atkRating, defRating, strRating };
-}
-
-function activePetId(s){ return s.ui?.activePet || null; }
-
-function ensurePetRecord(s, id){
-  s.pets = s.pets || {};
-  if (!s.pets[id] || typeof s.pets[id] !== 'object'){
-    s.pets[id] = { level: 1, xp: 0 };
-  } else {
-    if (!Number.isFinite(s.pets[id].level)) s.pets[id].level = 1;
-    if (!Number.isFinite(s.pets[id].xp))    s.pets[id].xp    = 0;
-  }
-  return s.pets[id];
 }
 
 export function derivePetStats(s, mon){
@@ -208,7 +193,7 @@ export function derivePetStats(s, mon){
   const L = Math.max(1, pet.level|0);
   const steps = L - 1;
 
-  // --- Base (unbuffed) derived stats from PETS growth curves ---
+  // --- Base derived stats from PETS growth curves ---
   const atk0     = Math.round((d.baseAtk     ?? 0) + (d.growthAtk     ?? 0) * steps);
   const str0     = Math.round((d.baseStr     ?? 0) + (d.growthStr     ?? 0) * steps);
   const def0     = Math.round((d.baseDef     ?? 0) + (d.growthDef     ?? 0) * steps);
@@ -244,10 +229,6 @@ export function derivePetStats(s, mon){
 }
 
 const PET_XP_MULT = (state?.tuning?.petXpMult ?? 0.70);
-function petXpForLevel(L){
-  const base = XP_TABLE[L] || 0;
-  return Math.floor(base * PET_XP_MULT);
-}
 
 export function beginFight(state, monsterId, opts = {}){
   const petOnly = !!opts.petOnly;
