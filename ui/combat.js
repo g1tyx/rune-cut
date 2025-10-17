@@ -51,15 +51,40 @@ export function openPetBattleMode(){
   else overlayEls.overlay?.classList.remove('hidden');
 }
 
-/* --- autobattle (unchanged behavior) --- */
+/* --- autobattle  --- */
 function isAutobattleUnlocked(){ return !!(state.unlocks && state.unlocks.autobattle); }
-function getAuto(monId){ return !!(state.autobattleByMonster && state.autobattleByMonster[monId]); }
-function setAuto(monId,val){ state.autobattleByMonster=state.autobattleByMonster||{}; state.autobattleByMonster[monId]=!!val; saveNow(); }
+function getAuto(monId, pet = state.petBattleMode){
+  if (pet) return !!(state.petAutobattleByMonster && state.petAutobattleByMonster[monId]);
+  return  !!(state.autobattleByMonster && state.autobattleByMonster[monId]);
+}
+function setAuto(monId, val, pet = state.petBattleMode){
+  if (pet){
+    state.petAutobattleByMonster = state.petAutobattleByMonster || {};
+    state.petAutobattleByMonster[monId] = !!val;
+  } else {
+    state.autobattleByMonster = state.autobattleByMonster || {};
+    state.autobattleByMonster[monId] = !!val;
+  }
+  saveNow();
+}
 const AUTO_SESSION_MS = 180000;
 function startAutoSession(monId){ state.autobattleMonId=monId; state.autobattleUntilMs=Date.now()+AUTO_SESSION_MS; saveNow(); }
 function clearAutoSession(){ delete state.autobattleMonId; delete state.autobattleUntilMs; saveNow(); }
 function autoActive(monId){ return isAutobattleUnlocked() && getAuto(monId) && state.autobattleMonId===monId && Date.now()<(state.autobattleUntilMs||0); }
-
+function startPetAutoSession(monId){
+  state.petAutobattleMonId = monId;
+  state.petAutobattleUntilMs = Date.now() + AUTO_SESSION_MS;
+  saveNow();
+}
+function clearPetAutoSession(){
+  delete state.petAutobattleMonId;
+  delete state.petAutobattleUntilMs;
+  saveNow();
+}
+function autoPetActive(monId){
+  return isAutobattleUnlocked() && getAuto(monId, true) &&
+         state.petAutobattleMonId === monId && Date.now() < (state.petAutobattleUntilMs||0);
+}
 /* --- drop preview helpers --- */
 function rarityFromChance(p=0){ if(p>=.20)return'common'; if(p>=.05)return'uncommon'; if(p>=.01)return'rare'; if(p>=.002)return'epic'; return'legendary'; }
 function fmtPct(p=0){ return `${Math.max(.01,+(p*100).toFixed(p<.01?2:1))}%`; }
@@ -90,7 +115,6 @@ function currentMonster(){ const id = state.selectedMonsterId; return MONSTERS.f
 function setBar(bar,label,cur,max){ const pct=max>0?Math.max(0,Math.min(100,Math.round(100*cur/max))):0; if(bar)bar.style.width=pct+'%'; if(label)label.textContent=`${cur}/${max}`; }
 
 /* food helpers */
-function baseIdStrict(s){ return String(s||'').split('@')[0].split('#')[0]; }
 function healAmountForBase(baseId){ const def=ITEMS[baseId]||{}; return Number.isFinite(def.heal)?def.heal:0; }
 function canEat(){ const eq=state.equipment||{}, base=eq.food, qty=Math.max(0,eq.foodQty|0); if(!base||qty<=0)return false; const heal=healAmountForBase(base); if(heal<=0)return false; const max=hpMaxFor(state); return (state.hpCurrent??max)<max; }
 function doEatOnce(){
@@ -223,7 +247,7 @@ function enableCombatLogAutoScroll(){
 /* loop + FX */
 let fightLoop=null; function stopFightLoop(){ if(fightLoop){ clearInterval(fightLoop); fightLoop=null; } }
 
-/* FX parser (adds poison parsing/visuals) */
+/* FX parser  */
 function applyTurnFx(logs){
   const parseIntAfterFor = s => { const m = /for\s+(\d+)/i.exec(s||''); return m ? parseInt(m[1],10) : null; };
   const hasCrit = s => /\bcrit/i.test(s||'') || /\bcritical\b/i.test(s||'');
@@ -329,28 +353,41 @@ function runCombatTurn(){
       renderCombat();
 
       const mon = currentMonster(), overlayOpen = !overlayEls.overlay?.classList.contains('hidden');
-      if (mon && overlayOpen && autoActive(mon.id)){
-        setTimeout(() => {
-          beginFight(state, mon.id, { petOnly: !!(state.combat && state.combat.petOnly) || !!state.petBattleMode });
-          overlayEls.log.appendChild(Object.assign(document.createElement('div'), { textContent:`Autobattle: re-engaging ${mon.name}...` }));
-          if (state.petBattleMode) {
-            const petId = state.ui?.activePet;
-            const pet = petId && state.pets ? state.pets[petId] : null;
-            if (pet && state.combat && state.combat.petOnly) {
-              pet.hp = Math.max(0, state.combat.petHp | 0);
-              if (Number.isFinite(state.combat.petMax)) pet.maxHp = state.combat.petMax | 0;
-              if (Number.isFinite(result?.petLevel) && result.petLevel > 0) pet.level = result.petLevel | 0;
-            }
+      if (mon && overlayOpen && (
+          (!state.petBattleMode && autoActive(mon.id)) ||
+          ( state.petBattleMode && autoPetActive(mon.id))
+        )){
+      setTimeout(() => {
+        beginFight(state, mon.id, { petOnly: !!(state.combat && state.combat.petOnly) || !!state.petBattleMode });
+        if (mon.zone === 'Bosses') {
+          window.dispatchEvent(new CustomEvent('boss:engage', { detail: { bossId: mon.id, boss: mon } }));
+        }
+        overlayEls.log.appendChild(Object.assign(document.createElement('div'), { textContent:`Autobattle${state.petBattleMode?' (Pet)':''}: re-engaging ${mon.name}...` }));
+        if (state.petBattleMode) {
+          const petId = state.ui?.activePet;
+          const pet = petId && state.pets ? state.pets[petId] : null;
+          if (pet && state.combat && state.combat.petOnly) {
+            pet.hp = Math.max(0, state.combat.petHp | 0);
+            if (Number.isFinite(state.combat.petMax)) pet.maxHp = state.combat.petMax | 0;
+            if (Number.isFinite(result?.petLevel) && result.petLevel > 0) pet.level = result.petLevel | 0;
           }
-          saveNow(); 
-          renderCombat(); 
-          renderEquipment(); 
-          startFightLoop();
-        }, 350);
-      } else if (mon && isAutobattleUnlocked() && getAuto(mon.id) && state.autobattleMonId === mon.id){
+        }
+        saveNow(); 
+        renderCombat(); 
+        renderEquipment(); 
+        startFightLoop();
+      }, 350);
+    } else if (mon && isAutobattleUnlocked()){
+      if (!state.petBattleMode && getAuto(mon.id, false) && state.autobattleMonId === mon.id){
         overlayEls.log.appendChild(Object.assign(document.createElement('div'), { textContent:`Autobattle: 3-minute session ended.` }));
         clearAutoSession();
       }
+      if ( state.petBattleMode && getAuto(mon.id, true) && state.petAutobattleMonId === mon.id){
+        overlayEls.log.appendChild(Object.assign(document.createElement('div'), { textContent:`Autobattle (Pet): 3-minute session ended.` }));
+        clearPetAutoSession();
+      }
+    }
+
     } else {
       overlayEls.log.appendChild(Object.assign(document.createElement('div'), { textContent: state.petBattleMode ? `Your pet was defeated.` : `You were defeated.` }));
       clearAutoSession();
@@ -411,7 +448,7 @@ function openCombat(mon, opts = {}){
 
 function closeCombat(){
   overlayEls.overlay?.classList.add('hidden'); setPetMode(false);
-  state.combat=null; saveNow(); clearAutoSession(); stopFightLoop();
+  state.combat=null; saveNow(); clearAutoSession(); clearPetAutoSession(); stopFightLoop();
 }
 overlayEls.close?.addEventListener('click', closeCombat);
 overlayEls.overlay?.addEventListener('click', (e)=>{ if (e.target === overlayEls.overlay) closeCombat(); });
@@ -429,6 +466,10 @@ overlayEls.fightBtn?.addEventListener('click', ()=>{
   if (state.petBattleMode){
     beginFight(state, mon.id, { petOnly:true });
     overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`Your pet engages ${mon.name}!`}));
+    if (isAutobattleUnlocked() && getAuto(mon.id, true) && !autoPetActive(mon.id)) {
+      startPetAutoSession(mon.id);
+      overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle (Pet): session started (3 minutes).`}));
+    }
   } else {
     beginFight(state, mon.id);
     overlayEls.log.appendChild(Object.assign(document.createElement('div'),{textContent:`You engage ${mon.name}!`}));
@@ -530,7 +571,7 @@ window.addEventListener('boss:event:log', (e)=>{
   document.head.appendChild(css);
 })();
 
-/* --- combat-card Autobattle toggle (unchanged) --- */
+/* --- combat-card Autobattle toggle  --- */
 function ensureCombatAutoHost(){
   const anchor = overlayEls.monStats?.parentElement || document.querySelector('#monsterCard');
   if (!anchor) return null;
@@ -541,13 +582,22 @@ function ensureCombatAutoHost(){
 function renderCombatAutoToggle(mon){
   const host=ensureCombatAutoHost(); if(!host) return; host.innerHTML='';
   if(!isAutobattleUnlocked()||!mon) return;
-  const row=document.createElement('label'); row.className='combat-auto-row'; row.title='Autobattle this monster';
-  row.innerHTML=`<input type="checkbox" id="combatAutoChk" ${getAuto(mon.id)?'checked':''}/><span>Autobattle</span>`;
+  const checked = getAuto(mon.id, state.petBattleMode);
+  const row=document.createElement('label'); row.className='combat-auto-row';
+  row.title = state.petBattleMode ? 'Autobattle this boss (Pet)' : 'Autobattle this monster';
+  row.innerHTML=`<input type="checkbox" id="combatAutoChk" ${checked?'checked':''}/><span>Autobattle${state.petBattleMode?' (Pet)':''}</span>`;
   host.appendChild(row);
   row.querySelector('#combatAutoChk')?.addEventListener('change',(e)=>{
-    setAuto(mon.id,e.target.checked);
-    if(e.target.checked){ startAutoSession(mon.id); overlayEls.log?.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle: session started (3 minutes).`})); }
-    else { clearAutoSession(); overlayEls.log?.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle: disabled.`})); }
+    setAuto(mon.id, e.target.checked, state.petBattleMode);
+    if (e.target.checked){
+      if (state.petBattleMode){ startPetAutoSession(mon.id); }
+      else { startAutoSession(mon.id); }
+      overlayEls.log?.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle${state.petBattleMode?' (Pet)':''}: session started (3 minutes).`}));
+    } else {
+      if (state.petBattleMode){ clearPetAutoSession(); }
+      else { clearAutoSession(); }
+      overlayEls.log?.appendChild(Object.assign(document.createElement('div'),{textContent:`Autobattle${state.petBattleMode?' (Pet)':''}: disabled.`}));
+    }
   });
 }
 
@@ -556,7 +606,7 @@ export function renderMonsterGrid(zone){
   const grid=document.querySelector('#monsterGrid'); if(!grid)return; grid.innerHTML='';
   const monsters=MONSTERS.filter(m=>m.zone===zone);
   monsters.forEach(mon=>{
-    const topDrops=(mon.drops||[]).slice().sort((a,b)=>(b.chance||0)-(a.chance||0)).slice(0,3);
+    const topDrops=(mon.drops||[]).slice().sort((a,b)=>(b.chance||0)-(a.chance||0));
     const dots=topDrops.map(d=>{
       if(!isDiscovered(d)) return `<span class="dot unknown" title="Undiscovered"></span>`;
       const name=d.id?(ITEMS?.[d.id]?.name||d.id):`${d.gold}g`;

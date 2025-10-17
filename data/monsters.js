@@ -256,7 +256,7 @@ export const MONSTERS = [
   { id:'crypt_lich', name:'Crypt Lich', level:48, time:6000,
     zone:'Crypts', hp:520, attack:60, defense:52, maxHit:42,
     xp:{attack:640,strength:640,defense:640},
-    drops:[{gold:60, chance:0.7}],
+    drops:[{gold:60, chance:0.7}, {id: 'gravewind_shroud', chance:0.02}],
     img:'assets/monsters/crypt_lich.png'
   },
 
@@ -302,6 +302,13 @@ export const MONSTERS = [
     xp:{attack:670,strength:670,defense:670}, type: 'water',
     drops:[{gold:70, chance:0.7}, {id:'small_water_spirit', chance: 0.5, min:4, max:7}, {id: 'runed_coil', chance: 0.11}],
     img:'assets/monsters/storm_colossus.png'
+  },
+  /*dwarfs*/
+  { id:'dwarf_scout', name:'Dwarf Scout', level:15, time:6000,
+    zone:'Dwarven', hp:120, attack:21, defense:16, maxHit:13,
+    xp:{attack:670,strength:670,defense:670}, type: 'water',
+    drops:[{id:'bar_iron', chance: 0.15, min:1, max:2}, {id: 'small_gear', chance: 0.15}],
+    img:'assets/monsters/dwarf_scout.png'
   },
 ];
 

@@ -3,7 +3,7 @@ import { qs } from '../utils/dom.js';
 import { state, saveNow } from '../systems/state.js';
 import { ITEMS } from '../data/items.js';
 import {
-  buildBuildings,     // -> first tier of each allowed family (hut/campfire), hides if already placed
+  buildBuildings,
   canBuild,
   buildNow,
   improveBuilding,
@@ -528,7 +528,6 @@ function enableDragMove(el, idx){
       maybeDrag = false;
   
       if (!dragging) {
-        // Not a drag → let the regular click handler open the inspector.
         return;
       }
   
@@ -688,7 +687,6 @@ function openInspectorFor(idx){
             setTimeout(()=> el.classList.remove('upgraded'), 520);
           });
   
-          // Reopen inspector to reflect the new tier
           openInspectorFor(idx);
         });
       }
@@ -770,7 +768,7 @@ export function initCamp(){
     btn.addEventListener('click', (e)=> {
       e.preventDefault();
       if (!state.ui?.campUnlocked){
-        if (!ensureCampUnlockedFlow()) return; // still locked
+        if (!ensureCampUnlockedFlow()) return;
       }
       showCamp();
     });
@@ -780,7 +778,7 @@ export function initCamp(){
   updateCampTabLockUI();
 
   // Live-update palette enable/disable when inventory changes
-  window.addEventListener('inventory:changed', renderCampPalette);
+  window.addEventListener('inventory:changed', renderCamp);
 
   // When total level or gold updates, keep lock label fresh
   const totalEl = document.getElementById('totalLevel');

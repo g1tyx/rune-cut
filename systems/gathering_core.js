@@ -114,11 +114,11 @@ export function createGatheringSkill(cfg){
     return {
       qty,
       essence,
-      bonuses,        // [{ id, qty }, ...]
-      dropId: t.drop, // for naming
-      xp: gainedXp,   // for log line
+      bonuses,
+      dropId: t.drop,
+      xp: gainedXp,
       target: t.name || t.id,
-      essenceId       // for naming
+      essenceId
     };
   }
 

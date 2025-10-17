@@ -92,5 +92,28 @@ export const SKILL_INFO = {
         "Gather supplies or kill monsters for the royal court to earn Royal Favor",
         "Royal favor unlocks Quality of Life upgrades and other useful features"
     ]
+  },
+  devlog: {
+    tips: [
+       "<h3>Version: 1.6.30</h3>",
+       "Readded 'Well-Fed bonus in Pet UI",
+       "Added Dwarf combat zone",
+       "Added Small Gear and hand crank items", 
+       "<h3>Version: 1.6.29</h3>",
+        "mechanics Placeholder",
+        "New monster drop",
+        "<h3>Version: 1.6.28</h3>",
+        "Royal Service overlay shows all active tasks",
+        "Pet page close button doesnt need to scroll to close",
+        "Monster drop icons not spliced at 3 anymore",
+        "Pet autobattle toggle fixed to work the same as players",
+        "Fixed combat logs being cut off during skilling",
+        "<h3>Version: 1.6.27</h3>",
+        "Rebalance of Royal Service xp and gold gain",
+        "Royal Service overlay added to show task progress",
+        "Fixed bug with autobattle unlock",
+        "fixed combat showing empty xp in info panel",
+        "added devlog to xp poanel",
+    ]
   }
 }

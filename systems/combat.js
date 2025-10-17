@@ -193,7 +193,7 @@ export function derivePetStats(s, mon){
   const L = Math.max(1, pet.level|0);
   const steps = L - 1;
 
-  // --- Base derived stats from PETS growth curves ---
+  // Base (unbuffed) derived stats
   const atk0     = Math.round((d.baseAtk     ?? 0) + (d.growthAtk     ?? 0) * steps);
   const str0     = Math.round((d.baseStr     ?? 0) + (d.growthStr     ?? 0) * steps);
   const def0     = Math.round((d.baseDef     ?? 0) + (d.growthDef     ?? 0) * steps);
@@ -202,10 +202,9 @@ export function derivePetStats(s, mon){
   const maxHit0  = Math.round(baseMax + 0.3 * str0);
   const maxHp0   = Math.round((d.baseHp ?? 1) + (d.growthHp ?? 0) * steps);
 
-  // Current HP snapshot
   const currentHp = (combat && Number.isFinite(combat.petHp)) ? combat.petHp : (pet.hp|0);
 
-  // --- Well-Fed multiplier  ---
+  // Well-Fed multiplier (from state.pets[petId])
   let mult = 1.0;
   const wfUntil = Number((s.pets?.[petId]?.wellFedUntil) || 0);
   const wfPct   = Number((s.pets?.[petId]?.wellFedPct) || 0);
@@ -218,14 +217,10 @@ export function derivePetStats(s, mon){
   const def    = Math.max(1, Math.floor(def0    * mult));
   const maxHit = Math.max(1, Math.floor(maxHit0 * mult));
   const maxHp  = Math.max(1, Math.floor(maxHp0  * mult));
-  const acc = acc0;
+  const acc = acc0; 
   const hp = Math.min(currentHp, maxHp);
 
-  return {
-    name: d.name || petId,
-    atk, str, def, acc, maxHit,
-    hp, maxHp
-  };
+  return { name: d.name || petId, atk, str, def, acc, maxHit, hp, maxHp };
 }
 
 const PET_XP_MULT = (state?.tuning?.petXpMult ?? 0.70);

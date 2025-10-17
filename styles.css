@@ -1241,11 +1241,11 @@ body.camp-mode header { display:none !important; }
 
 /* Modal */
 .pets-box {
-  position: relative;                 /* needed for absolute close button */
-  background: #0b1220;                /* dark shell for high contrast */
+  position: relative;                 
+  background: #0b1220;                
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 14px;
-  padding: 56px 20px 18px;            /* top room for close button */
+  padding: 20px 20px 18px;            
   width: min(680px, 92vw);
   max-height: 82vh;
   overflow: auto;
@@ -1255,18 +1255,20 @@ body.camp-mode header { display:none !important; }
 /* Heading (high contrast) */
 .pets-box h2 {
   margin: 0 0 10px;
-  color: #f7fafc;                     /* bright text */
+  color: #f7fafc;                  
   font-weight: 800;
   letter-spacing: .2px;
 }
 
-/* Close “×” button — perfectly centered */
+/* Close “×” button */
 .close-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  position: sticky;                
+  top: 12px;                      
+  right: 12px;                     
+  float: right;                      
+  z-index: 2;
   width: 36px; height: 36px;
-  display: inline-flex;               /* center the X reliably */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
@@ -1274,7 +1276,7 @@ body.camp-mode header { display:none !important; }
   background: rgba(255,255,255,.12);
   color: #fff;
   font-size: 20px;
-  line-height: 1;                     /* no weird vertical offset */
+  line-height: 1;
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(0,0,0,.3);
   transition: filter .15s ease, background .15s ease, transform .06s ease;
@@ -1282,7 +1284,7 @@ body.camp-mode header { display:none !important; }
 .close-btn:hover { background: rgba(255,255,255,.18); filter: brightness(1.05); }
 .close-btn:active { transform: translateY(1px) scale(.99); }
 .close-btn:focus-visible {
-  outline: 2px solid #9ae6b4;        /* accessible focus ring */
+  outline: 2px solid #9ae6b4;
   outline-offset: 2px;
 }
 

@@ -16,20 +16,35 @@ const els = {
   logFilters: qs('#logFilters'),
 };
 
+const MAIN_STREAMS = ['skilling','wc','crafting','cooking','fishing','mining','smithing','enchanting','combat','economy'];
+
+const PANEL_DEFS = {
+  global: () => {
+    const filter = state.logFilter || 'all';
+    return (filter === 'all') ? MAIN_STREAMS : MAIN_STREAMS.filter(t => t === filter || t === 'economy');
+  },
+  wcLog:      ['wc','economy'],
+  cookLog:    ['cooking','economy'],
+  craftLog:   ['crafting','economy'],
+  fishLog:    ['fishing','economy'],
+  mineLog:    ['mining','economy'],
+  smithLog:   ['smithing','economy'],
+  enchantLog: ['enchanting','economy'],
+  combatLog:  ['combat','economy'],
+};
+
 function escapeHtml(s=''){
-  return s.replace(/[&<>"']/g, c => (
-    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
-  ));
+  s = String(s);
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 export function logEvent(type, msg){
   const entry = { t: Date.now(), type, msg };
   (state.logs ||= []).push(entry);
-  // keep list from growing forever
   if (state.logs.length > 300) state.logs.splice(0, state.logs.length - 300);
 }
 
-function renderGlobalInto(targetEl, types){
+function renderInto(targetEl, types){
   if (!targetEl) return;
   const items = (state.logs||[])
     .filter(en => !types || types.includes(en.type))
@@ -41,22 +56,38 @@ function renderGlobalInto(targetEl, types){
   targetEl.scrollTop = targetEl.scrollHeight;
 }
 
-export function renderPanelLogs(){
-  // Global log: include all main streams
-  renderGlobalInto(els.log, [
-    'skilling','wc','crafting','cooking','fishing','mining',
-    'smithing','enchanting','combat','economy'
-  ]);
+function panelTypes(name){
+  const def = PANEL_DEFS[name];
+  return typeof def === 'function' ? def() : def;
+}
 
-  // Per-panel logs
-  renderGlobalInto(els.wcLog,      ['wc','economy']);
-  renderGlobalInto(els.cookLog,    ['cooking','economy']);
-  renderGlobalInto(els.craftLog,   ['crafting','economy']);
-  renderGlobalInto(els.fishLog,    ['fishing','economy']);
-  renderGlobalInto(els.mineLog,    ['mining','economy']);
-  renderGlobalInto(els.smithLog,   ['smithing','economy']);
-  renderGlobalInto(els.enchantLog, ['enchanting','economy']);
-  renderGlobalInto(els.combatLog,  ['combat','economy']);
+function renderPanel(name){
+  if (name === 'global') {
+    renderInto(els.globalLog, panelTypes('global'));
+  } else {
+    renderInto(els[name], panelTypes(name));
+  }
+}
+
+export function renderPanelLogs(){
+  renderPanel('global');
+  renderPanel('wcLog');
+  renderPanel('cookLog');
+  renderPanel('craftLog');
+  renderPanel('fishLog');
+  renderPanel('mineLog');
+  renderPanel('smithLog');
+  renderPanel('enchantLog');
+  renderPanel('combatLog');
+}
+
+function renderAffectedPanels(type){
+  renderPanel('global');
+  for (const name of Object.keys(PANEL_DEFS)){
+    if (name === 'global') continue;
+    const types = panelTypes(name);
+    if (types?.includes(type)) renderPanel(name);
+  }
 }
 
 export function wireLogFilters(){
@@ -66,18 +97,17 @@ export function wireLogFilters(){
       .forEach(b=>b.classList.toggle('active', b===btn));
     state.logFilter = btn.dataset.log || 'all';
     saveNow();
+    renderPanel('global');
   });
 }
 
-/** One logger to rule them all.
- *  Usage examples:
- *    pushLog('Chopped Oak');                           // type 'skilling'
- *    pushLog('Cooked Shrimps → +8 Cooking xp','cooking');
- *    pushLog('Crafted Handle → +6 Crafting xp','crafting');
- */
-export const pushLog        = (m, type='skilling') => { logEvent(type, m); renderPanelLogs(); };
-export const pushMineLog   = (m)=>{ logEvent('mining',     m); renderPanelLogs(); };
-export const pushSmithLog   = (m)=>{ logEvent('smithing',   m); renderPanelLogs(); };
-export const pushCombatLog  = (m)=>{ logEvent('combat',     m); renderPanelLogs(); };
-export const pushCraftLog   = (m)=>{ logEvent('crafting',   m); renderPanelLogs(); };
-export const pushEnchantLog = (m)=>{ logEvent('enchanting', m); renderPanelLogs(); };
+export const pushLog        = (m, type='skilling') => { logEvent(type, m); renderAffectedPanels(type); };
+export const pushWcLog      = (m)=>{ logEvent('wc',         m); renderAffectedPanels('wc'); };
+export const pushCookLog    = (m)=>{ logEvent('cooking',    m); renderAffectedPanels('cooking'); };
+export const pushCraftLog   = (m)=>{ logEvent('crafting',   m); renderAffectedPanels('crafting'); };
+export const pushFishLog    = (m)=>{ logEvent('fishing',    m); renderAffectedPanels('fishing'); };
+export const pushMineLog    = (m)=>{ logEvent('mining',     m); renderAffectedPanels('mining'); };
+export const pushSmithLog   = (m)=>{ logEvent('smithing',   m); renderAffectedPanels('smithing'); };
+export const pushEnchantLog = (m)=>{ logEvent('enchanting', m); renderAffectedPanels('enchanting'); };
+export const pushCombatLog  = (m)=>{ logEvent('combat',     m); renderAffectedPanels('combat'); };
+export const pushEconomyLog = (m)=>{ logEvent('economy',    m); renderAffectedPanels('economy'); };

@@ -183,7 +183,6 @@ function renderUnlocks(){
   const host = ensureUnlocksContainer();
   const favor = state.royalFavor || 0;
 
-  // Build grid of recipe-like cards (no sort button here; the button lives next to inventory)
   const cards = UNLOCKS.map(u => {
     const unlocked = favor >= u.favor;
     const pill = unlocked
@@ -372,7 +371,125 @@ export function renderRoyalService(){
   renderContract();
   renderHeaderRow();
 }
+/*------------------------- Overlay ------------------------*/
+function isMin(){ return !!(state.ui && state.ui.rsHudMin); }
+function setMin(v){
+  state.ui = state.ui || {};
+  state.ui.rsHudMin = !!v;
+  window.runecut?.save?.();
+}
 
+function contractTotals(ctr){
+  let done = 0, total = 0;
+  for (const t of (ctr?.tasks||[])) {
+    const { have, need } = taskProgress(t);
+    done += Math.min(have, need);
+    total += Math.max(need, 0);
+  }
+  return { done, total };
+}
+
+function taskRow(t){
+  const { have, need } = taskProgress(t);
+  const label = t.label || t.name || (String(t.id||'').replace(/[_-]+/g,' '));
+  const pct = need ? Math.round((Math.min(have,need)/need)*100) : 0;
+  return `<div class="rsli">
+    <span class="rslab">${label}</span>
+    <span class="rsqty">${have}/${need}</span>
+    <div class="rsbar"><div class="rsbarin" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function overlayExpandedHtml(){
+  const ctr = state.royalContract;
+  if (!ctr) return `<div class="rsempty">No active contract</div>`;
+  const { done, total } = contractTotals(ctr);
+  const rows = (ctr.tasks||[]).slice(0,10).map(taskRow).join('');
+  const more = (ctr.tasks?.length||0) > 10 ? `<div class="rsmore">+${ctr.tasks.length-4} more</div>` : '';
+  return `
+    <div class="rshdr">
+      <span>👑 Royal Contract</span>
+      <div class="rshdrbtns">
+        <button class="rsopen" type="button" title="Open">Open</button>
+        <button class="rsmin"  type="button" title="Minimize">×</button>
+      </div>
+    </div>
+    <div class="rsprog"><b>${done}</b>/<b>${total}</b></div>
+    <div class="rslist">${rows}${more}</div>`;
+}
+
+function overlayMinHtml(){
+  const ctr = state.royalContract;
+  if (!ctr) {
+    return `<div class="rspill" title="Royal Service">
+      <span>👑 RS</span><button class="rsrestore" type="button">Expand</button>
+    </div>`;
+  }
+  const { done, total } = contractTotals(ctr);
+  return `<div class="rspill" title="Royal Service">
+    <span>👑 RS ${done}/${total}</span>
+    <button class="rsrestore" type="button" title="Expand">▣</button>
+  </div>`;
+}
+
+function overlayHtml(){
+  return isMin() ? overlayMinHtml() : overlayExpandedHtml();
+}
+
+export function renderRoyalOverlay(){
+  const root = document.getElementById('royalOverlayHud');
+  if (!root) return;
+  root.innerHTML = overlayHtml();
+
+  const open = root.querySelector('.rsopen');
+  if (open) open.onclick = () => window.runecut?.setTab?.('royal');
+
+  const min = root.querySelector('.rsmin');
+  if (min) min.onclick = () => { setMin(true); renderRoyalOverlay(); };
+
+  const restore = root.querySelector('.rsrestore');
+  if (restore) restore.onclick = () => { setMin(false); renderRoyalOverlay(); };
+}
+
+export function mountRoyalOverlay(){
+  if (document.getElementById('royalOverlayHud')) return;
+  const el = document.createElement('div');
+  el.id = 'royalOverlayHud';
+  el.style.cssText = `
+    position:fixed; right:12px; bottom:12px; z-index:1000;
+    width:260px; max-width:70vw; background:#111; color:#eee;
+    border:1px solid #333; border-radius:12px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    font:14px/1.3 system-ui,sans-serif;
+  `;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #royalOverlayHud .rshdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    #royalOverlayHud .rshdrbtns{display:flex;gap:6px}
+    #royalOverlayHud .rsopen{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:4px 8px;cursor:pointer}
+    #royalOverlayHud .rsmin{background:#222;color:#aaa;border:1px solid #444;border-radius:8px;padding:2px 8px;cursor:pointer}
+    #royalOverlayHud .rsprog{margin:4px 0 6px;color:#bbb}
+    #royalOverlayHud .rslist{display:flex;flex-direction:column;gap:6px}
+    #royalOverlayHud .rsli{display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center}
+    #royalOverlayHud .rslab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+    #royalOverlayHud .rsqty{color:#aaa;font-variant-numeric:tabular-nums}
+    #royalOverlayHud .rsbar{grid-column:1 / -1;height:6px;background:#222;border-radius:6px;overflow:hidden}
+    #royalOverlayHud .rsbarin{height:100%;background:#4ade80}
+    #royalOverlayHud .rsmore{color:#888;font-size:12px}
+    #royalOverlayHud .rsempty{color:#aaa}
+    #royalOverlayHud .rspill{display:flex;align-items:center;gap:8px}
+    #royalOverlayHud .rspill .rsrestore{margin-left:auto;background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:3px 8px;cursor:pointer}
+  `;
+  document.body.appendChild(style);
+  document.body.appendChild(el);
+
+  const rerender = () => { try { renderRoyalOverlay(); } catch {} };
+  window.addEventListener('royal:change', rerender);
+  window.addEventListener('kills:change', rerender);
+  window.addEventListener('inventory:changed', rerender);
+  window.addEventListener('unlocks:changed', rerender);
+  rerender();
+}
 /* ------------------------ wire up ------------------------ */
 (function bind(){
   if (!el.panel) return;
@@ -423,8 +540,6 @@ export function renderRoyalService(){
       celebrateComplete();
       renderRoyalService();
     }
-
-    // Keep unlocks row fresh if favor changes mid-session
     renderUnlocks();
   }, 1000);
 

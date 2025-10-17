@@ -1,84 +1,73 @@
 // /ui/router.js
 import { qs, on } from '../utils/dom.js';
 
-// Known panel names you use today (safe to grow later)
-const PANEL_NAMES = ['enchanting', 'royal_service' ,'construction','forests','farming','crafting','mining','smithing','fishing','cooking','combat', 'alchemy'];
+const PANEL_NAMES = [
+  'enchanting','royal','royal_service','construction','forests','farming',
+  'crafting','mining','smithing','fishing','cooking','combat','alchemy',
+  'mechanics','destruction'
+];
 
-// Find all panels robustly (works even if some are missing the .tabpanel class)
 function getPanels(){
   const map = new Map();
-
-  // Any element already marked as a tab panel
   document.querySelectorAll('.tabpanel').forEach(el => {
     const id = el.id || '';
     const name = id.startsWith('tab-') ? id.slice(4) : id;
     if (name) map.set(name, el);
   });
-
-  // Also pick up well-known ids like #tab-forests, etc.
   PANEL_NAMES.forEach(name => {
-    const el = document.getElementById(`tab-${name}`);
+    const el = document.getElementById(`tab-${name}`) || document.getElementById(name);
     if (el) map.set(name, el);
   });
-
   return map;
 }
 
 export function setTab(name){
   const panels = getPanels();
+  const entries = [...panels.entries()];
+  if (entries.length === 0) return;
 
-  // Fallback to first available if name is unknown
-  const activeEl = panels.get(name) || [...panels.values()][0];
+  const activeEl = panels.get(name) || entries[0][1];
+  const activeName = [...panels].find(([, el]) => el === activeEl)?.[0] || name;
 
   panels.forEach((el) => {
-    // Ensure the class exists so your CSS continues to work
     if (!el.classList.contains('tabpanel')) el.classList.add('tabpanel');
-
     const isActive = el === activeEl;
-
-    // Authoritative hide/show (prevents “panel stacking”)
     el.classList.toggle('hidden', !isActive);
-    el.style.setProperty('display', isActive ? 'block' : 'none', 'important');
-    el.style.setProperty('visibility', isActive ? 'visible' : 'hidden', 'important');    el.style.pointerEvents = isActive ? 'auto' : 'none';
+    el.toggleAttribute('hidden', !isActive);
+    el.style.removeProperty('display');
+    el.style.pointerEvents = isActive ? 'auto' : 'none';
     el.setAttribute('aria-hidden', String(!isActive));
   });
 
-  // Reflect active state in any top nav buttons
   document.querySelectorAll('button.tab[data-tab]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === name);
+    btn.classList.toggle('active', btn.dataset.tab === activeName);
   });
 
-  // Optional: keep the URL hash in sync for reload/deep-linking
-  if (activeEl?.id?.startsWith('tab-')) {
-    const hash = activeEl.id.slice(4);
-    if (location.hash !== `#${hash}`) {
-      history.replaceState(null, '', `#${hash}`);
-    }
+  const hash = activeEl.id?.startsWith('tab-') ? activeEl.id.slice(4) : activeName;
+  if (hash && location.hash !== `#${hash}`) {
+    history.replaceState(null, '', `#${hash}`);
   }
 
   activeEl?.scrollIntoView?.({ block: 'start' });
 }
 
 export function wireRoutes(){
-  // Top tab buttons
   on(document, 'click', 'button.tab[data-tab]', (e, btn) => setTab(btn.dataset.tab));
 
-  // Dashboard skill tiles -> tabs
   const TILE_TO_TAB = {
     'tile-wc':'forests','tile-craft':'crafting','tile-min':'mining',
     'tile-smith':'smithing','tile-fish':'fishing','tile-cook':'cooking',
-    'tile-atk':'combat','tile-str':'combat','tile-def':'combat', 'tile-enchant': 'enchanting',
-    'tile-royal':'royal', 'tile-alch': 'alchemy', 'tile-destruction': 'destruction',
-    'tile-farming': 'farming'
+    'tile-atk':'combat','tile-str':'combat','tile-def':'combat',
+    'tile-enchant':'enchanting','tile-royal':'royal',
+    'tile-alch':'alchemy','tile-destruction':'destruction',
+    'tile-farming':'farming','tile-mechanics':'mechanics'
   };
   Object.entries(TILE_TO_TAB).forEach(([id, tab])=>{
-    const el = qs(`#${id}`);
-    if (!el) return;
+    const el = qs(`#${id}`); if (!el) return;
     el.style.cursor = 'pointer';
     el.addEventListener('click', () => setTab(tab));
   });
 
-  // Open tab from hash on first load (or forests by default)
   const initial = (location.hash || '').slice(1) || 'forests';
   setTab(initial);
 }

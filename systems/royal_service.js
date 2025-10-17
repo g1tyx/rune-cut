@@ -1,36 +1,26 @@
 // /systems/royal_service.js
-
 import { state, saveNow } from './state.js';
 import { hasItems, removeItem } from './inventory.js';
 import { XP_TABLE, levelFromXp } from './xp.js';
 
-import { ITEMS as _ITEMS } from '../data/items.js';
-import { COOK_RECIPES as _COOK_RECIPES } from '../data/cooking.js';
-import { SMELT_RECIPES as _SMELT_RECIPES, FORGE_RECIPES as _FORGE_RECIPES } from '../data/smithing.js';
+import { ITEMS } from '../data/items.js';
+import { COOK_RECIPES } from '../data/cooking.js';
+import { SMELT_RECIPES, FORGE_RECIPES } from '../data/smithing.js';
 import { MONSTERS as _MONSTERS } from '../data/monsters.js';
-import { renderSkills } from '../ui/skills.js'
 import {
   PATRONS, CONTRACT_BUDGETS, CONTRACT_LAYOUT, ITEM_LEVEL_CAPS,
   ELIGIBILITY, WEIGHTING, REWARDS, COOLDOWNS,
   COMBAT, SKILLS, TAG_SKILL, TIERING
 } from '../data/royal_service_config.js';
 
-const ITEMS = _ITEMS || {};
-const COOK  = _COOK_RECIPES || {};
-const SMELT = _SMELT_RECIPES || {};
-const FORGE = Array.isArray(_FORGE_RECIPES) ? _FORGE_RECIPES : [];
+const FORGE = Array.isArray(FORGE_RECIPES) ? FORGE_RECIPES : [];
 const MONSTERS = Array.isArray(_MONSTERS) ? _MONSTERS : [];
 
-const baseId = (id)=> String(id || '').split('@')[0];
-const baseIdStrict = (s)=> String(s||'').split('@')[0].split('#')[0];
+const baseId = (s)=> String(s||'').split('@')[0].split('#')[0];
 const randInt = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
-const now = ()=> Date.now();
 
 /* ---------- Levels ---------- */
-function levelFromXpSafe(xp){
-  try { const v = levelFromXp(xp||0, XP_TABLE); if (Number.isFinite(v) && v>=1) return v; } catch {}
-  return Math.max(1, Math.floor(Math.sqrt((xp||0)/100)) + 1);
-}
+function levelFromXpSafe(xp){ return levelFromXp(xp||0, XP_TABLE); }
 function royalLevel(){ return levelFromXpSafe(state.royalXp || 0); }
 
 function pickByLevel(table, level){
@@ -52,7 +42,6 @@ function normalizeRecipes(src, defSkill){
   const out = [];
   if (Array.isArray(src)) {
     for (const r of src){
-      if (!r) continue;
       out.push({
         id: r.id, lvl: r.level ?? r.lvl ?? 1,
         inputs: Array.isArray(r.inputs) ? r.inputs : [],
@@ -60,23 +49,23 @@ function normalizeRecipes(src, defSkill){
         reqSkill: r.reqSkill || r.speedSkill || defSkill || null,
       });
     }
-    return out;
-  }
-  for (const k in (src||{})){
-    const r = src[k]; if (!r) continue;
-    out.push({
-      id: r.id || k, lvl: r.level ?? r.lvl ?? 1,
-      inputs: Array.isArray(r.inputs) ? r.inputs : [],
-      outputs: Array.isArray(r.outputs) ? r.outputs : (r.output ? [r.output] : []),
-      reqSkill: r.reqSkill || r.speedSkill || defSkill || null,
-    });
+  } else {
+    for (const k in (src||{})){
+      const r = src[k];
+      out.push({
+        id: r.id || k, lvl: r.level ?? r.lvl ?? 1,
+        inputs: Array.isArray(r.inputs) ? r.inputs : [],
+        outputs: Array.isArray(r.outputs) ? r.outputs : (r.output ? [r.output] : []),
+        reqSkill: r.reqSkill || r.speedSkill || defSkill || null,
+      });
+    }
   }
   return out;
 }
 
 const ALL_RECIPES = [
-  ...normalizeRecipes(COOK,  'cook'),
-  ...normalizeRecipes(SMELT, 'smith'),
+  ...normalizeRecipes(COOK_RECIPES,  'cook'),
+  ...normalizeRecipes(SMELT_RECIPES, 'smith'),
   ...normalizeRecipes(FORGE, 'smith'),
 ];
 
@@ -136,7 +125,7 @@ function passesSkillGate(itemId, playerLevels){
   const it = ITEMS[baseId(itemId)];
   const eff = effectiveItemLevel(itemId);
   const skill = relevantSkillForItem(it);
-  if (!skill) return true; // generic resources allowed unless a recipe implies a skill
+  if (!skill) return true;
   const have = Number(playerLevels?.[skill] ?? 0);
   return have >= eff;
 }
@@ -276,7 +265,6 @@ function poolForPatronTags(patronTags, rsLevel, playerLvls, perTaskBudget){
   for (const id in ITEMS){
     const it = ITEMS[id]; if (!it || baseId(it.id) !== id) continue;
 
-    // whitelist shortcut
     if (wl.has(id)){
       const a = actionCost(it); if (!a) continue;
       if (a > perTaskBudget.max) continue;
@@ -329,10 +317,7 @@ function buildDeliverTasks(patronTags, rsLevel, playerLvls, contractBudget, layo
   const ptBudget = perTaskBudget(contractBudget, layout);
   const candidates = poolForPatronTags(patronTags, rsLevel, playerLvls, ptBudget);
 
-  if (!candidates.length){
-    console.error('[RoyalService] No deliverable candidates for patron tags', patronTags);
-    throw new Error('No eligible delivery items for contract.');
-  }
+  if (!candidates.length) throw new Error('No eligible delivery items for contract.');
 
   const tasks = [];
   const bag = candidates.slice();
@@ -345,7 +330,6 @@ function buildDeliverTasks(patronTags, rsLevel, playerLvls, contractBudget, layo
     for (let i=0;i<bag.length;i++){ r -= weights[i]; if (r <= 0){ idx=i; break; } }
     const pick = bag.splice(idx,1)[0];
 
-    // Ensure we can always produce a positive qty: if budget-based qty fails, fall back to 1+
     let qty = qtyForBudget(pick.a, ptBudget);
     if (!qty){
       const fallback = Math.max(1, Math.floor(ptBudget.min / Math.max(1,pick.a)));
@@ -362,14 +346,8 @@ function buildDeliverTasks(patronTags, rsLevel, playerLvls, contractBudget, layo
     });
   }
 
-  // If we couldn't hit the min count (e.g., level gates leave 1–2 options),
-  // inflate quantities so the contract still "works out".
   const ensured = inflateTasksToMeetMin(tasks, layout.tasksMin);
-
-  if (!ensured.length){
-    console.error('[RoyalService] Failed to assemble delivery tasks despite candidates', { candidates: candidates.length, want, ptBudget });
-    throw new Error('Unable to assemble delivery tasks for contract.');
-  }
+  if (!ensured.length) throw new Error('Unable to assemble delivery tasks for contract.');
   return ensured;
 }
 
@@ -382,10 +360,7 @@ function buildWardenTasks(rsLevel, layout, favor, contractBudget){
     return lvl >= band.min && lvl <= band.max;
   });
 
-  if (!cand.length){
-    console.error('[RoyalService] No monsters in favor band', band);
-    throw new Error('No eligible monsters for Warden contract.');
-  }
+  if (!cand.length) throw new Error('No eligible monsters for Warden contract.');
 
   const ptBudget = perTaskBudget(contractBudget, layout);
   const tasks = [];
@@ -401,10 +376,7 @@ function buildWardenTasks(rsLevel, layout, favor, contractBudget){
     const maxQ = Math.max(1, Math.floor(ptBudget.max / perKillActs));
     const minQ = Math.max(1, Math.floor(ptBudget.min / perKillActs));
 
-    if (maxQ < 1 || minQ > maxQ){
-      console.error('[RoyalService] Warden task budget invalid', { lvl, perKillActs, ptBudget });
-      throw new Error('Invalid per-task budget for Warden contract.');
-    }
+    if (maxQ < 1 || minQ > maxQ) throw new Error('Invalid per-task budget for Warden contract.');
 
     const qty = randInt(minQ, maxQ);
     tasks.push({
@@ -418,11 +390,7 @@ function buildWardenTasks(rsLevel, layout, favor, contractBudget){
   }
 
   const ensured = inflateTasksToMeetMin(tasks, layout.tasksMin);
-
-  if (!ensured.length){
-    console.error('[RoyalService] Failed to assemble Warden tasks despite candidates', { candidates: cand.length, want, ptBudget, band });
-    throw new Error('Unable to assemble Warden tasks for contract.');
-  }
+  if (!ensured.length) throw new Error('Unable to assemble Warden tasks for contract.');
   return ensured;
 }
 
@@ -438,7 +406,6 @@ function computeContractRewards(contract){
       totalGold += r.gold;
       totalActs += r.totalActs;
     } else {
-      // Warden: tunable xp, no gold
       const per = (REWARDS.combatXpBase || 4) + (REWARDS.combatXpPerLevel || 1.1) * (t.level||1);
       totalXp += Math.round((t.qty||0) * per);
     }
@@ -477,26 +444,19 @@ export function tryOfferContract(){
   const pool = available.length ? available : PATRONS;
   const patron = pool[Math.floor(Math.random()*pool.length)];
 
-  try {
-    const contract = generateInternal(patron, rsLevel, playerLvls, budget, layout);
-    if (!contract) {
-      console.error('[RoyalService] Contract generation returned empty object');
-      throw new Error('Contract generation failed.');
-    }
-    state.royalContract = { ...contract, createdAt: now() };
-    saveNow();
-    try { window.dispatchEvent(new Event('royal:change')); } catch {}
-    return state.royalContract;
-  } catch (e){
-    console.error('[RoyalService] Failed to generate contract', { patron, rsLevel, layout, budget, playerLvls, error: e });
-    throw e; // do not fail gracefully
-  }
+  const contract = generateInternal(patron, rsLevel, playerLvls, budget, layout);
+  if (!contract) throw new Error('Contract generation failed.');
+
+  state.royalContract = { ...contract, createdAt: Date.now() };
+  saveNow();
+  try { window.dispatchEvent(new Event('royal:change')); } catch {}
+  return state.royalContract;
 }
 
 /* ---------- Cooldown / abandon ---------- */
 export function getAbandonCooldown(){
   const until = state.royalCooldowns?.abandonAfter || 0;
-  const rem = Math.max(0, until - now());
+  const rem = Math.max(0, until - Date.now());
   return { allowed: rem === 0, remainingMs: rem };
 }
 export function canAbandon(){
@@ -509,11 +469,11 @@ export function abandonContract(){
   if (!state.royalContract) return false;
 
   state.royalHistory = state.royalHistory || [];
-  try { state.royalHistory.push({ ...state.royalContract, abandonedAt: now() }); } catch {}
+  try { state.royalHistory.push({ ...state.royalContract, abandonedAt: Date.now() }); } catch {}
   state.royalContract = null;
 
   state.royalCooldowns = state.royalCooldowns || {};
-  state.royalCooldowns.abandonAfter = now() + (COOLDOWNS.abandonMs || (5*60*1000));
+  state.royalCooldowns.abandonAfter = Date.now() + (COOLDOWNS.abandonMs || (5*60*1000));
 
   saveNow();
   try { window.dispatchEvent(new Event('royal:change')); } catch {}
@@ -572,16 +532,16 @@ export function completeIfAllDone(){
   state.royalStats = state.royalStats || {};
   const ps = (state.royalStats[pid] = state.royalStats[pid] || {});
   ps.completed = (ps.completed || 0) + 1;
-  ps.lastCompletedAt = now();
+  ps.lastCompletedAt = Date.now();
 
   state.royalHistory = state.royalHistory || [];
-  try { state.royalHistory.push({ ...ctr, completedAt: now() }); } catch {}
+  try { state.royalHistory.push({ ...ctr, completedAt: Date.now() }); } catch {}
 
   state.royalContract = null;
-  renderSkills();
   saveNow();
 
   try {
+    window.dispatchEvent(new Event('skills:change'));
     window.dispatchEvent(new Event('royal:complete'));
     window.dispatchEvent(new Event('favor:update'));
     window.dispatchEvent(new Event('royal:change'));
@@ -592,13 +552,13 @@ export function completeIfAllDone(){
 
 /* ---------- Combat progress ---------- */
 export function recordWardenKill(monOrId){
-  const id = baseIdStrict(monOrId?.id || monOrId);
+  const id = baseId(monOrId?.id || monOrId);
   const ctr = state.royalContract;
   if (!ctr) return false;
   let touched = false;
   for (const t of (ctr.tasks || [])){
     if (t.kind !== 'slay') continue;
-    if (baseIdStrict(t.id) !== id) continue;
+    if (baseId(t.id) !== id) continue;
     const need = t.need ?? t.qty ?? 0;
     if ((t.have|0) >= need) continue;
     t.have = (t.have|0) + 1;

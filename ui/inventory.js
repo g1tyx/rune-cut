@@ -16,8 +16,8 @@ import { iconHtmlForItem } from './sprites.js';
 const elInv = qs('#inventory');
 
 // ---------- regex / encoding ----------
-const ENCH_RE  = /#e:([a-zA-Z_]+):(\d+)/;     // ring enchant encoder
-const SWIFT_RE = /#swift:([0-9.]+)/;          // tool swiftness encoder
+const ENCH_RE  = /#e:([a-zA-Z_]+):(\d+)/;
+const SWIFT_RE = /#swift:([0-9.]+)/;
 
 // ---------- CSS ----------
 (function ensureInvEquipCSS(){
@@ -45,14 +45,12 @@ const SWIFT_RE = /#swift:([0-9.]+)/;          // tool swiftness encoder
     }
     #inv-sort-btn:hover{ filter:brightness(1.15); }
     #inv-sort-btn.active{ background:#1b2333; border:1px solid rgba(255,255,255,.2); }
-    /* make it sit "next to" the Inventory title no matter the layout */
     .inv-title-host{ position:relative; }
     .inv-title-host .inv-sort-anchor{ position:absolute; right:0; top:50%; transform:translateY(-50%); }
   `;
   document.head.appendChild(css);
 })();
 
-// Nice visuals for drag-to-reorder (inventory only)
 (function ensureInvDnDCSS(){
   if (document.getElementById('inv-dnd-css')) return;
   const css = document.createElement('style');
@@ -111,7 +109,6 @@ function eatItem(id){
   return true;
 }
 
-// parse enchant from id and map to tier
 function enchantFromId(id=''){
   const m = String(id).match(ENCH_RE);
   if (!m) return null;
@@ -129,7 +126,6 @@ function enchantFromId(id=''){
   return { stat, add, tier };
 }
 
-// ---------- sell value (includes Option C ring-enchant bonus) ----------
 function sellPrice(id){
   const base = baseIdStrict(id);
   const it = ITEMS[base] || {};
@@ -145,7 +141,6 @@ function sellPrice(id){
     price = Math.max(1, Math.round(price || 1));
   }
 
-  // ring-enchant sale bonus (Option C)
   const m = String(id).match(/#e:([a-zA-Z_]+):(\d+)/);
   if (m){
     const stat = m[1], add = Number(m[2])||0;
@@ -173,7 +168,6 @@ function setInvOrder(arr){
   state.ui.invOrder = Array.isArray(arr) ? arr.slice(0, 2000) : [];
 }
 function syncInvOrderWithEntries(entries){
-  // entries: [ [id, qty], ... ] — keep only present ids; append new ones at the end
   const presentIds = entries.map(([id]) => id);
   const cur = getInvOrder();
   const next = cur.filter(id => presentIds.includes(id));
@@ -211,13 +205,10 @@ export function findInvIconEl(id){
 export function renderInventory(){
   if (!elInv) return;
 
-  // Gather non-empty stacks
   let entries = Object.entries(state.inventory || {}).filter(([, qty]) => (qty|0) > 0);
 
-  // Keep order in sync with what's actually in the bag
   syncInvOrderWithEntries(entries);
 
-  // Optional sort toggle (by use then name). If OFF: use manual drag order.
   if (state.ui?.invSortUse) {
     entries = entries.sort((a, b) => {
       const abase = String(a[0]).split('@')[0];
@@ -246,30 +237,27 @@ export function renderInventory(){
     const isPotion = (!isFood && (Number(def.mana)>0 || Number(def.accBonus)>0 || Number(def.dmgReduce)>0));
     const isMat    = /^bar_|^ore_/.test(base);
 
-    // Fallback image for non-sprite items (or when sprite helpers say "no")
     const imgSrc = def.img || (isMat ? 'assets/materials/ore.png' : null);
 
     const tintCls = tintClassForItem(id);
     const glow    = !!def.glow;
 
-    // Sensible default frame selection for sprite-sheet items
     function frameForItem(d){
-      if (!d || !d.frames) return null;            // not a sprite-sheet item
+      if (!d || !d.frames) return null;
       if (d.defaultFrame && d.frames[d.defaultFrame]) return d.defaultFrame;
-      if (d.frames.icon)   return 'icon';          // common convention
-      if (d.frames.empty)  return 'empty';         // vials/containers
+      if (d.frames.icon)   return 'icon';
+      if (d.frames.empty)  return 'empty';
       const firstKey = Object.keys(d.frames)[0];
       return firstKey || null;
     }
     const frame = frameForItem(def);
 
-    // Build icon HTML via sprites helper (falls back to <img> or ❔)
     const iconHtml = iconHtmlForItem(base, {
       px: 28,
-      frame,                // may be null -> helper should ignore and use fallback
+      frame,
       tintClass: tintCls,
       glow,
-      fallback: imgSrc,     // final fallback if no sprite frame is available
+      fallback: imgSrc,
       alt: def.name || base
     });
 
@@ -290,6 +278,8 @@ export function renderInventory(){
       </div>
     `;
   }).join('');
+
+  ensureInvSortBtn(); // keep placement/visibility fresh on every render
 }
 
 /* ---------- equip food from inventory (stack) ---------- */
@@ -342,7 +332,6 @@ on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
   const it = ITEMS[base];
   if (!it || it.type !== 'equipment') return;
 
-  // validate using the base item (avoids "unknown item" from canEquip)
   const gate = canEquip(state, base);
   if (!gate.ok) { showTip(e, it.name || base, gate.message); return; }
 
@@ -355,27 +344,19 @@ on(elInv, 'click', '.inv-slot.equip', (e, tile)=>{
 /* =========================================
    Drag & Drop — existing + reorder overlay
 ========================================= */
-
-// keep DnD data on inventory tiles (INVENTORY-ORIGIN dragstart)
 on(elInv, 'dragstart', '.inv-slot', (e, tile)=>{
   const id = tile.getAttribute('data-id') || '';
   const qty = state.inventory?.[id] | 0;
   if (!id || qty <= 0) return;
   if (e.dataTransfer){
-    // Original payloads (keep for cooking / other drops)
     e.dataTransfer.setData('application/x-runecut-item', id);
     e.dataTransfer.setData('text/plain', id);
-
-    // Mark as internal-inventory drag so tiles can accept reordering
     e.dataTransfer.setData(REORDER_MIME, '1');
-
-    // Allow both copy (external) and move (internal reorder)
     e.dataTransfer.effectAllowed = 'copyMove';
   }
   tile.classList.add('dragging');
 });
 
-// Also keep DnD data when starting from anywhere that targets inventory tiles
 on(document, 'dragstart', '#inventory .inv-slot', (e, tile)=>{
   const id = tile.getAttribute('data-id') || '';
   if (!id) return;
@@ -386,7 +367,6 @@ on(document, 'dragstart', '#inventory .inv-slot', (e, tile)=>{
   tile.classList.add('dragging');
 });
 
-// Reorder handlers (apply only inside #inventory)
 on(document, 'dragenter', '#inventory .inv-slot', (e, tile)=>{
   if (!e.dataTransfer?.types?.includes(REORDER_MIME)) return;
   e.preventDefault();
@@ -401,7 +381,7 @@ on(document, 'dragleave', '#inventory .inv-slot', (_e, tile)=>{
   tile.classList.remove('drag-over');
 });
 on(document, 'drop', '#inventory .inv-slot', (e, tile)=>{
-  if (!e.dataTransfer?.types?.includes(REORDER_MIME)) return; // not a reorder drop
+  if (!e.dataTransfer?.types?.includes(REORDER_MIME)) return;
   e.preventDefault();
 
   const fromId = e.dataTransfer.getData('text/plain') || '';
@@ -419,15 +399,14 @@ on(document, 'drop', '#inventory .inv-slot', (e, tile)=>{
   order.splice(toIdx, 0, fromId);
   setInvOrder(order);
   saveNow();
-  renderInventory(); // re-render with new order (keeps other features)
+  renderInventory();
 });
 on(document, 'dragend', '#inventory .inv-slot', (_e, tile)=>{
-  // Clean up drag classes
   tile?.classList?.remove('dragging');
   elInv?.querySelectorAll('.drag-over')?.forEach(n=>n.classList.remove('drag-over'));
 });
 
-// ---------- tooltips on inventory tiles ----------
+// ---------- tooltips ----------
 function tomeTooltipLines(base){
   const def = ITEMS[base] || {};
   const lines = [];
@@ -473,7 +452,6 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     if (def.slot === 'tome'){ lines.push(...tomeTooltipLines(base)); }
     const req = equipReqLabel(base); if (req) lines.push(req);
 
-    // Bound ring enchant (from id)
     if (def.slot === 'ring'){
       const efx = enchantFromId(id);
       if (efx){
@@ -482,7 +460,6 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
       }
     }
 
-    // Swiftness (from id)
     const mSwift = String(id).match(SWIFT_RE);
     if (mSwift){
       const s = parseFloat(mSwift[1])||0;
@@ -509,10 +486,7 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     }
   }
 
-  // --- Value on ALL items (equipment included) ---
   const each = sellPrice(id);
-
-  // Qty + totals (still shown when present)
   const qty = state.inventory?.[id] || 0;
   if (qty > 0){
     const eaStr = each ? ` · ${each}g` : '';
@@ -520,7 +494,6 @@ on(elInv, 'mousemove', '.inv-slot', (e, tile)=>{
     lines.push(`Qty: ${qty}${eaStr}${qty>1 ? total : ''}`);
   }
 
-  // --- custom item tips (string | string[] | function) ---
   try {
     const t = def && def.tip;
     if (typeof t === 'string' && t.trim()) {
@@ -633,7 +606,7 @@ elPopover?.addEventListener('click', (e)=>{
   }
 });
 
-// shift-click item use (potions / buffs / poisons)
+// shift-click item use
 elInv?.addEventListener('click', (e)=>{
   if (!e.shiftKey) return;
   const tile = e.target.closest('[data-id]'); 
@@ -643,50 +616,26 @@ elInv?.addEventListener('click', (e)=>{
   const bid = baseId(id);
   const def = ITEMS[bid] || {};
 
-  // --- Mana Potions ---
   if (Number(def.mana) > 0) {
     const res = drinkPotion(state, bid);
     if (!res || !res.ok) return;
-
-  // --- Accuracy Buff ---
   } else if (Number(def.accBonus) > 0) {
     const durMs = Math.max(1000, (def.durationSec | 0) * 1000 || 300000);
-    applyEffect(state, {
-      id: bid,
-      name: def.name || 'Accuracy',
-      durationMs: durMs,
-      data: { accBonus: Number(def.accBonus) || 0 }
-    });
+    applyEffect(state, { id: bid, name: def.name || 'Accuracy', durationMs: durMs, data: { accBonus: Number(def.accBonus) || 0 } });
     removeItem(state, id, 1);
-
-  // --- Defense Buff ---
   } else if (Number(def.dmgReduce) > 0) {
     const durMs = Math.max(1000, (def.durationSec | 0) * 1000 || 300000);
-    applyEffect(state, {
-      id: bid,
-      name: def.name || 'Defense',
-      durationMs: durMs,
-      data: { dmgReduce: Number(def.dmgReduce) || 0 }
-    });
+    applyEffect(state, { id: bid, name: def.name || 'Defense', durationMs: durMs, data: { dmgReduce: Number(def.dmgReduce) || 0 } });
     removeItem(state, id, 1);
-
-  // --- Weapon Poison ---
   } else if (Number(def.damage) > 0) {
     const durMs = Math.max(1000, (def.durationSec | 0) * 1000 || 180000);
-    applyEffect(state, {
-      id: bid,
-      name: def.name || 'Weapon Poison',
-      durationMs: durMs,
-      data: { poisonDmg: Number(def.damage) || 0 }
-    });
+    applyEffect(state, { id: bid, name: def.name || 'Weapon Poison', durationMs: durMs, data: { poisonDmg: Number(def.damage) || 0 } });
     removeItem(state, id, 1);
     try { window.dispatchEvent(new Event('effects:tick')); } catch {}
-
   } else {
     return; 
   }
 
-  // --- visuals + refresh ---
   tile.classList.add('pulse'); 
   setTimeout(() => tile.classList.remove('pulse'), 200);
   renderCharacterEffects(); 
@@ -697,8 +646,6 @@ elInv?.addEventListener('click', (e)=>{
   try { window.dispatchEvent(new Event('effects:tick')); } catch {}
 });
 
-
-// popover close
 document.addEventListener('click', (e)=>{
   const inside = e.target.closest('#popover');
   const isSell = e.target.closest('button.sell-btn');
@@ -712,7 +659,7 @@ const USE_ORDER = ['tool','gear','tome','potion','food','essence','wood','plank'
 const useRank = u => { const i = USE_ORDER.indexOf(u); return i === -1 ? USE_ORDER.length : i; };
 const invUseOf = (base) => {
   const it = ITEMS[base] || {};
-  if (it.invUse) return it.invUse; // optional override
+  if (it.invUse) return it.invUse;
   if (it.slot === 'tome') return 'tome';
   if (it.type === 'food') return 'food';
   if (it.type === 'potion' || it.mana || it.accBonus || it.dmgReduce) return 'potion';
@@ -732,24 +679,27 @@ const invUseOf = (base) => {
 /* --------- place the Sort button next to the Inventory title ---------- */
 function placeSortButtonNextToTitle(btn){
   if (!elInv) return;
-
-  // Try likely header candidates
-  const candidates = [
-    elInv.previousElementSibling,                                      // most common: header right above grid
-    elInv.parentElement?.querySelector('.inventory-title, .inv-title'),
-    elInv.parentElement?.querySelector('h2, h3'),
-  ].filter(Boolean);
-
   let header = null;
-  for (const c of candidates){
-    // Prefer an element that visibly contains the word "Inventory" (fallback to first candidate)
-    const text = (c.textContent || '').trim().toLowerCase();
-    if (!header) header = c;
-    if (text.includes('inventory')) { header = c; break; }
+  let sib = elInv.previousElementSibling;
+  while (sib){
+    if (/inventory/i.test((sib.textContent || ''))) { header = sib; break; }
+    sib = sib.previousElementSibling;
+  }
+  if (!header){
+    const parent = elInv.parentElement;
+    if (parent){
+      header =
+        parent.querySelector(':scope > .inventory-title, :scope > .inv-title') ||
+        parent.querySelector(':scope > h2, :scope > h3');
+      if (header && !/inventory/i.test((header.textContent || ''))) header = null;
+    }
+  }
+  if (!header){
+    header = Array.from(document.querySelectorAll('h1,h2,h3,.inv-title,.inventory-title'))
+      .find(n => /inventory/i.test((n.textContent || '')));
   }
 
   if (header){
-    // Make header a host and absolutely position the button on the right
     header.classList.add('inv-title-host');
     let anchor = header.querySelector('.inv-sort-anchor');
     if (!anchor){
@@ -757,36 +707,32 @@ function placeSortButtonNextToTitle(btn){
       anchor.className = 'inv-sort-anchor';
       header.appendChild(anchor);
     }
-    anchor.appendChild(btn);
+    if (btn.parentElement !== anchor) anchor.appendChild(btn);
   } else {
-    // Fallback: place above the grid
     const host = elInv.parentElement || document.body;
-    host.insertBefore(btn, elInv);
+    if (btn.parentElement !== host) host.insertBefore(btn, elInv);
   }
 }
 
-(function ensureInvSortBtn(){
-  if (!elInv || document.getElementById('inv-sort-btn')) return;
-  const btn = document.createElement('button');
-  btn.id = 'inv-sort-btn'; btn.textContent = 'Sort'; btn.className = 'btn';
-  btn.addEventListener('click', ()=>{
-    state.ui = state.ui || {};
-    state.ui.invSortUse = !state.ui.invSortUse;            // toggle sort ↔ manual order
-    btn.classList.toggle('active', !!state.ui.invSortUse);
-    renderInventory(); saveNow();
-  });
-  btn.addEventListener('mouseenter', () => { btn.style.filter = 'brightness(1.15)'; });
-  btn.addEventListener('mouseleave', () => { btn.style.filter = ''; });
+function ensureInvSortBtn(){
+  if (!elInv) return;
+  let btn = document.getElementById('inv-sort-btn');
+  if (!btn){
+    btn = document.createElement('button');
+    btn.id = 'inv-sort-btn'; btn.textContent = 'Sort'; btn.className = 'btn';
+    btn.addEventListener('click', ()=>{
+      state.ui = state.ui || {};
+      state.ui.invSortUse = !state.ui.invSortUse;
+      btn.classList.toggle('active', !!state.ui.invSortUse);
+      renderInventory(); saveNow();
+    });
+    if (state.ui?.invSortUse) btn.classList.add('active');
+    placeSortButtonNextToTitle(btn);
+  }
+  btn.style.display = (state.unlocks && state.unlocks.sort_inventory) ? '' : 'none';
+}
 
-  // Place it next to the Inventory header label
-  placeSortButtonNextToTitle(btn);
-
-  // Visibility gated by Favor unlock (favor >= 10 sets state.unlocks.sort_inventory)
-  function syncSortBtnVis(){ btn.style.display = (state.unlocks && state.unlocks.sort_inventory) ? '' : 'none'; }
-  syncSortBtnVis();
-  window.addEventListener('favor:update', syncSortBtnVis);
-  window.addEventListener('unlocks:changed', syncSortBtnVis);
-
-  if (state.ui?.invSortUse) btn.classList.add('active');
-})();
-
+document.addEventListener('DOMContentLoaded', ensureInvSortBtn);
+window.addEventListener('favor:update', ensureInvSortBtn);
+window.addEventListener('unlocks:changed', ensureInvSortBtn);
+window.addEventListener('inventory:changed', ensureInvSortBtn);

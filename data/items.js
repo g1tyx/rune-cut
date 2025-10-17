@@ -105,7 +105,7 @@ export const ITEMS = {
 
   /* ------------------------------ Ores ----------------------------- */
   ore_copper:    { id:'ore_copper',    name:'Copper Ore',    type:'resource', sell:2,  img:'assets/materials/ore.png',       tags:['ore','resource'], actions:1, level:1  },
-  silica_sand:   { id:'silica_sand',   name:'Silica Sand',   type:'resource', sell:3,  img:'assets/materials/sand.png',      tags:['ore','resource'], actions:1, level:5  },
+  silica_sand:   { id:'silica_sand',   name:'Silica Sand',   type:'resource', sell:3,  img:'assets/materials/silica_sand.png',      tags:['ore','resource'], actions:1, level:5  },
   ore_tin:       { id:'ore_tin',       name:'Tin Ore',       type:'resource', sell:4,  img:'assets/materials/ore.png',       tags:['ore','resource'], actions:1, level:10 },
   ore_iron:      { id:'ore_iron',      name:'Iron Ore',      type:'resource', sell:8,  img:'assets/materials/ore.png',       tags:['ore','resource'], actions:1, level:20 },
   ore_coal:      { id:'ore_coal',      name:'Coal',          type:'resource', sell:16, img:'assets/materials/coal.png',      tags:['ore','resource'], actions:1, level:30 },
@@ -214,7 +214,7 @@ export const ITEMS = {
   starsteel_sword_rare:  { id:'starsteel_sword_rare',  name:'Rare Starsteel Sword',  type:'equipment', slot:'weapon', atk:44, str:33, sell:750, img:'assets/equipment/rare_starsword.png',  tint:'starsteel', reqAtk:45, tags:['rare'], level:53 },
   starsteel_axe_rare:    { id:'starsteel_axe_rare',    name:'Rare Starsteel Axe',    type:'equipment', slot:'weapon', atk:32, str:60, sell:750, img:'assets/equipment/rare_staraxe.png',    tint:'starsteel', reqAtk:45, tags:['rare'], level:55 },
 
-  /* ----------------------------- Tools (late) ---------------------- */
+  /* ----------------------------- Tools  ---------------------- */
   pick_starsteel: { id:'pick_starsteel', name:'Starsteel Pick', type:'equipment', slot:'pick', speed:2.25, img:'assets/equipment/starpick.png', tint:'starsteel', tags:[], actions:13, level:50 },
   axe_starsteel:  { id:'axe_starsteel',  name:'Starsteel Axe',  type:'equipment', slot:'axe',  speed:2.25, img:'assets/equipment/staraxe.png',  tint:'starsteel', tags:[], actions:13, level:50 },
 
@@ -234,9 +234,10 @@ export const ITEMS = {
   draconyx_boots:      { id:'draconyx_boots',      name:'Draconyx Boots',      type:'equipment', slot:'boots', def:20, atk:2, str:1, sell:420, img:'assets/equipment/draconyx_boots.png',      reqDef:55, tags:[], level:61 },
   draconyx_boots_rare: { id:'draconyx_boots_rare', name:'Rare Draconyx Boots', type:'equipment', slot:'boots', def:22, atk:2, str:2, sell:590, img:'assets/equipment/draconyx_boots_rare.png', reqDef:55, tags:['rare'], level:61 },
 
-  sandreaver:     { id:'sandreaver',     name:'Sandreaver',      type:'equipment', slot:'weapon', atk:25, str:45, sell:400, img:'assets/equipment/sandreaver.png',          reqAtk:38, tags:[] },
-  obsidian_maul:  { id:'obsidian_maul',  name:'Obsidian Maul',   type:'equipment', slot:'weapon', atk:31, str:52, sell:600, img:'assets/equipment/ob_maul.png',              reqAtk:42, tags:[] },
-  swamp_mask:     { id:'swamp_mask',     name:'Swamp Mask',      type:'equipment', slot:'head',   def:20, atk:12, str:15, sell:800, img:'assets/equipment/swamp_mask.png',   reqStr:60, tags:[] },
+  sandreaver:       { id:'sandreaver',      name:'Sandreaver',      type:'equipment', slot:'weapon', atk:25, str:45, sell:400, img:'assets/equipment/sandreaver.png',          reqAtk:38, tags:[] },
+  obsidian_maul:    { id:'obsidian_maul',   name:'Obsidian Maul',   type:'equipment', slot:'weapon', atk:31, str:52, sell:600, img:'assets/equipment/ob_maul.png',              reqAtk:42, tags:[] },
+  swamp_mask:       { id:'swamp_mask',      name:'Swamp Mask',      type:'equipment', slot:'head',   def:20, atk:12, str:15, sell:800, img:'assets/equipment/swamp_mask.png',   reqStr:60, tags:[] },
+  gravewind_shroud: { id:'gravewind_shroud',name:'Gravewind Shroud',type:'equipment', slot:'cape',   hp:20,  def:5,  sell:1200, img:'assets/equipment/gravewind_shroud.png',    tags:[] },
 
   draconyx_gloves:      { id:'draconyx_gloves',      name:'Draconyx Gauntlets', type:'equipment', slot:'gloves', def:26, atk:2, str:2, sell:540, img:'assets/equipment/draconyx_gloves.png',       reqDef:55, tags:[], level:61 },
   draconyx_gloves_rare: { id:'draconyx_gloves_rare', name:'Rare Draconyx Gauntlets', type:'equipment', slot:'gloves', def:29, atk:3, str:3, sell:680, img:'assets/equipment/draconyx_gloves_rare.png', reqDef:55, tags:['rare'], level:61 },
@@ -339,4 +340,7 @@ export const ITEMS = {
   pumpkin:      { id:'pumpkin',      name:'Pumpkin',      type:'crop', sell:15, img:'assets/farming/pumpkin.png',  tip:'Spooky but also good for dogs', tags:[], actions:1 },
   seed_strawberry: { id:'seed_strawberry', name:'Strawberry Seeds', farmStore:true, type:'seed', sell:125, img:'assets/farming/strawberry_seed.png', tags:[] },
   strawberry:      { id:'strawberry',      name:'Strawberry',      type:'crop', sell:25, img:'assets/farming/strawberry.png', tip:'A bright red berry. Could be a nice snack for a cat', tags:[], actions:1 },
-};
+
+  /* -------------------------- Mechanics ------------------------------ */
+  small_gear: { id:'small_gear', name:'Small Gear', type:'resource', sell:22,  img:'assets/mechanics/small_gear.png',        tags:[] },
+  handcrank_drill: { id:'handcrank_drill', name:'Handcrank Drill', type:'mining_tool', sell:40, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/handcrank_drill.png', tip:'Equip in mining panel for 15% chance double ore gain for 30 seconds', tags:[] },};

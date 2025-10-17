@@ -125,6 +125,7 @@ const SKILLS = [
   { key: 'enchant',   name: 'Enchanting', icon: '🪄', xpKey: 'enchantXp'                   },
   { key: 'combat',    name: 'Combat',     icon: '⚔️'        },
   { key: 'royal',     name: 'Royal Service',    icon: '👑', xpKey: 'royalXp'                     },
+  { key: 'devlog',   name: 'Dev Log',    icon: ''                 },
 ];
 
 function xpBlock(xpVal=0) {
@@ -174,12 +175,11 @@ function renderPanel(key) {
 
   const meta = SKILLS.find(s => s.key === key) || SKILLS[0];
 
-  // General tab: no XP bar, just tips/info
-  if (meta.key === 'general') {
-    const lines = tipsForSkill('general', meta);
+  const noXPShown = ['general', 'combat', 'devlog']
+  if (noXPShown.includes(meta.key)) {
+    const lines = tipsForSkill(meta.key, meta);
     panel.innerHTML = `
       <div class="info-card">
-        <div class="info-title">Welcome to RuneCut. The Incremental Skilling RPG</div>
         <ul class="bullets">${lines.map(li=>`<li>${li}</li>`).join('')}</ul>
       </div>
     `;

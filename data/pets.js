@@ -58,6 +58,7 @@ export const PETS = {
     growthAcc: 0.013,
     growthMaxHit: 0.35,
     requires: { attack: 55 },
+    feed: { item: "strawberry", label: "Strawberry", qty: 10, pct: 30, durMs: 1.3 * 60_000 },
   },
 
   silynara: {

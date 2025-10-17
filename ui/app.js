@@ -1,7 +1,8 @@
 // /ui/app.js — centralized bootstrap with safer wiring and autosave
 import { state, initState, saveNow, defaultState } from '../systems/state.js';
 import { hpMaxFor } from '../systems/combat.js';
-
+import { ensureRoyalUnlocks } from '../systems/royal_service.js';
+import { mountRoyalOverlay } from './royal_service.js';
 import { renderInventory }   from './inventory.js';
 import { renderSmithing }    from './smithing.js';
 import { renderCooking }     from './cooking.js';
@@ -13,7 +14,7 @@ import { renderEnchanting }  from './enchanting.js';
 import { renderCombat }      from './combat.js';
 import { renderSkills }      from './skills.js';
 import { renderEquipment }   from './equipment.js';
-import { renderPanelLogs, wireLogFilters, pushLog } from './logs.js';
+import { renderPanelLogs, pushLog } from './logs.js';
 import { setTab, wireRoutes } from './router.js';
 import { qs } from '../utils/dom.js';
 import { initAutoCookUI } from './autocook.js';
@@ -24,9 +25,9 @@ import { renderAlchemy } from './alchemy.js';
 import { initAutoCook } from '../systems/autocook.js';
 import { renderDestruction } from './destruction.js';
 import { addPet } from '../systems/pet.js';
-import { PETS } from '../data/pets.js';
 import './farming.js';
 import { renderFarming } from './farming.js';
+import { renderMechanics } from './mechanics.js';
 
 /* --------------------------------------------------------
    Utilities
@@ -53,7 +54,8 @@ function repaintAll(){
   safe(()=>renderRoyalService(),'renderRoyalService');
   safe(()=>renderAlchemy(),     'renderAlchemy');
   safe(()=>renderDestruction(), 'renderDestruction');
-  safe(()=>renderFarming(), 'renderFarming');
+  safe(()=>renderFarming(),     'renderFarming');
+  safe(()=>renderMechanics(),   'renderMechanics');
 }
 
 function updateMiniHeader(){
@@ -73,7 +75,6 @@ function updateMiniHeader(){
 let rafId = 0;
 function tick(){
   rafId = requestAnimationFrame(tick);
-  // keep HUD countdown fresh even if systems didn’t pulse yet
   try {
     const until = Number(state.ui?.autoCookUntil || 0);
     const rawId = state.ui?.lastCookedRawId || null;
@@ -83,7 +84,8 @@ function tick(){
 }
 
 function initialPaint(){
-  const cheeken = addPet(state, 'cheeken');
+  addPet(state, 'cheeken');
+  try { mountRoyalOverlay(); } catch {}
   repaintAll();
   safe(()=>initAutoCookUI(), 'initAutoCookUI');
 }
@@ -162,12 +164,22 @@ function startApp(){
   safe(()=>initState(), 'initState');
   safe(()=>wireRoutes(), 'wireRoutes');
 
-  // Autocook systems before first paint so HUD can pick up persisted window
+  // Unlocks refresh hook: recompute when favor updates
+  window.addEventListener('favor:update', () => {
+    try {
+      ensureRoyalUnlocks();
+      window.dispatchEvent(new Event('unlocks:changed'));
+      saveNow();
+    } catch (e) { console.warn('[app] unlock refresh failed', e); }
+  });
+
+  // Ensure unlocks are correct at boot
+  try { window.dispatchEvent(new Event('favor:update')); } catch {}
+
   safe(()=>initAutoCook(), 'initAutoCook');
   safe(()=>initCamp(), 'initCamp');
   safe(()=>initPets(), 'initPets');
 
-  // Persist locked raw + window endpoints whenever systems announce them
   window.addEventListener('autocook:window', (e)=>{
     const d = e.detail || {};
     state.ui = state.ui || {};
@@ -194,6 +206,7 @@ function startApp(){
     try { renderCampEntities(); } catch {}
     try { renderAlchemy(); } catch {}
     try { renderDestruction(); } catch {}
+    try {renderMechanics(); } catch {}
   };
   window.addEventListener('inventory:changed', repaintForInventory);
 

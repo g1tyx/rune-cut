@@ -1,7 +1,7 @@
 import { TREES } from '../data/woodcutting.js';
 import { createGatheringSkill } from './gathering_core.js';
 import { ITEMS } from '../data/items.js';
-import { pushLog } from '../ui/logs.js'; // if you have a forestry log; else remove
+import { pushLog } from '../ui/logs.js';
 
 export const TREE_ESSENCE_ID = 'forest_essence';
 
@@ -23,7 +23,6 @@ export function startChop(state, treeOrId, onDone){ return chop.start(state, tre
 export function finishChop(state, treeOrId){
   const res = chop.finish(state, treeOrId);
   if (!res) return 0;
-  // optional per-drop logging (remove if you don’t want logs)
   if (Array.isArray(res.bonuses) && res.bonuses.length){
     const msg = res.bonuses.map(b => `+${b.qty||1} ${(ITEMS?.[b.id]?.name || b.id)}`).join(' · ');
     try { pushLog(`Forestry: ${msg}`, ['forestry']); } catch {}
