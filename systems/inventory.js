@@ -1,7 +1,4 @@
 // /systems/inventory.js
-// Pure state mutation helpers for inventory & gold.
-// Emits DOM events for the UI layer to react to (Option B decoupling).
-// import { ITEMS } from '../data/items.js';
 
 function normQty(q) {
   const n = Number(q);

@@ -306,7 +306,7 @@ export const MONSTERS = [
   /*dwarfs*/
   { id:'dwarf_scout', name:'Dwarf Scout', level:15, time:6000,
     zone:'Dwarven', hp:120, attack:21, defense:16, maxHit:13,
-    xp:{attack:670,strength:670,defense:670}, type: 'water',
+    xp:{attack:150,strength:150,defense:150}, type: '',
     drops:[{id:'bar_iron', chance: 0.15, min:1, max:2}, {id: 'small_gear', chance: 0.15}],
     img:'assets/monsters/dwarf_scout.png'
   },

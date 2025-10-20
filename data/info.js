@@ -70,6 +70,20 @@ export const SKILL_INFO = {
         "Drag the buildings to where you want them to customize your camp"
     ]
   },
+  farming: {
+    tips: [
+        "Buy plots to begin farming",
+        "Buy seeds from the farm store. Others may need to be found from monsters",
+        "Some crops can be fed to pets to receive a percentage based boost in it's combat stats",
+        "Plant a mushroom to harvest three"
+    ]
+  },
+  mechanics: {
+    tips: [
+        "Pioneered by the Dwarves living on the Caldera",
+        "Create tools and gadgets to support your growth in other skills",
+    ]
+  },
   enchant: {
     tips: [
         "Enchanting consumes mana as well as ingredients",
@@ -95,6 +109,13 @@ export const SKILL_INFO = {
   },
   devlog: {
     tips: [
+       "<h3>Version: 1.6.33</h3>",
+       "Added advanced sorting",
+       "<h3>Version: 1.6.31</h3>",
+       "Added gearbox saw",
+       "Mechanic tools activated with shift click",
+       "Dwarf combat XP fixed",
+       "Neko fed Strawberries for well-fed bonus",
        "<h3>Version: 1.6.30</h3>",
        "Readded 'Well-Fed bonus in Pet UI",
        "Added Dwarf combat zone",

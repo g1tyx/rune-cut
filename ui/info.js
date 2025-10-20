@@ -1,12 +1,8 @@
-// /ui/info.js
 import { state } from '../systems/state.js';
 import { levelFromXp, progressFor, XP_TABLE } from '../systems/xp.js';
 import { on } from '../utils/dom.js';
 import { SKILL_INFO } from '../data/info.js';
 
-/* =========================
-   CSS & DOM SCAFFOLD
-========================= */
 function ensureInfoCss() {
   if (document.getElementById('info-css')) return;
   const css = document.createElement('style');
@@ -17,7 +13,6 @@ function ensureInfoCss() {
     .info-box{position:relative;width:min(980px,92vw);max-height:86vh;overflow:auto;background:#fff;color:#0f172a;border-radius:14px;border:1px solid rgba(0,0,0,.12);box-shadow:0 16px 48px rgba(2,6,23,.35);padding:14px 16px 16px;}
     .info-box h2{margin:0 0 10px;font-weight:800;color:#0b1220;}
     .info-box .close-btn{position:absolute;right:18px;top:12px;border:0;background:#0f172a;color:#e2e8f0;width:28px;height:28px;border-radius:8px;cursor:pointer;}
-    /* Two-column layout */
     .info-layout{display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:start;}
     .info-layout .tabs{display:flex;flex-direction:column;gap:6px;position:sticky;top:8px;align-self:start;}
     .info-layout .tabs .tab{padding:8px 10px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;cursor:pointer;font-weight:700;text-align:left;}
@@ -71,7 +66,6 @@ function ensureInfoLayout() {
   const panel = document.getElementById('infoPanel');
   if (!box || !tabs || !panel) return;
   if (tabs.parentElement?.classList.contains('info-layout')) return;
-
   const layout = document.createElement('div');
   layout.className = 'info-layout';
   box.insertBefore(layout, tabs);
@@ -82,7 +76,6 @@ function ensureInfoLayout() {
 function ensureHeaderButton() {
   const header = document.querySelector('header .row') || document.querySelector('header');
   if (!header) return;
-
   if (!document.getElementById('tabInfo')) {
     const btn = document.createElement('button');
     btn.id = 'tabInfo';
@@ -109,44 +102,34 @@ function ensureHeaderButton() {
   }
 }
 
-/* =========================
-   DATA & HELPERS
-========================= */
 const SKILLS = [
-  { key: 'general',   name: 'General',    icon: ''                 },
+  { key: 'general',   name: 'General',    icon: '' },
   { key: 'wc',        name: 'Forestry',   icon: '🪓', xpKey: 'wcXp',          toolSlot: 'axe' },
-  { key: 'craft',     name: 'Crafting',   icon: '🪚', xpKey: 'craftXp'                      },
+  { key: 'craft',     name: 'Crafting',   icon: '🪚', xpKey: 'craftXp' },
   { key: 'min',       name: 'Mining',     icon: '⛏️', xpKey: 'minXp',         toolSlot: 'pick' },
-  { key: 'smith',     name: 'Smithing',   icon: '⚒️', xpKey: 'smithXp'                     },
+  { key: 'smith',     name: 'Smithing',   icon: '⚒️', xpKey: 'smithXp' },
   { key: 'fish',      name: 'Fishing',    icon: '🎣', xpKey: 'fishXp',        toolSlot: 'fishing' },
-  { key: 'cook',      name: 'Cooking',    icon: '🍳', xpKey: 'cookXp'                      },
-  { key: 'alchemy',   name: 'Alchemy',    icon: '🧪', xpKey: 'alchemyXp'                   },
-  { key: 'construct', name: 'Construct',  icon: '🏕️', xpKey: 'constructionXp'             },
-  { key: 'enchant',   name: 'Enchanting', icon: '🪄', xpKey: 'enchantXp'                   },
-  { key: 'combat',    name: 'Combat',     icon: '⚔️'        },
-  { key: 'royal',     name: 'Royal Service',    icon: '👑', xpKey: 'royalXp'                     },
-  { key: 'devlog',   name: 'Dev Log',    icon: ''                 },
+  { key: 'cook',      name: 'Cooking',    icon: '🍳', xpKey: 'cookXp' },
+  { key: 'alchemy',   name: 'Alchemy',    icon: '🧪', xpKey: 'alchemyXp' },
+  { key: 'construct', name: 'Construct',  icon: '🏕️', xpKey: 'constructionXp' },
+  { key: 'mechanics', name: 'Mechanics',  icon: '🔧', xpKey: 'mechanicsXp' },
+  { key: 'farming',   name: 'Farming',    icon: '🌽', xpKey: 'farmingXp' },
+  { key: 'enchant',   name: 'Enchanting', icon: '🪄', xpKey: 'enchantXp' },
+  { key: 'combat',    name: 'Combat',     icon: '⚔️' },
+  { key: 'royal',     name: 'Royal Service', icon: '👑', xpKey: 'royalXp' },
+  { key: 'devlog',    name: 'Dev Log',    icon: '' }
 ];
 
 function xpBlock(xpVal=0) {
   const lvl  = levelFromXp(xpVal|0, XP_TABLE);
   const prog = progressFor(xpVal|0);
   const pct  = Math.max(0, Math.min(100, prog.pct|0));
-  return {
-    lvl,
-    pct,
-    label: `XP ${prog.into}/${prog.span} (need ${prog.need} to Lv ${prog.lvl+1})`
-  };
+  return { lvl, pct, label: `XP ${prog.into}/${prog.span} (need ${prog.need} to Lv ${prog.lvl+1})` };
 }
 
 function tipsForSkill(key, meta) {
-  const fromData = (SKILL_INFO?.[key]?.tips ?? [])
-    .filter(s => typeof s === 'string' && s.trim())
-    .map(s => s.trim());
-
+  const fromData = (SKILL_INFO?.[key]?.tips ?? []).filter(s => typeof s === 'string' && s.trim()).map(s => s.trim());
   if (fromData.length) return fromData;
-
-  // fallback tips if none provided in SKILL_INFO
   const generic = [
     'Higher level increases efficiency and unlocks more content.',
     'Hover items in Inventory to see sell price, stats, and notes.'
@@ -155,13 +138,9 @@ function tipsForSkill(key, meta) {
   return toolLine ? [toolLine, ...generic] : generic;
 }
 
-/* =========================
-   RENDER
-========================= */
 function renderTabs(activeKey) {
   const tabs = document.getElementById('infoTabs');
   if (!tabs) return;
-
   tabs.innerHTML = SKILLS.map(s => `
     <button class="tab ${s.key===activeKey ? 'active':''}" data-skill="${s.key}">
       ${s.icon ? `${s.icon} ` : ''}${s.name}
@@ -172,10 +151,8 @@ function renderTabs(activeKey) {
 function renderPanel(key) {
   const panel = document.getElementById('infoPanel');
   if (!panel) return;
-
   const meta = SKILLS.find(s => s.key === key) || SKILLS[0];
-
-  const noXPShown = ['general', 'combat', 'devlog']
+  const noXPShown = ['general', 'combat', 'devlog'];
   if (noXPShown.includes(meta.key)) {
     const lines = tipsForSkill(meta.key, meta);
     panel.innerHTML = `
@@ -185,11 +162,9 @@ function renderPanel(key) {
     `;
     return;
   }
-
   const xpVal = Number(state[meta.xpKey] || 0);
   const xpUI  = xpBlock(xpVal);
   const tips  = tipsForSkill(key, meta);
-
   const coreHtml = `
     <div class="info-card">
       <div class="info-title">${meta.icon ? meta.icon+' ' : ''}${meta.name}</div>
@@ -204,20 +179,15 @@ function renderPanel(key) {
       <div class="info-muted small" style="margin-top:6px;">${xpUI.label}</div>
     </div>
   `;
-
   const tipsHtml = `
     <div class="info-card">
       <div class="info-title">Tips</div>
       <ul class="bullets">${tips.map(li=>`<li>${li}</li>`).join('')}</ul>
     </div>
   `;
-
   panel.innerHTML = coreHtml + tipsHtml;
 }
 
-/* =========================
-   OPEN/CLOSE
-========================= */
 export function showInfo() {
   document.getElementById('infoOverlay')?.classList.remove('hidden');
 }
@@ -225,25 +195,17 @@ export function leaveInfo() {
   document.getElementById('infoOverlay')?.classList.add('hidden');
 }
 
-/* =========================
-   INIT
-========================= */
 let inited = false;
 export function initInfo() {
   if (inited) return;
   inited = true;
-
   ensureInfoCss();
   ensureOverlay();
   ensureInfoLayout();
   ensureHeaderButton();
-
-  // Default active tab remembered on state.ui
   const defaultKey = state.ui?.infoActiveKey || SKILLS[0].key;
   renderTabs(defaultKey);
   renderPanel(defaultKey);
-
-  // Header button to open
   document.getElementById('tabInfo')?.addEventListener('click', (e)=>{
     e.preventDefault();
     ensureInfoLayout();
@@ -252,14 +214,10 @@ export function initInfo() {
     renderPanel(k);
     showInfo();
   });
-
-  // Close handlers
   document.getElementById('infoBackBtn')?.addEventListener('click', leaveInfo);
   on(document, 'keydown', null, (e)=>{
     if (e.key === 'Escape') leaveInfo();
   });
-
-  // Tab clicks
   on(document, 'click', '#infoTabs .tab', (_e, btn)=>{
     const key = btn.getAttribute('data-skill');
     if (!key) return;
@@ -270,5 +228,4 @@ export function initInfo() {
   });
 }
 
-/* Auto-init when module loads (to wire header button quickly) */
 initInfo();

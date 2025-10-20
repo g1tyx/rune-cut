@@ -1,4 +1,3 @@
-// /ui/skill_ui.js
 import { state, saveNow } from '../systems/state.js';
 import { on } from '../utils/dom.js';
 import { pushLog } from './logs.js';
@@ -7,39 +6,73 @@ import { renderSkills } from './skills.js';
 import { renderEnchanting } from './enchanting.js';
 import { ITEMS } from '../data/items.js';
 import { isAfkSkillActive, startAfk, switchAfkTarget, stopAfk } from '../systems/afk.js';
+import { toolEffectFor, toolRemainingMs } from '../systems/tools.js';
+
+function ensureBoostCss(){
+  if (document.getElementById('skill-boost-css')) return;
+  const css = document.createElement('style');
+  css.id = 'skill-boost-css';
+  css.textContent = `
+    .skill-boost-tip{
+      margin-left:8px; font-weight:800; font-size:12px; color:#86efac;
+      background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.25);
+      padding:2px 8px; border-radius:999px; white-space:nowrap;
+    }
+  `;
+  document.head.appendChild(css);
+}
+
+function ensureBoostTipNear(labelEl, tipId){
+  if (!labelEl) return null;
+  let tip = document.getElementById(tipId);
+  if (!tip){
+    tip = document.createElement('span');
+    tip.id = tipId;
+    tip.className = 'skill-boost-tip';
+    tip.hidden = true;
+    labelEl.insertAdjacentElement('afterend', tip);
+  }
+  return tip;
+}
+
+function fmtSecs(ms){
+  const s = Math.max(0, Math.ceil(ms/1000));
+  return `${s}s`;
+}
 
 /**
  * Create a standardized gathering-skill UI controller.
  *
  * @param {Object} cfg
- * @param {string}   cfg.skillId             e.g. 'forestry' | 'fishing' | 'mining'
- * @param {string}   cfg.actionType          e.g. 'chop' | 'fish' | 'mine' (matches state.action.type)
- * @param {function} cfg.getList(state):[]   returns array of targets with {id, name, level, baseTime?}
- * @param {function} cfg.canUse(state, tOrId):boolean  level gate (ignore busy internally)
- * @param {function} cfg.getSelectedId():string        read selected id from global state
- * @param {function} cfg.setSelectedId(id):void        write selected id to global state
- * @param {string}   cfg.selectSelector       CSS selector for <select> (e.g. '#treeSelect')
- * @param {string}   cfg.startBtnSelector     CSS selector for Start button
- * @param {string}   cfg.stopBtnSelector      CSS selector for Stop button
- * @param {string}   cfg.barSelector          CSS selector for progress .bar
- * @param {string}   cfg.labelSelector        CSS selector for progress label
- * @param {string}   cfg.logChannel           'wc' | 'fishing' | 'mining' (for pushLog)
- * @param {string}   cfg.autoLabel            e.g. 'Auto-chopping…'
- * @param {string}   cfg.verbPast             e.g. 'Chopped' | 'Caught' | 'Mined' (for cycle logs)
- * @param {string}   cfg.essenceId            e.g. 'forest_essence' | 'sea_essence' | 'earth_essence'
+ * @param {string}   cfg.skillId
+ * @param {string}   cfg.actionType
+ * @param {function} cfg.getList
+ * @param {function} cfg.canUse
+ * @param {function} cfg.getSelectedId
+ * @param {function} cfg.setSelectedId
+ * @param {string}   cfg.selectSelector
+ * @param {string}   cfg.startBtnSelector
+ * @param {string}   cfg.stopBtnSelector
+ * @param {string}   cfg.barSelector
+ * @param {string}   cfg.labelSelector
+ * @param {string}   cfg.logChannel
+ * @param {string}   cfg.autoLabel
+ * @param {string}   cfg.verbPast
+ * @param {string}   cfg.essenceId
  */
 export function initGatheringPanel(cfg){
+  ensureBoostCss();
+
   const selEl = document.querySelector(cfg.selectSelector);
   const barEl = document.querySelector(cfg.barSelector);
   const lblEl = document.querySelector(cfg.labelSelector);
+  const boostTip = ensureBoostTipNear(lblEl, `${cfg.skillId}-boost-tip`);
 
-  /* ---------- stable-select freeze logic ---------- */
   let SELECT_FROZEN = false;
   let PENDING_REBUILD = false;
   let lastIds = '';
 
   function idsOf(list){ return list.map(x=>x.id).join('|'); }
-
   function freezeSelect(){ SELECT_FROZEN = true; }
   function unfreezeSelect(){
     SELECT_FROZEN = false;
@@ -61,7 +94,6 @@ export function initGatheringPanel(cfg){
     });
   }
 
-  /* ---------- rendering ---------- */
   function currentList(){ return cfg.getList(state) || []; }
 
   function ensureSelectedExists(list){
@@ -79,10 +111,8 @@ export function initGatheringPanel(cfg){
     if (!selEl) return;
     const list = currentList();
     if (!list.length) return;
-
     ensureSelectedExists(list);
     const selId = cfg.getSelectedId();
-
     selEl.innerHTML = list.map(t=>{
       const ok = cfg.canUse({ ...state, action: null }, t);
       const selAttr = t.id === selId ? 'selected' : '';
@@ -91,7 +121,6 @@ export function initGatheringPanel(cfg){
       return `<option value="${t.id}" ${selAttr} ${disAttr}>${t.name || t.id}${ok ? '' : lvlStr}</option>`;
     }).join('');
     selEl.value = selId;
-
     lastIds = idsOf(list);
   }
 
@@ -104,7 +133,6 @@ export function initGatheringPanel(cfg){
       rebuildSelect();
       return;
     }
-    // Update disabled flags & labels without rebuilding
     const optById = new Map();
     for (let i=0;i<selEl.options.length;i++){
       const o = selEl.options[i];
@@ -121,6 +149,23 @@ export function initGatheringPanel(cfg){
     }
   }
 
+  function updateBoostTip(){
+    if (!boostTip) return;
+    const eff = toolEffectFor(state, cfg.skillId);
+    if (!eff){
+      boostTip.hidden = true;
+      return;
+    }
+    const left = toolRemainingMs(state, cfg.skillId);
+    if (left <= 0){
+      boostTip.hidden = true;
+      return;
+    }
+    const pct = Math.round(Math.max(0, Math.min(1, eff.chance || 0)) * 100);
+    boostTip.textContent = `${pct}% double drop for ${fmtSecs(left)}`;
+    boostTip.hidden = false;
+  }
+
   function updateBar(){
     if (!barEl || !lblEl) return;
     const a = state.action;
@@ -133,11 +178,11 @@ export function initGatheringPanel(cfg){
       barEl.style.width = '0%';
       lblEl.textContent = isAfkSkillActive(cfg.skillId) ? cfg.autoLabel : 'Idle';
     }
+    updateBoostTip();
   }
 
   function render(){
     if (!SELECT_FROZEN) rebuildSelect(); else updateSelectNonDestructive();
-    // Enable/disable start button cosmetically based on capability (ignore busy)
     const startBtn = document.querySelector(cfg.startBtnSelector);
     if (startBtn){
       const selId = cfg.getSelectedId();
@@ -146,8 +191,6 @@ export function initGatheringPanel(cfg){
     updateBar();
   }
 
-  /* ---------- interactions ---------- */
-  // Dropdown change
   if (selEl){
     on(document, 'change', cfg.selectSelector, ()=>{
       const id = selEl.value;
@@ -155,13 +198,11 @@ export function initGatheringPanel(cfg){
     });
   }
 
-  // Start
   on(document, 'click', cfg.startBtnSelector, ()=>{
     const id = cfg.getSelectedId();
     onStart(id);
   });
 
-  // Stop
   on(document, 'click', cfg.stopBtnSelector, ()=>{
     onStop();
   });
@@ -170,11 +211,9 @@ export function initGatheringPanel(cfg){
     const list = currentList();
     const t = list.find(x => x.id === targetId);
     if (!t) return;
-    if (!cfg.canUse({ ...state, action:null }, t)) return; // level guardrail
-
+    if (!cfg.canUse({ ...state, action:null }, t)) return;
     cfg.setSelectedId(targetId);
     saveNow();
-
     if (isAfkSkillActive(cfg.skillId)) {
       switchAfkTarget(state, { skill: cfg.skillId, targetId });
     }
@@ -182,11 +221,8 @@ export function initGatheringPanel(cfg){
   }
 
   function onStart(targetId){
-    // Avoid “half bar”: ignore if same target is already active for this action type
     if (state.action?.type === cfg.actionType){
-      // If it's the same selected target, no-op. Else it's a switch via startAfk.
-      const same = true; // action label already bound to target; we treat start as switch anyway
-      if (same && isAfkSkillActive(cfg.skillId) && cfg.getSelectedId() === targetId){
+      if (isAfkSkillActive(cfg.skillId) && cfg.getSelectedId() === targetId){
         return;
       }
     }
@@ -199,7 +235,6 @@ export function initGatheringPanel(cfg){
     render();
   }
 
-  /* ---------- logging ---------- */
   window.addEventListener('afk:start', (e)=>{
     if (e?.detail?.skill !== cfg.skillId) return;
     const list = currentList();
@@ -226,9 +261,9 @@ export function initGatheringPanel(cfg){
     const itemName = ITEMS[d.dropId]?.name || d.dropName || d.dropId;
     const targetName = d.targetName || d.targetId;
     const essTxt = d.essence ? ` · +1 ${ITEMS[cfg.essenceId]?.name || 'Essence'}` : '';
+    const extraTxt = d.doubleCount && d.doubleCount > 0 ? ` · +${d.doubleCount} extra ${itemName}` : '';
     const xp = d.xp|0;
-
-    pushLog(`${cfg.verbPast} ${targetName} → +1 ${itemName}${essTxt} · +${xp} ${cfg.skillId[0].toUpperCase()+cfg.skillId.slice(1)} xp`, cfg.logChannel);
+    pushLog(`${cfg.verbPast} ${targetName} → +1 ${itemName}${extraTxt}${essTxt} · +${xp} ${cfg.skillId[0].toUpperCase()+cfg.skillId.slice(1)} xp`, cfg.logChannel);
     saveNow();
     render();
     renderInventory();
@@ -243,8 +278,6 @@ export function initGatheringPanel(cfg){
     render();
   });
 
-  /* ---------- public ---------- */
-  // Smooth HUD loop
   (function raf(){
     updateBar();
     requestAnimationFrame(raf);

@@ -29,4 +29,20 @@ export const small_gear = {
     xp: [{ skill: 'mechanics', amount: 30 }],
     img: 'assets/mechanics/handcrank_drill.png'
   },
+  gearbox_saw: {
+    id: 'gearbox_saw',
+    name: 'Gearbox Saw',
+    level: 7,
+    time: 3900,
+    reqSkill: 'mechanics',
+    speedSkill: 'mechanics',
+    inputs: [
+      { id: 'small_gear', qty: 1},
+      { id: 'plank_oak', qty: 1},
+      { id: 'nails', qty: 3}
+    ],
+    outputs: [{ id: 'gearbox_saw', qty: 1 }],
+    xp: [{ skill: 'mechanics', amount: 38 }],
+    img: 'assets/mechanics/gearbox_saw.png'
+  },
 }

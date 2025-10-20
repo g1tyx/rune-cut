@@ -240,16 +240,20 @@
         <!-- Mining panel -->
         <div class="tabpanel hidden" id="tab-mining">
           <h2>⛏️ Mining</h2>
+
+          <!-- Target -->
           <div class="row" style="gap:10px; margin-bottom:10px;">
             <label class="muted" for="rockSelect">Rock</label>
             <select id="rockSelect"></select>
             <button id="mineBtn" class="btn-primary">Mine</button>
             <button id="mineStopBtn" class="btn ghost mine-stop-btn">Stop</button>
           </div>
+
           <div class="progress" style="margin-bottom:10px;">
             <div class="bar" id="mineBar"></div>
             <div class="label" id="mineLabel">Idle</div>
           </div>
+
           <div class="card" style="padding:10px;">
             <h2 style="margin-bottom:6px;">📜 Log</h2>
             <div id="mineLog" class="log" aria-live="polite"></div>
@@ -527,7 +531,7 @@
       </section>
     </div>
     <footer>
-      Version: 1.6.31
+      Version: 1.6.33
     </footer>
   </div>
   

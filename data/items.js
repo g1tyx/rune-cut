@@ -343,4 +343,6 @@ export const ITEMS = {
 
   /* -------------------------- Mechanics ------------------------------ */
   small_gear: { id:'small_gear', name:'Small Gear', type:'resource', sell:22,  img:'assets/mechanics/small_gear.png',        tags:[] },
-  handcrank_drill: { id:'handcrank_drill', name:'Handcrank Drill', type:'mining_tool', sell:40, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/handcrank_drill.png', tip:'Equip in mining panel for 15% chance double ore gain for 30 seconds', tags:[] },};
+  handcrank_drill: { id:'handcrank_drill', name:'Handcrank Drill', type:'mining_tool', sell:40, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/handcrank_drill.png', tip:'Shift-click for 15% chance double ore gain for 30 seconds (Stackable)', tags:[] },
+  gearbox_saw: { id:'gearbox_saw', name:'Gearbox Saw', type:'forestry_tool', sell:45, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/gearbox_saw.png', tip:'Shift-click for 15% chance double log gain for 30 seconds (Stackable)', tags:[] },
+};
