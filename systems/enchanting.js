@@ -30,15 +30,53 @@ function listInputs(r){
 }
 
 // ——— Enchant encoding helpers (rings + tools) ———
-const ENCH_RE   = /#e:([a-zA-Z_]+):(\d+)/;     // #e:stat:add
+const ENCH_RE   = /#e:([a-zA-Z_]+):(\d+)/g;     // ring enchant encoder (global for multiple matches)
+const SINGLE_ENCH_RE = /#e:([a-zA-Z_]+):(\d+)/; // non-global for single match
 const SWIFT_RE  = /#swift:([0-9.]+)/;          // #swift:0.25
 
-function hasRingEnchant(id=''){ return ENCH_RE.test(String(id)); }
+function hasRingEnchant(id=''){ return SINGLE_ENCH_RE.test(String(id)); }
 function encodeRingEnchant(baseId, stat, add){ return `${baseId}#e:${stat}:${add}`; }
 
-// from recipe id like "enchant_sapphire_ring" -> "sapphire_ring"
-function ringBaseFromRecipeId(recId=''){
-  const m = String(recId).match(/^enchant_(.+_ring)$/);
+// Count how many enchants are on a jewelry item
+function countEnchants(id=''){
+  const str = String(id);
+  const matches = [...str.matchAll(ENCH_RE)];
+  return matches.length;
+}
+
+// Get all enchantments from an item
+function getEnchants(id=''){
+  const enchants = [];
+  const str = String(id);
+  const matches = [...str.matchAll(ENCH_RE)];
+  for (const m of matches){
+    enchants.push({ stat: m[1], value: parseInt(m[2], 10) });
+  }
+  return enchants;
+}
+
+// Add a second enchant to jewelry (removes weakest if already has 2)
+function addSecondEnchant(currentId, stat, add){
+  const existing = getEnchants(currentId);
+  const base = baseIdOf(currentId);
+  
+  if (existing.length === 0){
+    // No enchants yet - add first one
+    return `${base}#e:${stat}:${add}`;
+  } else if (existing.length === 1){
+    // One enchant - add second
+    return `${currentId}#e:${stat}:${add}`;
+  } else {
+    // Two enchants - remove the weaker one and add new one
+    const sorted = [...existing].sort((a, b) => a.value - b.value);
+    const keepEnchant = sorted[1]; // Keep the stronger one
+    return `${base}#e:${keepEnchant.stat}:${keepEnchant.value}#e:${stat}:${add}`;
+  }
+}
+
+// from recipe id like "enchant_sapphire_ring" -> "sapphire_ring" or "enchant_ruby_amulet" -> "ruby_amulet"
+function jewelryBaseFromRecipeId(recId=''){
+  const m = String(recId).match(/^enchant_(.+(?:_ring|_amulet))$/);
   return m ? m[1] : null;
 }
 
@@ -60,11 +98,26 @@ function findApplyTarget(state, r){
     if (ap.requireStat && !def[ap.requireStat]) continue;
 
     if (ap.mode === 'ring_enchant'){
-      // 1) must be a ring matching the recipe’s ring type
-      const needBase = ringBaseFromRecipeId(r.id);
-      if (!needBase || base !== needBase) continue;
-      // 2) ring cannot already be enchanted
+      // 1) must be jewelry (ring/amulet) matching the recipe's type
+      const needBase = jewelryBaseFromRecipeId(r.id);
+      if (!needBase) continue;
+      
+      // For amulets, accept both silver and gold versions
+      if (needBase.includes('amulet')) {
+        const gemType = needBase.replace('_amulet', ''); // e.g., "sapphire", "ruby"
+        const isMatch = base === `silver_${gemType}_amulet` || base === `gold_${gemType}_amulet`;
+        if (!isMatch) continue;
+      } else {
+        // For rings, require exact match
+        if (base !== needBase) continue;
+      }
+      
+      // 2) jewelry cannot already be enchanted
       if (hasRingEnchant(id)) continue;
+    } else if (ap.mode === 'dual_enchant'){
+      // For dual enchanting: must be jewelry AND already have at least one enchant
+      if (slot !== 'ring' && slot !== 'amulet') continue;
+      if (!hasRingEnchant(id)) continue;
     } else if (ap.mode === 'tool_swiftness'){
       if (!def.speed) continue; // tools must have speed
     }
@@ -102,6 +155,9 @@ export function startEnchant(state, id, onDone){
   const r = getRec(id); if(!r) return false;
   if (!canEnchant(state, id)) return false;
 
+  // Consume inputs immediately
+  listInputs(r).forEach(inp => removeItem(state, inp.id, inp.qty));
+
   const dur = clampMs(r.time || 500);
   const now = performance.now();
 
@@ -123,21 +179,30 @@ export function startEnchant(state, id, onDone){
   return true;
 }
 
+export function stopEnchant(state){
+  const key = state.action?.key;
+  const r = getRec(key);
+  if (r && r.inputs && r.inputs.length){
+    // Return all input items
+    const itemsToReturn = listInputs(r).filter(x=>x.qty>0);
+    if (itemsToReturn.length){
+      itemsToReturn.forEach(item => addItem(state, item.id, item.qty));
+    }
+  }
+  state.action = null;
+  return true;
+}
+
 export function finishEnchant(state, id){
   const r = getRec(id) || getRec(state.action?.key);
   if (!r){ state.action = null; return null; }
-  if (!canEnchant(state, r.id)){ state.action = null; return null; }
-
-  // Spend inputs first
-  listInputs(r).forEach(inp => removeItem(state, inp.id, inp.qty));
 
   // Spend mana via API (authoritative path)
   const needMana = Math.max(0, Number(r.mana) || 0);
   if (needMana > 0){
     const ok = spendMana(state, needMana); // notifies if changed
     if (!ok){
-      // Revert inputs on failure to be safe (should be rare due to canEnchant gating)
-      listInputs(r).forEach(inp => { state.inventory[inp.id] = (state.inventory[inp.id]||0) + inp.qty; });
+      // Can't revert inputs - they were spent on start
       state.action = null;
       return null;
     }
@@ -149,7 +214,7 @@ export function finishEnchant(state, id){
     const ap  = r.apply;
     const tgt = findApplyTarget(state, r);
     if (tgt){
-      if (ap.mode === 'ring_enchant'){ // bind to equipped ring id
+      if (ap.mode === 'ring_enchant'){ // bind to equipped jewelry id
         if (hasRingEnchant(state.equipment[tgt.slot])) { state.action = null; return null; }
 
         const roll = rollEnchant(state, tgt.base);
@@ -159,10 +224,26 @@ export function finishEnchant(state, id){
 
           state.equipment[tgt.slot] = encodeRingEnchant(tgt.base, stat, add);
 
-          const ringName = ITEMS[tgt.base]?.name || tgt.base;
-          pushEnchantLog(`Enchanted ${ringName} → ✨ +${add} ${stat} (${roll.tierKey})`);
+          const jewelryName = ITEMS[tgt.base]?.name || tgt.base;
+          pushEnchantLog(`Enchanted ${jewelryName} → ✨ +${add} ${stat} (${roll.tierKey})`);
 
           appliedTo = { slot: tgt.slot, itemId: tgt.base, encoded: state.equipment[tgt.slot], tier: roll.tierKey, stat, add };
+        }
+      } else if (ap.mode === 'dual_enchant'){
+        // Add second enchantment to already enchanted jewelry
+        const roll = rollEnchant(state, tgt.base);
+        if (roll.effects?.length){
+          const stat = roll.stat;
+          const add  = roll.add;
+
+          const currentId = state.equipment[tgt.slot];
+          state.equipment[tgt.slot] = addSecondEnchant(currentId, stat, add);
+
+          const jewelryName = ITEMS[tgt.base]?.name || tgt.base;
+          const enchCount = countEnchants(state.equipment[tgt.slot]);
+          pushEnchantLog(`Added ${enchCount === 2 ? '2nd' : 'replacement'} enchant to ${jewelryName} → ✨ +${add} ${stat} (${roll.tierKey})`);
+
+          appliedTo = { slot: tgt.slot, itemId: tgt.base, encoded: state.equipment[tgt.slot], tier: roll.tierKey, stat, add, dual: true };
         }
       } else {
         // Legacy tag-apply path (e.g., Swiftness via legacy)

@@ -7,7 +7,10 @@ const XP_TABLE = {
   pine_hut_t1: 180, pine_hut_t2: 220, pine_hut_t3: 270, pine_hut_t4: 330, pine_hut_t5: 400,
   birch_hut_t1: 450, birch_hut_t2: 550, birch_hut_t3: 670, birch_hut_t4: 810, birch_hut_t5: 1000,
   cedar_hut_t1: 1100, cedar_hut_t2: 1350, cedar_hut_t3: 1600, cedar_hut_t4: 1950, cedar_hut_t5: 2300,
-  elderwood_hut_t1: 2500, elderwood_hut_t2: 3000, elderwood_hut_t3: 3600, elderwood_hut_t4: 4300, elderwood_hut_t5: 5000,
+  willow_hut_t1: 2700, willow_hut_t2: 3300, willow_hut_t3: 4050, willow_hut_t4: 4950, willow_hut_t5: 5850,
+  maple_hut_t1: 6700, maple_hut_t2: 8200, maple_hut_t3: 10050, maple_hut_t4: 12300, maple_hut_t5: 14700,
+  yew_hut_t1: 16700, yew_hut_t2: 20400, yew_hut_t3: 25000, yew_hut_t4: 30600, yew_hut_t5: 36500,
+  runewood_hut_t1: 41000, runewood_hut_t2: 50200, runewood_hut_t3: 61500, runewood_hut_t4: 75000, runewood_hut_t5: 91000,
   campfire_t1: 60, campfire_t2: 90, campfire_t3: 120, campfire_t4: 170, campfire_t5: 230,
   bonfire_t1: 280, bonfire_t2: 360, bonfire_t3: 450, bonfire_t4: 550, bonfire_t5: 660,
   crafting_table_t1: 220, crafting_table_t2: 320, crafting_table_t3: 500, crafting_table_t4: 700, crafting_table_t5: 1000,
@@ -38,9 +41,44 @@ export const BUILDINGS = {
   birch_hut_t2: { id:'birch_hut_t2', name:'Birch Hut (T2)', size:{w:320,h:320}, sprite:'assets/camp/buildings/birch_hut.png', recipe:[{id:'plank_birch',qty:60},{id:'nails',qty:70}], time:4200, xp:CONSTRUCT_XP('birch_hut_t2'), effects:[{type:'afk_extend',seconds:70}], improvesTo:'birch_hut_t3' },
   birch_hut_t3: { id:'birch_hut_t3', name:'Birch Hut (T3)', size:{w:320,h:320}, sprite:'assets/camp/buildings/birch_hut.png', recipe:[{id:'plank_birch',qty:90},{id:'nails',qty:80}], time:4600, xp:CONSTRUCT_XP('birch_hut_t3'), effects:[{type:'afk_extend',seconds:78}], improvesTo:'birch_hut_t4' },
   birch_hut_t4: { id:'birch_hut_t4', name:'Birch Hut (T4)', size:{w:320,h:320}, sprite:'assets/camp/buildings/birch_hut.png', recipe:[{id:'plank_birch',qty:120},{id:'nails',qty:90}], time:5000, xp:CONSTRUCT_XP('birch_hut_t4'), effects:[{type:'afk_extend',seconds:86}], improvesTo:'birch_hut_t5' },
-  birch_hut_t5: { id:'birch_hut_t5', name:'Birch Hut (T5)', size:{w:320,h:320}, sprite:'assets/camp/buildings/birch_hut.png', recipe:[{id:'plank_birch',qty:160},{id:'nails',qty:100}], time:5400, xp:CONSTRUCT_XP('birch_hut_t5'), effects:[{type:'afk_extend',seconds:95}] },
+  birch_hut_t5: { id:'birch_hut_t5', name:'Birch Hut (T5)', size:{w:320,h:320}, sprite:'assets/camp/buildings/birch_hut.png', recipe:[{id:'plank_birch',qty:160},{id:'nails',qty:100}], time:5400, xp:CONSTRUCT_XP('birch_hut_t5'), effects:[{type:'afk_extend',seconds:95}], upgradesTo:'cedar_hut_t1' },
 
-  // ---------------- CAMPFIRE chain (Auto-cook) ----------------
+  // ---------------- CEDAR HUT chain ----------------
+  cedar_hut_t1: { id:'cedar_hut_t1', name:'Cedar Hut (T1)', size:{w:320,h:320}, sprite:'assets/camp/buildings/cedar_hut.png', recipe:[{id:'plank_cedar',qty:50},{id:'nails',qty:70}], time:5600, xp:CONSTRUCT_XP('cedar_hut_t1'), effects:[{type:'afk_extend',seconds:104}], improvesTo:'cedar_hut_t2', showInPalette:false },
+  cedar_hut_t2: { id:'cedar_hut_t2', name:'Cedar Hut (T2)', size:{w:320,h:320}, sprite:'assets/camp/buildings/cedar_hut.png', recipe:[{id:'plank_cedar',qty:70},{id:'nails',qty:80}], time:6000, xp:CONSTRUCT_XP('cedar_hut_t2'), effects:[{type:'afk_extend',seconds:114}], improvesTo:'cedar_hut_t3' },
+  cedar_hut_t3: { id:'cedar_hut_t3', name:'Cedar Hut (T3)', size:{w:320,h:320}, sprite:'assets/camp/buildings/cedar_hut.png', recipe:[{id:'plank_cedar',qty:95},{id:'nails',qty:90}], time:6400, xp:CONSTRUCT_XP('cedar_hut_t3'), effects:[{type:'afk_extend',seconds:126}], improvesTo:'cedar_hut_t4' },
+  cedar_hut_t4: { id:'cedar_hut_t4', name:'Cedar Hut (T4)', size:{w:320,h:320}, sprite:'assets/camp/buildings/cedar_hut.png', recipe:[{id:'plank_cedar',qty:130},{id:'nails',qty:100}], time:6800, xp:CONSTRUCT_XP('cedar_hut_t4'), effects:[{type:'afk_extend',seconds:138}], improvesTo:'cedar_hut_t5' },
+  cedar_hut_t5: { id:'cedar_hut_t5', name:'Cedar Hut (T5)', size:{w:320,h:320}, sprite:'assets/camp/buildings/cedar_hut.png', recipe:[{id:'plank_cedar',qty:180},{id:'nails',qty:110}], time:7200, xp:CONSTRUCT_XP('cedar_hut_t5'), effects:[{type:'afk_extend',seconds:152}], upgradesTo:'willow_hut_t1' },
+
+  // ---------------- WILLOW HUT chain ----------------
+  willow_hut_t1: { id:'willow_hut_t1', name:'Willow Hut (T1)', size:{w:320,h:320}, sprite:'assets/camp/buildings/willow_hut.png', recipe:[{id:'plank_willow',qty:60},{id:'nails',qty:80}], time:6800, xp:CONSTRUCT_XP('willow_hut_t1'), effects:[{type:'afk_extend',seconds:166}], improvesTo:'willow_hut_t2', showInPalette:false },
+  willow_hut_t2: { id:'willow_hut_t2', name:'Willow Hut (T2)', size:{w:320,h:320}, sprite:'assets/camp/buildings/willow_hut.png', recipe:[{id:'plank_willow',qty:85},{id:'nails',qty:90}], time:7200, xp:CONSTRUCT_XP('willow_hut_t2'), effects:[{type:'afk_extend',seconds:182}], improvesTo:'willow_hut_t3' },
+  willow_hut_t3: { id:'willow_hut_t3', name:'Willow Hut (T3)', size:{w:320,h:320}, sprite:'assets/camp/buildings/willow_hut.png', recipe:[{id:'plank_willow',qty:120},{id:'nails',qty:100}], time:7600, xp:CONSTRUCT_XP('willow_hut_t3'), effects:[{type:'afk_extend',seconds:200}], improvesTo:'willow_hut_t4' },
+  willow_hut_t4: { id:'willow_hut_t4', name:'Willow Hut (T4)', size:{w:320,h:320}, sprite:'assets/camp/buildings/willow_hut.png', recipe:[{id:'plank_willow',qty:160},{id:'nails',qty:110}], time:8000, xp:CONSTRUCT_XP('willow_hut_t4'), effects:[{type:'afk_extend',seconds:220}], improvesTo:'willow_hut_t5' },
+  willow_hut_t5: { id:'willow_hut_t5', name:'Willow Hut (T5)', size:{w:320,h:320}, sprite:'assets/camp/buildings/willow_hut.png', recipe:[{id:'plank_willow',qty:220},{id:'nails',qty:120}], time:8400, xp:CONSTRUCT_XP('willow_hut_t5'), effects:[{type:'afk_extend',seconds:242}], upgradesTo:'maple_hut_t1' },
+
+  // ---------------- MAPLE HUT chain ----------------
+  maple_hut_t1: { id:'maple_hut_t1', name:'Maple Hut (T1)', size:{w:400,h:400}, sprite:'assets/camp/buildings/maple_hut.png', recipe:[{id:'plank_maple',qty:75},{id:'nails',qty:100}], time:8000, xp:CONSTRUCT_XP('maple_hut_t1'), effects:[{type:'afk_extend',seconds:268}], improvesTo:'maple_hut_t2', showInPalette:false },
+  maple_hut_t2: { id:'maple_hut_t2', name:'Maple Hut (T2)', size:{w:400,h:400}, sprite:'assets/camp/buildings/maple_hut.png', recipe:[{id:'plank_maple',qty:110},{id:'nails',qty:110}], time:8400, xp:CONSTRUCT_XP('maple_hut_t2'), effects:[{type:'afk_extend',seconds:294}], improvesTo:'maple_hut_t3' },
+  maple_hut_t3: { id:'maple_hut_t3', name:'Maple Hut (T3)', size:{w:400,h:400}, sprite:'assets/camp/buildings/maple_hut.png', recipe:[{id:'plank_maple',qty:155},{id:'nails',qty:120}], time:8800, xp:CONSTRUCT_XP('maple_hut_t3'), effects:[{type:'afk_extend',seconds:324}], improvesTo:'maple_hut_t4' },
+  maple_hut_t4: { id:'maple_hut_t4', name:'Maple Hut (T4)', size:{w:400,h:400}, sprite:'assets/camp/buildings/maple_hut.png', recipe:[{id:'plank_maple',qty:210},{id:'nails',qty:130}], time:9200, xp:CONSTRUCT_XP('maple_hut_t4'), effects:[{type:'afk_extend',seconds:358}], improvesTo:'maple_hut_t5' },
+  maple_hut_t5: { id:'maple_hut_t5', name:'Maple Hut (T5)', size:{w:400,h:400}, sprite:'assets/camp/buildings/maple_hut.png', recipe:[{id:'plank_maple',qty:290},{id:'nails',qty:140}], time:9600, xp:CONSTRUCT_XP('maple_hut_t5'), effects:[{type:'afk_extend',seconds:396}], upgradesTo:'yew_hut_t1' },
+
+  // ---------------- YEW HUT chain ----------------
+  yew_hut_t1: { id:'yew_hut_t1', name:'Yew Hut (T1)', size:{w:504,h:370}, sprite:'assets/camp/buildings/yew_hut.png', recipe:[{id:'plank_yew',qty:100},{id:'nails',qty:140}], time:9600, xp:CONSTRUCT_XP('yew_hut_t1'), effects:[{type:'afk_extend',seconds:438}], improvesTo:'yew_hut_t2', showInPalette:false },
+  yew_hut_t2: { id:'yew_hut_t2', name:'Yew Hut (T2)', size:{w:504,h:370}, sprite:'assets/camp/buildings/yew_hut.png', recipe:[{id:'plank_yew',qty:145},{id:'nails',qty:150}], time:10000, xp:CONSTRUCT_XP('yew_hut_t2'), effects:[{type:'afk_extend',seconds:484}], improvesTo:'yew_hut_t3' },
+  yew_hut_t3: { id:'yew_hut_t3', name:'Yew Hut (T3)', size:{w:504,h:370}, sprite:'assets/camp/buildings/yew_hut.png', recipe:[{id:'plank_yew',qty:205},{id:'nails',qty:160}], time:10400, xp:CONSTRUCT_XP('yew_hut_t3'), effects:[{type:'afk_extend',seconds:536}], improvesTo:'yew_hut_t4' },
+  yew_hut_t4: { id:'yew_hut_t4', name:'Yew Hut (T4)', size:{w:504,h:370}, sprite:'assets/camp/buildings/yew_hut.png', recipe:[{id:'plank_yew',qty:280},{id:'nails',qty:170}], time:10800, xp:CONSTRUCT_XP('yew_hut_t4'), effects:[{type:'afk_extend',seconds:592}], improvesTo:'yew_hut_t5' },
+  yew_hut_t5: { id:'yew_hut_t5', name:'Yew Hut (T5)', size:{w:504,h:370}, sprite:'assets/camp/buildings/yew_hut.png', recipe:[{id:'plank_yew',qty:390},{id:'nails',qty:180}], time:11200, xp:CONSTRUCT_XP('yew_hut_t5'), effects:[{type:'afk_extend',seconds:654}], upgradesTo:'runewood_hut_t1' },
+
+  // ---------------- RUNEWOOD HUT chain ----------------
+  runewood_hut_t1: { id:'runewood_hut_t1', name:'Runewood Hut (T1)', size:{w:500,h:500}, sprite:'assets/camp/buildings/runewood_hut.png', recipe:[{id:'plank_runewood',qty:130},{id:'nails',qty:200}], time:11200, xp:CONSTRUCT_XP('runewood_hut_t1'), effects:[{type:'afk_extend',seconds:720}], improvesTo:'runewood_hut_t2', showInPalette:false },
+  runewood_hut_t2: { id:'runewood_hut_t2', name:'Runewood Hut (T2)', size:{w:500,h:500}, sprite:'assets/camp/buildings/runewood_hut.png', recipe:[{id:'plank_runewood',qty:190},{id:'nails',qty:220}], time:11600, xp:CONSTRUCT_XP('runewood_hut_t2'), effects:[{type:'afk_extend',seconds:800}], improvesTo:'runewood_hut_t3' },
+  runewood_hut_t3: { id:'runewood_hut_t3', name:'Runewood Hut (T3)', size:{w:500,h:500}, sprite:'assets/camp/buildings/runewood_hut.png', recipe:[{id:'plank_runewood',qty:270},{id:'nails',qty:240}], time:12000, xp:CONSTRUCT_XP('runewood_hut_t3'), effects:[{type:'afk_extend',seconds:888}], improvesTo:'runewood_hut_t4' },
+  runewood_hut_t4: { id:'runewood_hut_t4', name:'Runewood Hut (T4)', size:{w:500,h:500}, sprite:'assets/camp/buildings/runewood_hut.png', recipe:[{id:'plank_runewood',qty:370},{id:'nails',qty:260}], time:12400, xp:CONSTRUCT_XP('runewood_hut_t4'), effects:[{type:'afk_extend',seconds:984}], improvesTo:'runewood_hut_t5' },
+  runewood_hut_t5: { id:'runewood_hut_t5', name:'Runewood Hut (T5)', size:{w:500,h:500}, sprite:'assets/camp/buildings/runewood_hut.png', recipe:[{id:'plank_runewood',qty:520},{id:'nails',qty:280}], time:12800, xp:CONSTRUCT_XP('runewood_hut_t5'), effects:[{type:'afk_extend',seconds:1080}] },
+
+  // ---------------- CAMPFIRE chain ----------------
   campfire_t1: { id:'campfire_t1', name:'Campfire (T1)', size:{w:120,h:120}, sprite:'assets/camp/buildings/campfire.png', recipe:[{id:'log_oak',qty:40}], time:2500, xp:CONSTRUCT_XP('campfire_t1'), effects:[{type:'auto_cook',seconds:15}], improvesTo:'campfire_t2', showInPalette:true },
   campfire_t2: { id:'campfire_t2', name:'Campfire (T2)', size:{w:120,h:120}, sprite:'assets/camp/buildings/campfire.png', recipe:[{id:'log_oak',qty:44}], time:2800, xp:CONSTRUCT_XP('campfire_t2'), effects:[{type:'auto_cook',seconds:22}], improvesTo:'campfire_t3' },
   campfire_t3: { id:'campfire_t3', name:'Campfire (T3)', size:{w:120,h:120}, sprite:'assets/camp/buildings/campfire.png', recipe:[{id:'log_oak',qty:48}], time:3200, xp:CONSTRUCT_XP('campfire_t3'), effects:[{type:'auto_cook',seconds:28}], improvesTo:'campfire_t4' },

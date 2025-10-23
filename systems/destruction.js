@@ -22,6 +22,7 @@ export const maxMakable   = (state, id)            => mod.maxCraftable(state, id
 export const startMake    = (state, id, onDone)    => mod.start(state, id, onDone);
 export const finishMake   = (state, id)            => mod.finish(state, id);
 export const finishOne    = (state)                => mod.finishOne(state);
+export const stopMake     = (state)                => mod.stop(state);
 
 const baseIdStrict = s => String(s||'').split('@')[0].split('#')[0];
 

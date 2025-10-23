@@ -25,15 +25,16 @@ export function equipTool(state, itemId){
 
   const durMs = Math.max(1000, Math.floor((def.duration||0)*1000));
   const chance = Math.max(0, Math.min(1, Number(def.dropTwoChance)||0));
+  const smeltBonus = Math.max(0, Math.min(1, Number(def.smeltSpeedBonus)||0));
 
   state.toolsActive = state.toolsActive || {};
   const cur = state.toolsActive[skill] || null;
   const now = Date.now();
 
   if (cur && cur.id === b && cur.until > now){
-    state.toolsActive[skill] = { id:b, chance, until: cur.until + durMs, started: cur.started };
+    state.toolsActive[skill] = { id:b, chance, smeltBonus, until: cur.until + durMs, started: cur.started };
   } else {
-    state.toolsActive[skill] = { id:b, chance, until: now + durMs, started: now };
+    state.toolsActive[skill] = { id:b, chance, smeltBonus, until: now + durMs, started: now };
   }
 
   removeItem(state, itemId, 1);

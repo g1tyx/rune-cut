@@ -38,10 +38,24 @@ export function manaMaxFor(state){
     + enchLvl
     + destLvl; // ← add Destruction level
 
-  // ring enchant: +Mana max when id contains "#e:manaMax:<add>"
-  const m = String(state?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
-  if (m && m[1] === 'manaMax'){
-    max += Number(m[2]) || 0;
+  // Check all jewelry enchants for manaMax
+  const ringId = state?.equipment?.ring;
+  if (ringId) {
+    const ringMatches = [...String(ringId).matchAll(/#e:([a-zA-Z_]+):(\d+)/g)];
+    for (const m of ringMatches) {
+      if (m[1] === 'manaMax') {
+        max += Number(m[2]) || 0;
+      }
+    }
+  }
+  const amuletId = state?.equipment?.amulet;
+  if (amuletId) {
+    const amuletMatches = [...String(amuletId).matchAll(/#e:([a-zA-Z_]+):(\d+)/g)];
+    for (const m of amuletMatches) {
+      if (m[1] === 'manaMax') {
+        max += Number(m[2]) || 0;
+      }
+    }
   }
 
   return max;

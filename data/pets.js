@@ -78,5 +78,6 @@ export const PETS = {
     growthHp: 3.0,
     growthAcc: 0.014,
     growthMaxHit: 0.41,
+    feed: { item: "raw_bluefin_tuna", label: "Raw Bluefin Tuna", qty: 10, pct: 30, durMs: 1.5 * 60_000 },
   }
 };

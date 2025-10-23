@@ -112,6 +112,8 @@ export const ITEMS = {
   ore_nightiron: { id:'ore_nightiron', name:'Nightiron Ore', type:'resource', sell:32, img:'assets/materials/nightiron.png', tags:['ore','resource'], actions:1, level:40 },
   ore_asterium:  { id:'ore_asterium',  name:'Asterium Ore',  type:'resource', sell:60, img:'assets/materials/asterium.png',  tags:['ore','resource'], actions:1, level:52 },
   ore_draconyx:  { id:'ore_draconyx',  name:'Draconyx Ore',  type:'resource', sell:95, img:'assets/materials/draconyx.png',  tags:['ore','resource'], actions:1, level:64 },
+  ore_voidcoal:  { id:'ore_voidcoal',  name:'Void Coal',     type:'resource', sell:140, img:'assets/materials/voidcoal.png', tags:['ore','resource'], actions:1, level:70 },
+  ore_luminite:  { id:'ore_luminite',  name:'Luminite Ore',  type:'resource', sell:180, img:'assets/materials/luminite.png',  tags:['ore','resource'], actions:1, level:75 },
 
   /* ------------------------ Smithing resources --------------------- */
   // levels from SMELT_RECIPES
@@ -122,6 +124,7 @@ export const ITEMS = {
   bar_blacksteel: { id:'bar_blacksteel', name:'Blacksteel Bar',type:'resource', sell:90,  img:'assets/materials/bar_nightiron.png',    tags:['bar','resource'], actions:4, level:40 },
   bar_starsteel:  { id:'bar_starsteel',  name:'Starsteel Bar', type:'resource', sell:200, img:'assets/materials/starsteel_bar.png',    tags:['bar','resource'], actions:5, level:50 },
   bar_draconyx:   { id:'bar_draconyx',   name:'Draconyx Bar',  type:'resource', sell:300, img:'assets/materials/draconyx_bar.png',     tags:['bar','resource'], actions:6, level:60 },
+  bar_luminite:   { id:'bar_luminite',   name:'Luminite Bar',  type:'resource', sell:540, img:'assets/materials/luminite_bar.png',     tags:['bar','resource'], actions:8, level:75 },
 
   // upgrade bars: levels from FORGE_RECIPES (material kind)
   copper_upgrade_bar:     { id:'copper_upgrade_bar',     name:'Copper Upgrade Bar',     type:'material', sell:10,  icon:'➕', img:'assets/equipment/armor-upgrade.png',            tags:[], actions:7,  level:5  },
@@ -131,6 +134,7 @@ export const ITEMS = {
   blacksteel_upgrade_bar: { id:'blacksteel_upgrade_bar', name:'Blacksteel Upgrade Bar', type:'material', sell:300, icon:'➕', img:'assets/equipment/upgrade_nightiron.png', tint:'steel', tags:[], actions:13, level:40 },
   starsteel_upgrade_bar:  { id:'starsteel_upgrade_bar',  name:'Starsteel Upgrade Bar',  type:'material', sell:600, icon:'➕', img:'assets/equipment/star_upgrade.png',                tags:[], actions:16, level:50 },
   draconyx_upgrade_bar:   { id:'draconyx_upgrade_bar',   name:'Draconyx Upgrade Bar',   type:'material', sell:900, icon:'➕', img:'assets/equipment/draconyx_upgrade.png',            tags:[], actions:19, level:60 },
+  luminite_upgrade_bar:   { id:'luminite_upgrade_bar',   name:'Luminite Upgrade Bar',   type:'material', sell:1800, icon:'➕', img:'assets/equipment/luminite_upgrade.png',            tags:[], actions:25, level:75 },
 
   /* --------------------------- Copper set -------------------------- */
   // levels from FORGE_RECIPES
@@ -285,6 +289,8 @@ export const ITEMS = {
   enchanted_mana_potion:   { id:'enchanted_mana_potion',   name:'Enchanted Mana Potion',    type:'potion', mana:40, sell:125, img:'assets/potions/enchanted_mana_potion.png', tip:'Shift-click to consume', tags:[] },
   weapon_poison:           { id:'weapon_poison',           name:'Weapon Poison',            type:'potion', sell:30, damage:2, durationSec:60, img:'assets/potions/weapon_poison.png', tip:'Shift-click to consume', tags:[] },
   toxic_poison:            { id:'toxic_poison',            name:'Toxic Poison',             type:'potion', sell:90, damage:5, durationSec:75, img:'assets/potions/toxic_poison.png', tip:'Shift-click to consume', tags:[] },
+  deathblight_toxin:       { id:'deathblight_toxin',       name:'Deathblight Toxin',        type:'potion', sell:180, damage:10, durationSec:90, sheet:'assets/potions/arcane_sheet.png', cellSize:128, cols:3, rows:2, sheetW:384, sheetH:256, frames:{ icon:[1,1], tags:[] }, tip:'Shift-click to consume' },
+  spore_toxin:             { id:'spore_toxin',             name:'Spore Toxin',              type:'potion', sell:350, damage:15, durationSec:120, img:'assets/potions/spore_toxin.png', tip:'Shift-click to consume', tags:[] },
 
   gem_sapphire:   { id:'gem_sapphire',   name:'Sapphire',      type:'gem', sell:200, img:'assets/gems/gem_sapphire.png', tags:['resource'] },
   gem_ruby:       { id:'gem_ruby',       name:'Ruby',          type:'gem', sell:400, img:'assets/gems/gem_ruby.png',     tags:['resource'] },
@@ -308,26 +314,30 @@ export const ITEMS = {
   gold_starstone_amulet:  { id:'gold_starstone_amulet',  name:'Gold Starstone Amulet',  type:'equipment', hp:30, slot:'amulet', sell:2500,img:'assets/gems/starstone_amulet.png',        tags:[], level:62 },
 
   /* -------------------------- Destruction ------------------------- */
-  small_fire_spirit:   { id:'small_fire_spirit',   name:'Small Fire Spirit',   type:'reagent', sell:3,  img:'assets/destruction/small_fire_spirit.png',  tags:[] },
-  small_water_spirit:  { id:'small_water_spirit',  name:'Small Water Spirit',  type:'reagent', sell:4,  img:'assets/destruction/small_water_spirit.png', tags:[] },
-  small_forest_spirit: { id:'small_forest_spirit', name:'Small Forest Spirit', type:'reagent', sell:3,  img:'assets/destruction/small_forest_spirit.png',tags:[] },
-  small_ground_spirit: { id:'small_ground_spirit', name:'Small Ground Spirit', type:'reagent', sell:3,  img:'assets/destruction/small_earth_spirit.png', tags:[] },
+  small_fire_spirit:   { id:'small_fire_spirit',   name:'Fire Spirit',   type:'reagent', sell:3,  img:'assets/destruction/small_fire_spirit.png',  tags:[] },
+  small_water_spirit:  { id:'small_water_spirit',  name:'Water Spirit',  type:'reagent', sell:4,  img:'assets/destruction/small_water_spirit.png', tags:[] },
+  small_forest_spirit: { id:'small_forest_spirit', name:'Forest Spirit', type:'reagent', sell:3,  img:'assets/destruction/small_forest_spirit.png',tags:[] },
+  small_ground_spirit: { id:'small_ground_spirit', name:'Ground Spirit', type:'reagent', sell:3,  img:'assets/destruction/small_earth_spirit.png', tags:[] },
 
   leaf_dart:   { id:'leaf_dart',   name:'Leaf Dart',   type:'spell', element:'forest', sell:4,  xp:3,  damage:8,  manaUsed:3, img:'assets/destruction/leaf_dart.png',   tip:'Cast to inflict 8 forest damage on enemy. Spending 3 mana', tags:[] },
-  razorleaf:   { id:'razorleaf',   name:'Razorleaf',   type:'spell', element:'forest', sell:14, xp:10, damage:20, manaUsed:5, img:'assets/destruction/razor_leaf.png',   tip:'Cast to inflict 20 forest damage on enemy. Spending 5 mana', tags:[] },
+  razorleaf:   { id:'razorleaf',   name:'Razorleaf',   type:'spell', element:'forest', sell:14, xp:10, damage:20, manaUsed:5, img:'assets/destruction/razor_leaf.png',  tip:'Cast to inflict 20 forest damage on enemy. Spending 5 mana', tags:[] },
   thornstorm:  { id:'thornstorm',  name:'Thornstorm',  type:'spell', element:'forest', sell:42, xp:20, damage:50, manaUsed:7, img:'assets/destruction/thornstorm.png',  tip:'Cast to inflict 50 forest damage on enemy. Spending 7 mana',  tags:[] },
+  vineburst:   { id:'vineburst',   name:'Vineburst',   type:'spell', element:'forest', sell:90, xp:35, damage:75, manaUsed:9, img:'assets/destruction/vineburst.png',   tip:'Cast to inflict 75 forest damage on enemy. Spending 9 mana',   tags:[] },
 
   ember:       { id:'ember',       name:'Ember',       type:'spell', element:'fire',   sell:5,  xp:3,  damage:8,  manaUsed:3, img:'assets/destruction/ember.png',        tip:'Cast to inflict 8 fire damage on enemy. Spending 3 mana',     tags:[] },
   fireball:    { id:'fireball',    name:'Fireball',    type:'spell', element:'fire',   sell:15, xp:10, damage:20, manaUsed:5, img:'assets/destruction/fireball.png',     tip:'Cast to inflict 20 fire damage on enemy. Spending 5 mana',    tags:[] },
   inferno:     { id:'inferno',     name:'Inferno',     type:'spell', element:'fire',   sell:45, xp:20, damage:50, manaUsed:7, img:'assets/destruction/inferno.png',      tip:'Cast to inflict 50 fire damage on enemy. Spending 7 mana',    tags:[] },
+  emberfall:   { id:'emberfall',   name:'Emberfall',   type:'spell', element:'fire',   sell:90, xp:35, damage:75, manaUsed:9, img:'assets/destruction/emberfall.png',    tip:'Cast to inflict 75 fire damage on enemy. Spending 9 mana',   tags:[] },
 
   stone_throw: { id:'stone_throw', name:'Stone Throw', type:'spell', element:'ground', sell:5,  xp:3,  damage:8,  manaUsed:3, img:'assets/destruction/stone_throw.png',  tip:'Cast to inflict 8 ground damage on enemy. Spending 3 mana',   tags:[] },
   rock_barrage:{ id:'rock_barrage',name:'Rock Barrage',type:'spell', element:'ground', sell:15, xp:10, damage:20, manaUsed:5, img:'assets/destruction/rock_barrage.png', tip:'Cast to inflict 20 ground damage on enemy. Spending 5 mana',   tags:[] },
   explosion:   { id:'explosion',   name:'Explosion',   type:'spell', element:'ground', sell:45, xp:20, damage:50, manaUsed:7, img:'assets/destruction/explosion.png',    tip:'Cast to inflict 50 ground damage on enemy. Spending 7 mana',   tags:[] },
+  terraquake: { id:'terraquake', name:'Terraquake', type:'spell', element:'ground',  sell:90, xp:35, damage:75, manaUsed:9, img:'assets/destruction/terraquake.png',    tip:'Cast to inflict 75 ground damage on enemy. Spending 9 mana',   tags:[] },
 
   splash:      { id:'splash',      name:'Splash',      type:'spell', element:'water',  sell:7,  xp:4,  damage:8,  manaUsed:3, img:'assets/destruction/splash.png',       tip:'Cast to inflict 8 water damage on enemy. Spending 3 mana',    tags:[] },
   water_bolt:  { id:'water_bolt',  name:'Water Bolt',  type:'spell', element:'water',  sell:19, xp:12, damage:20, manaUsed:5, img:'assets/destruction/water_bolt.png',   tip:'Cast to inflict 20 water damage on enemy. Spending 5 mana',   tags:[] },
   tidal_surge: { id:'tidal_surge', name:'Tidal Surge', type:'spell', element:'water',  sell:50, xp:20, damage:50, manaUsed:7, img:'assets/destruction/tidal_surge.png',  tip:'Cast to inflict 50 water damage on enemy. Spending 7 mana',   tags:[] },
+  shatterstorm:{ id:'shatterstorm', name:'Shatterstorm', type:'spell', element:'water',  sell:90, xp:35, damage:75, manaUsed:9, img:'assets/destruction/shatterstorm.png',  tip:'Cast to inflict 75 water damage on enemy. Spending 9 mana',   tags:[] },
 
   /* -------------------------- Farming ------------------------------ */
   seed_beet: { id:'seed_beet', name:'Beet Seeds', farmStore:true, type:'seed', sell:10,  img:'assets/farming/beet_seed.png',        tags:[] },
@@ -336,6 +346,8 @@ export const ITEMS = {
   corn:      { id:'beet',      name:'Corn',       type:'crop', sell:9,  img:'assets/farming/corn.png',     tip:'Chickens love corn', tags:[], actions:1 },
   redcap_fungus:      { id:'redcap_fungus',      name:'Redcap Fungus',      type:'seed', sell:37, img:'assets/farming/redcap_fungus.png',      tip:"I wouldn't eat this...",            tags:[] },
   spotted_mireheart:  { id:'spotted_mireheart',  name:'Spotted Mireheart',  type:'seed', sell:50, img:'assets/farming/spotted_mireheart.png',   tip:"I really wouldn't eat this...",    tags:[] },
+  deathcap_toadstool:  { id:'deathcap_toadstool',  name:'Deathcap Toadstool',  type:'seed', sell:95, img:'assets/farming/deathcap_toadstool.png',   tip:"Seriously do not eat this...",    tags:[] },
+  sporeshroud_fungus:  { id:'sporeshroud_fungus',  name:'Sporeshroud Fungus',   type:'seed', sell:200, img:'assets/farming/sporeshroud_fungus.png', tip:"Do not inhale the spores...", tags:[], level:50 },
   seed_pumpkin: { id:'seed_pumpkin', name:'Pumpkin Seeds', farmStore:true, type:'seed', sell:75, img:'assets/farming/pumpkin_seed.png', tags:[] },
   pumpkin:      { id:'pumpkin',      name:'Pumpkin',      type:'crop', sell:15, img:'assets/farming/pumpkin.png',  tip:'Spooky but also good for dogs', tags:[], actions:1 },
   seed_strawberry: { id:'seed_strawberry', name:'Strawberry Seeds', farmStore:true, type:'seed', sell:125, img:'assets/farming/strawberry_seed.png', tags:[] },
@@ -345,4 +357,7 @@ export const ITEMS = {
   small_gear: { id:'small_gear', name:'Small Gear', type:'resource', sell:22,  img:'assets/mechanics/small_gear.png',        tags:[] },
   handcrank_drill: { id:'handcrank_drill', name:'Handcrank Drill', type:'mining_tool', sell:40, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/handcrank_drill.png', tip:'Shift-click for 15% chance double ore gain for 30 seconds (Stackable)', tags:[] },
   gearbox_saw: { id:'gearbox_saw', name:'Gearbox Saw', type:'forestry_tool', sell:45, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/gearbox_saw.png', tip:'Shift-click for 15% chance double log gain for 30 seconds (Stackable)', tags:[] },
+  angler_reel: { id:'angler_reel', name:'Angler Reel', type:'fishing_tool', sell:50, dropTwoChance: 0.15, duration: 30, img:'assets/mechanics/angler_reel.png', tip:'Shift-click for 15% chance double fish gain for 30 seconds (Stackable)', tags:[], level:9 },
+  harvest_scythe: { id:'harvest_scythe', name:'Harvest Scythe', type:'farming_tool', sell:85, farmSpeedBonus: 0.15, duration: 60, img:'assets/mechanics/harvest_scythe.png', tip:'Shift-click for 15% faster crop growth for 60 seconds (Stackable)', tags:[], level:15 },
+  forge_bellows: { id:'forge_bellows', name:'Forge Bellows', type:'smithing_tool', sell:110, smeltSpeedBonus: 0.15, duration: 60, img:'assets/mechanics/forge_bellows.png', tip:'Shift-click for 15% faster smelting speed for 60 seconds (Stackable)', tags:[], level:20 },
 };

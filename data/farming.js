@@ -8,7 +8,9 @@ export const FARM_RECIPES = {
   seed_pumpkin: { cropId: 'pumpkin', time: 16_000, name: 'Pumpkin', xp: 30, lvl: 17 },
   spotted_mireheart: { cropId: 'spotted_mireheart', time: 20_000, name: 'Spotted Mireheart', xp: 40, lvl: 25 },
   seed_strawberry: { cropId: 'strawberry', time: 22_000, name: 'Strawberry', xp: 70, lvl: 30 },
-  
+  deathcap_toadstool: { cropId: 'deathcap_toadstool', time: 25_000, name: 'Deathcap Toadstool', xp: 110, lvl: 38 },
+  sporeshroud_fungus: { cropId: 'sporeshroud_fungus', time: 30_000, name: 'Sporeshroud Fungus', xp: 225, lvl: 50 },
+
 };
 
 /**

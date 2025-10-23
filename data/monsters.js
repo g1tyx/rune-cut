@@ -88,6 +88,7 @@ export const MONSTERS = [
     drops: [
       { gold: 350, chance: 0.7 },
       { id: 'swamp_mask', chance: 0.02 },
+      { id: 'sporeshroud_fungus', chance: 0.05 },
       { id:'small_forest_spirit', chance:0.55, min:3, max:7 }
     ],
     img: 'assets/monsters/swamp_guardian.png'
@@ -244,7 +245,10 @@ export const MONSTERS = [
   { id:'shadow_wraith', name:'Shadow Wraith', level:32, time:5000,
     zone:'Crypts', hp:320, attack:46, defense:38, maxHit:30,
     xp:{attack:425,strength:425,defense:425},
-    drops:[{gold:52, chance:0.7}],
+    drops:[
+      {gold:52, chance:0.7},
+      {id: 'deathcap_toadstool', chance: 0.05}
+    ],
     img:'assets/monsters/shadow_wraith.png'
   },
   { id:'death_priest', name:'Death Priest', level:40, time:5400,

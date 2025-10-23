@@ -66,12 +66,22 @@ export function elementalMultiplier(elem, monOrType){
 
 function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
 
-const RING_ENCH_RE = /#e:([a-zA-Z_]+):(\d+)/;
-function ringEnchant(state){
-  const id = state?.equipment?.ring;
-  if (!id) return null;
-  const m = String(id).match(RING_ENCH_RE);
-  return m ? { stat: m[1], add: Number(m[2])||0 } : null;
+const RING_ENCH_RE = /#e:([a-zA-Z_]+):(\d+)/g;
+function getJewelryEnchants(state){
+  const enchants = [];
+  // Check ring slot
+  const ringId = state?.equipment?.ring;
+  if (ringId) {
+    const ringMatches = [...String(ringId).matchAll(RING_ENCH_RE)];
+    enchants.push(...ringMatches.map(m => ({ stat: m[1], add: Number(m[2])||0 })));
+  }
+  // Check amulet slot
+  const amuletId = state?.equipment?.amulet;
+  if (amuletId) {
+    const amuletMatches = [...String(amuletId).matchAll(RING_ENCH_RE)];
+    enchants.push(...amuletMatches.map(m => ({ stat: m[1], add: Number(m[2])||0 })));
+  }
+  return enchants;
 }
 
 function totalAccBonus(s){
@@ -136,9 +146,12 @@ export function hpMaxFor(s){
   const hpGear = sumEquip(s, 'hp');
   let max = BALANCE.hpBase + defLvl * BALANCE.hpLevelPerDef + hpGear * BALANCE.hpGearWeight;
 
-  const m = String(s?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
-  if (m && m[1] === 'hpMax'){
-    max += Number(m[2]) || 0;
+  // Check all enchantments for hpMax from ring and amulet
+  const enchants = getJewelryEnchants(s);
+  for (const enc of enchants){
+    if (enc.stat === 'hpMax'){
+      max += enc.add;
+    }
   }
   return Math.floor(max);
 }
@@ -160,9 +173,10 @@ export function derivePlayerStats(s, mon){
   let strBonus = sumEquip(s,'str');
   let defBonus = sumEquip(s,'def');
 
-  const m = String(s?.equipment?.ring || '').match(/#e:([a-zA-Z_]+):(\d+)/);
-  if (m){
-    const stat = m[1], add = Number(m[2])||0;
+  // Apply all enchantments from ring and amulet
+  const enchants = getJewelryEnchants(s);
+  for (const enc of enchants){
+    const stat = enc.stat, add = enc.add;
     if (stat === 'attack')   atkBonus += add;
     if (stat === 'strength') strBonus += add;
     if (stat === 'defense')  defBonus += add;

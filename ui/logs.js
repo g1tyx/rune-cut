@@ -111,3 +111,4 @@ export const pushSmithLog   = (m)=>{ logEvent('smithing',   m); renderAffectedPa
 export const pushEnchantLog = (m)=>{ logEvent('enchanting', m); renderAffectedPanels('enchanting'); };
 export const pushCombatLog  = (m)=>{ logEvent('combat',     m); renderAffectedPanels('combat'); };
 export const pushEconomyLog = (m)=>{ logEvent('economy',    m); renderAffectedPanels('economy'); };
+export const pushFarmLog    = (m)=>{ logEvent('farming',    m); renderAffectedPanels('farming'); };

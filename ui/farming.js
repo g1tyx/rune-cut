@@ -9,18 +9,22 @@ import {
   harvest,
   FARM_PLOTS,
   UNLOCK_COSTS,
-  UNLOCK_LEVEL_REQS,   // ← NEW: import level requirements
+  UNLOCK_LEVEL_REQS,
   getFarmingXp,
 } from '../systems/farming.js';
 import { buildXpTable, levelFromXp } from '../systems/xp.js';
-import { pushLog } from './logs.js';
+import { pushFarmLog } from './logs.js';
 import { renderInventory } from './inventory.js';
 import { renderSkills } from './skills.js';
+import { toolEffectFor } from '../systems/tools.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const now = () => Date.now();
 const XP_TABLE = buildXpTable();
 const PLOTS = FARM_PLOTS;
+
+// NEW: Keep track of the last selected seed for convenient planting
+let lastSelectedSeedId = null;
 
 function fmtMs(ms) {
   const s = Math.max(0, Math.ceil(ms / 1000));
@@ -64,8 +68,29 @@ function injectStylesOnce() {
     .farm-store-info .name{font-weight:600;}
     .farm-store-info .price{opacity:.75;font-size:0.9em;}
     .seed-select{user-select: none;}
+    .seed-select.has-recent{border-color:#7aa2ff;background:rgba(122,162,255,.08);}
+    .farm-boost-badge{
+      margin-left:.5rem; padding:.15rem .5rem; border-radius:999px;
+      background:rgba(34,197,94,.15); color:#86efac; border:1px solid rgba(34,197,94,.35);
+      font-weight:800; font-size:12px; letter-spacing:.2px;
+    }
+    .farm-boost-hidden{ display:none; }
+    .growth-time-bonus{
+      font-size:0.85em; opacity:0.85; color:#fbbf24; margin-top:2px;
+      font-style:italic;
+    }
   `;
   document.head.appendChild(st);
+}
+
+function getGrowthTimeBonus() {
+  const eff = toolEffectFor(state, 'farming');
+  if (!eff || eff.id !== 'harvest_scythe') return null;
+  return {
+    name: 'Harvest Scythe',
+    reduction: 0.2, // 20% faster
+    secsRemaining: Math.max(0, Math.ceil((eff.until - Date.now())/1000))
+  };
 }
 
 function renderPlot(i, grid) {
@@ -85,7 +110,7 @@ function renderPlot(i, grid) {
       <div class="title">Plot ${i + 1}</div>
       <div class="muted">
         ${cost != null ? `Unlock cost: ${cost} gold` : 'Unlock cost: —'}
-        ${lvlReq != null ? ` • Req: Farming Lvl ${lvlReq}` : ''}
+        ${lvlReq != null ? ` • Req lvl: ${lvlReq}` : ''}
       </div>
       ${
         cost != null
@@ -109,10 +134,14 @@ function renderPlot(i, grid) {
     const playerLvl = levelFromXp(state.farmingXp || 0, XP_TABLE);
     const has = seeds.length > 0;
 
+    // Check if last seed is still available
+    const lastSeedStillAvailable = lastSelectedSeedId && seeds.some(s => s.id === lastSelectedSeedId);
+    const bonus = getGrowthTimeBonus();
+
     div.innerHTML = `
       <div class="title">Plot ${i + 1}</div>
       <div class="row">
-        <select class="seed-select" name="seed-select-${i}" ${has ? '' : 'disabled'}>
+        <select class="seed-select ${lastSeedStillAvailable ? 'has-recent' : ''}" name="seed-select-${i}" ${has ? '' : 'disabled'}>
           ${seeds.map((s) => {
             const rec = recipeForSeed(s.id, ITEMS);
             const lvlReq = rec?.lvl || 1;
@@ -120,25 +149,37 @@ function renderPlot(i, grid) {
             const label = playerLvl < lvlReq
               ? `${ITEMS[s.id]?.name || s.id} (Lvl ${lvlReq})`
               : `${ITEMS[s.id]?.name || s.id} (${s.qty})`;
-            return `<option value="${s.id}" ${disabled}>${label}</option>`;
+            const selected = s.id === lastSelectedSeedId ? 'selected' : '';
+            return `<option value="${s.id}" ${disabled} ${selected}>${label}</option>`;
           }).join('')}
         </select>
         <button class="btn btn-primary plot-plant" ${has ? '' : 'disabled'}>Plant</button>
       </div>
       <div class="muted">${has ? 'Choose a seed to plant.' : 'You have no seeds.'}</div>
+      ${bonus ? `<div class="growth-time-bonus">✓ ${bonus.reduction*100}% faster growth (${bonus.secsRemaining}s remaining)</div>` : ''}
     `;
     grid.appendChild(div);
 
     const btn = div.querySelector('.plot-plant');
     const sel = div.querySelector('.seed-select');
+    
+    // Update last selected seed when dropdown changes
+    sel.addEventListener('change', () => {
+      if (sel.value) {
+        lastSelectedSeedId = sel.value;
+      }
+    });
+
     wireBtn(btn, () => {
       if (!sel?.value) return;
       const rec = recipeForSeed(sel.value, ITEMS);
       const playerLvl2 = levelFromXp(state.farmingXp || 0, XP_TABLE);
       if (playerLvl2 < (rec.lvl || 1)) {
-        pushLog(`You need Farming level ${rec.lvl} to plant ${rec.name}.`, 'farming');
+        pushFarmLog(`You need Farming level ${rec.lvl} to plant ${rec.name}.`);
         return;
       }
+      // Remember this seed for next time
+      lastSelectedSeedId = sel.value;
       plantSeed(i, sel.value);
       renderFarming();
     });
@@ -206,12 +247,12 @@ function renderFarmStore() {
       if (!def) return;
       const cost = def.sell | 0;
       if ((state.gold | 0) < cost) {
-        pushLog('Not enough gold.', 'farming');
+        pushFarmLog('Not enough gold.');
         return;
       }
       state.gold -= cost;
       state.inventory[id] = (state.inventory[id] || 0) + 1;
-      pushLog(`Bought 1× ${def.name} for ${cost} gold.`, 'farming');
+      pushFarmLog(`Bought 1× ${def.name} for ${cost} gold.`);
       saveNow();
       renderInventory();
       renderFarmStore();
@@ -220,14 +261,48 @@ function renderFarmStore() {
   });
 }
 
+let boostTick = null;
+function ensureBoostBadge(){
+  const panelEl = document.querySelector('#tab-farming');
+  if (!panelEl) return;
+  let h2 = panelEl.querySelector('h2');
+  if (!h2) return;
+  let badge = document.getElementById('farmBoostBadge');
+  if (!badge){
+    badge = document.createElement('span');
+    badge.id = 'farmBoostBadge';
+    badge.className = 'farm-boost-badge farm-boost-hidden';
+    h2.appendChild(badge);
+  }
+  if (!boostTick){
+    boostTick = setInterval(updateBoostBadge, 500);
+    window.addEventListener('tools:change', updateBoostBadge);
+  }
+  updateBoostBadge();
+}
+
+function updateBoostBadge(){
+  const badge = document.getElementById('farmBoostBadge');
+  if (!badge) return;
+  const bonus = getGrowthTimeBonus();
+  if (!bonus){
+    badge.classList.add('farm-boost-hidden');
+    return;
+  }
+  const pct = Math.round(bonus.reduction * 100);
+  badge.textContent = `${pct}% faster growth · ${bonus.secsRemaining}s`;
+  badge.classList.remove('farm-boost-hidden');
+}
+
 export function renderFarming() {
   ensureFarmState();
   const grid = $('#farmGrid');
   if (!grid) return;
   grid.innerHTML = '';
   for (let i = 0; i < PLOTS; i++) renderPlot(i, grid);
-  $('#farmXp').textContent = `- Full Farming Functionality coming soon -`;
+  $('#farmXp').textContent = `- Purchase a plot of land and sow seeds to grow crops -`;
   renderFarmStore();
+  ensureBoostBadge();
 }
 
 function mountOnce() {

@@ -56,6 +56,7 @@ export const canAssemble  = mod.canMake;
 export const startMech    = mod.start;
 export const finishMech   = mod.finish;
 export const assembleOnce = mod.finishOne;
+export const stopMech     = mod.stop;
 
 // Level-aware duration
 export function mechanicsDurationMs(state, id){

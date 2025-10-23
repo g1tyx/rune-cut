@@ -29,6 +29,7 @@ import { ITEMS } from '../data/items.js';
  * @param {function} cfg.start(state, id, cb): boolean
  * @param {function} cfg.finish(state, id): { id, name, xpGains[] } | null
  * @param {function} cfg.pushLog(text): void
+ * @param {function} [cfg.stop(state)]: void  // optional stop handler (returns items to inventory)
  * @param {function} [cfg.getBatchOptions(state)]: (number[] | includes 'X')
  * @param {function} [cfg.getBatchChoice(state)]: number|'X'
  * @param {function} [cfg.setBatchChoice(state, v)]: void
@@ -207,6 +208,8 @@ export function initRecipePanel(cfg){
         .batch-row .batch-btn{padding:4px 8px;border-radius:8px;font-size:12px;background:#1b2333;color:#cfe3ff;border:1px solid rgba(255,255,255,.06)}
         .batch-row .batch-btn.active{background:#14351f;color:#22c55e;border-color:#1b3b25}
         .batch-row .batch-btn:disabled{opacity:.6;cursor:not-allowed}
+        .batch-row .stop-btn{padding:4px 8px;border-radius:8px;font-size:12px;cursor:pointer;transition:all 0.15s;margin-left:auto}
+        .batch-row .stop-btn:hover{opacity:.8}
         .recipe-card,.selector-card{display:block;width:100%;text-align:left;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:#0f1524;margin:0}
         .recipe-card.disabled,.selector-card.disabled{opacity:.6;cursor:not-allowed}
         .recipe-card .head,.selector-card .head{display:flex;gap:10px;align-items:center}
@@ -226,6 +229,15 @@ export function initRecipePanel(cfg){
           display:inline-block;
           background-repeat:no-repeat;
           image-rendering: crisp-edges;
+        }
+        .stop-btn-row{
+          display:flex;gap:8px;margin-top:12px;justify-content:center
+        }
+        .stop-btn-row .stop-btn{
+          padding:6px 12px;border-radius:8px;font-size:13px;background:#3b2c2c;color:#ff9999;border:1px solid rgba(255,100,100,.3);cursor:pointer;transition:all 0.15s ease
+        }
+        .stop-btn-row .stop-btn:hover{
+          background:#4a3333;border-color:rgba(255,100,100,.5);color:#ffcccc
         }
     `;
     document.head.appendChild(css);
@@ -253,6 +265,9 @@ export function initRecipePanel(cfg){
     const opts = (supportsBatch() ? (cfg.getBatchOptions(state) || [1]) : [1]);
     const choice = supportsBatch() ? cfg.getBatchChoice(state) : 1;
     const busy = isBusy();
+    const stopBtn = (busy && typeof cfg.stop === 'function')
+      ? `<button class="stop-btn" id="stop-${cfg.actionType}" style="margin-left:auto;background:#3b2c2c;color:#ff9999;border:1px solid rgba(255,100,100,.3)">Stop</button>`
+      : '';
     row.innerHTML = `
       <span class="muted">Batch:</span>
       ${opts.map(v=>{
@@ -260,6 +275,7 @@ export function initRecipePanel(cfg){
         const active = (v === choice) ? 'active' : '';
         return `<button class="batch-btn ${active}" data-batch="${v}" ${busy?'disabled':''}>${label}</button>`;
       }).join('')}
+      ${stopBtn}
     `;
   }
 
@@ -478,6 +494,21 @@ export function initRecipePanel(cfg){
 
     if (labelEl) labelEl.textContent = (getAllMap()?.[id]?.name || id);
     render();
+  });
+
+  /* ---------- stop button handler ---------- */
+  on(document, 'click', `.stop-btn`, (e, btn)=>{
+    if (btn?.id !== `stop-${cfg.actionType}`) return;
+    if (!isBusy()) return;
+    
+    // Call the stop handler
+    if (typeof cfg.stop === 'function') {
+      cfg.stop(state);
+      saveNow();
+      renderInventory(); renderSkills();
+      render();
+      cfg.pushLog(`Stopped. Items returned to inventory.`);
+    }
   });
 
   /* ---------- smooth progress loop ---------- */

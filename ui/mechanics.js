@@ -1,7 +1,7 @@
 // /ui/mechanics.js — basic Mechanics UI using initRecipePanel with single-batch lock
 
 import { state, saveNow } from '../systems/state.js';
-import { MECHANICS_RECIPES, mechanicsDurationMs, canAssemble, startMech, finishMech, assembleOnce, mechanicsGateReason, maxMakeMech } from '../systems/mechanics.js';
+import { MECHANICS_RECIPES, mechanicsDurationMs, canAssemble, startMech, finishMech, assembleOnce, mechanicsGateReason, maxMakeMech, stopMech } from '../systems/mechanics.js';
 import { initRecipePanel } from './recipe_ui.js';
 import { pushLog } from './logs.js';
 
@@ -25,6 +25,7 @@ const panel = initRecipePanel({
 
   start: (s, id, cb)=> startMech(s, id, cb),
   finish: (s, id)=> finishMech(s, id),
+  stop: (s)=> stopMech(s),
 
   pushLog: (txt)=> pushLog('mechanicsLog', txt),
 

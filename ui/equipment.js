@@ -14,7 +14,7 @@ import { ensureTomeEngine, tomeRemainingMs, tomeDurationMsFor, stopTomeRun } fro
 import { startHpRegen, ensureHp } from '../systems/hp.js';
 
 // ---------- constants / regex ----------
-const ENCH_RE  = /#e:([a-zA-Z_]+):(\d+)/;     // ring enchant encoder
+const ENCH_RE  = /#e:([a-zA-Z_]+):(\d+)/g;     // ring enchant encoder (global for multiple matches)
 const SWIFT_RE = /#swift:([0-9.]+)/;          // tool swiftness encoder
 
 // ---------- DOM roots ----------
@@ -176,12 +176,13 @@ function setSlot(slot, id){
     el.appendChild(span);
   }
 
-  // Ring enchant badge (sparkle only, per your ask)
-  if (slot === 'ring' && ENCH_RE.test(String(id||''))){
+  // Ring/Amulet enchant badge (sparkle only)
+  if ((slot === 'ring' || slot === 'amulet') && ENCH_RE.test(String(id||''))){
+    const enchCount = (String(id).match(ENCH_RE) || []).length;
     const span = document.createElement('span');
     span.className = 'enchant-badge';
-    span.title = 'Enchanted';
-    span.textContent = '✨';
+    span.title = enchCount === 2 ? 'Dual Enchanted' : 'Enchanted';
+    span.textContent = enchCount === 2 ? '✨✨' : '✨';
     el.appendChild(span);
   }
 }
@@ -388,23 +389,19 @@ on(grid, 'mousemove', '.slot', (e, slotDiv)=>{
   }
 
   // Encoded enchant displays
-  if (slotName === 'ring'){
-    const m = String(id).match(ENCH_RE);
-    if (m){
-      const stat = m[1], add = Number(m[2])||0;
+  if (slotName === 'ring' || slotName === 'amulet'){
+    const allMatches = [...String(id).matchAll(ENCH_RE)];
+    if (allMatches.length > 0){
       const labelMap = { hpMax:'HP', manaMax:'Mana', defense:'Defense', attack:'Attack', strength:'Strength' };
-      const tierKeys = ['minor','standard','greater','grand','mythic'];
-      const table = {
-        hpMax:[12,20,30,45,60],
-        manaMax:[10,15,25,38,50],
-        defense:[6,10,15,27,30],
-        attack:[4,6,10,15,20],
-        strength:[4,6,10,15,20],
-      };
-      const ix = (table[stat]||[]).indexOf(add);
-      const tier = ix>=0 ? tierKeys[ix] : null;
-      const pretty = labelMap[stat] || stat;
-      lines.push(`✨ +${add} ${pretty}${tier?` (${tier[0].toUpperCase()+tier.slice(1)})`:''}`);
+      allMatches.forEach((m, idx) => {
+        const stat = m[1], add = Number(m[2])||0;
+        const pretty = labelMap[stat] || stat;
+        const prefix = allMatches.length === 2 ? `[${idx+1}] ` : '';
+        lines.push(`✨ ${prefix}+${add} ${pretty}`);
+      });
+      if (allMatches.length === 2){
+        lines.push('🔥 Dual Enchanted!');
+      }
     }
   }
   const mSwift = String(id).match(SWIFT_RE);

@@ -41,6 +41,7 @@ export const canCraft     = mod.canMake;
 export const startCraft   = mod.start;
 export const finishCraft  = mod.finish;
 export const craftOnce    = mod.finishOne;
+export const stopCraft    = mod.stop;
 
 // For progress bars / timers (level-aware)
 export function craftDurationMs(state, id){

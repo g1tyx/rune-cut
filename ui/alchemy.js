@@ -7,6 +7,7 @@ import {
   maxBrewable,
   startBrew,
   finishBrew,
+  stopBrew,
 } from '../systems/alchemy.js';
 import { initRecipePanel } from './recipe_ui.js';
 import { pushLog } from './logs.js';
@@ -26,6 +27,7 @@ const panel = initRecipePanel({
   // Lifecycle — match Crafting: start(state,id,onDone) and finish(state,id)
   start:    (s, id, onDone) => startBrew(s, id, onDone),
   finish:   (s, id) => finishBrew(s, id),
+  stop:     (s) => stopBrew(s),
 
   // Logs
   pushLog:  (txt) => pushLog(txt),

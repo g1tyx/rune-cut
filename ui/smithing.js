@@ -4,7 +4,7 @@ import { qs, on } from '../utils/dom.js';
 import { FORGE_RECIPES, SMELT_RECIPES } from '../data/smithing.js';
 import {
   canSmelt, startSmelt, finishSmelt, maxSmeltable,
-  canForge, startForge, finishForge,
+  canForge, startForge, finishForge, stopForge, stopSmelt,
   listUpgradable, applyUpgrade,
   smithXpOf
 } from '../systems/smithing.js';
@@ -217,7 +217,11 @@ function ensureForgeBatchControls(){
   const wrap = document.createElement('div');
   wrap.className = 'smith-batch';
   wrap.id = 'forgeBatchWrap';
-  wrap.innerHTML = `<span class="label">Batch:</span><div class="btns"></div>`;
+  const busy = isSmithBusy();
+  const stopBtn = (busy && state.action?.mode === 'forge')
+    ? `<button class="stop-btn forge-stop-btn" style="margin-left:auto;background:#3b2c2c;color:#ff9999;border:1px solid rgba(255,100,100,.3)">Stop</button>`
+    : '';
+  wrap.innerHTML = `<span class="label">Batch:</span><div class="btns"></div>${stopBtn}`;
   anchor.insertBefore(wrap, anchor.firstChild);
   el.forgeBatchWrap = wrap;
 
@@ -237,6 +241,13 @@ function buildForgeBatchButtons(){
   const opts = forgeBatchOptionsFromMax(max);
   btnsHost.innerHTML = opts.map(v => `<button class="btn" type="button" data-v="${v}">${v}</button>`).join('');
   syncForgeBatchButtons();
+  
+  // Update stop button
+  const stopBtn = el.forgeBatchWrap.querySelector('.forge-stop-btn');
+  if (stopBtn) {
+    const busy = isSmithBusy() && state.action?.mode === 'forge';
+    stopBtn.style.display = busy ? 'block' : 'none';
+  }
 }
 function syncForgeBatchButtons(){
   if (!el.forgeBatchWrap) return;
@@ -384,6 +395,7 @@ export function renderSmithing(){
   ensureSmeltDropdown();
   updateSmeltButtons();
   ensureForgeMetalOptions();
+  ensureSmeltBoostBadge();
 
   // Batch UI
   ensureForgeBatchControls();
@@ -482,6 +494,44 @@ on(document, 'change', '#smeltSelect', ()=>{
   }
 });
 
+(function ensureSmeltBoostCss(){
+  if (document.getElementById('smelt-boost-css')) return;
+  const css = document.createElement('style');
+  css.id = 'smelt-boost-css';
+  css.textContent = `.smelt-boost-badge{margin-left:.5rem;padding:.15rem .5rem;border-radius:999px;background:rgba(220,38,38,.15);color:#fca5a5;border:1px solid rgba(220,38,38,.35);font-weight:800;font-size:12px}.smelt-boost-hidden{display:none}`;
+  document.head.appendChild(css);
+})();
+
+let smeltTick = null;
+function updateSmeltBoostBadge(){
+  const badge = document.getElementById('smeltBoostBadge');
+  if (!badge) return;
+  const toolEff = state.toolsActive?.smithing;
+  const isActive = toolEff && toolEff.until > Date.now();
+  if (isActive){
+    const secs = Math.max(0, Math.ceil((toolEff.until - Date.now())/1000));
+    const pct  = Math.round((toolEff.smeltBonus||0)*100);
+    badge.textContent = `+${pct}% speed · ${secs}s`;
+    badge.classList.remove('smelt-boost-hidden');
+  } else {
+    badge.classList.add('smelt-boost-hidden');
+  }
+}
+
+function ensureSmeltBoostBadge(){
+  const h2 = document.querySelector('#tab-smithing h2');
+  if (!h2) return;
+  let badge = document.getElementById('smeltBoostBadge');
+  if (!badge){
+    badge = document.createElement('span');
+    badge.id = 'smeltBoostBadge';
+    badge.className = 'smelt-boost-badge smelt-boost-hidden';
+    h2.appendChild(badge);
+    if (!smeltTick) smeltTick = setInterval(updateSmeltBoostBadge, 500);
+  }
+  updateSmeltBoostBadge();
+}
+
 on(document, 'change', '#forgeMetal', ()=>{
   renderForgeList();
 });
@@ -506,7 +556,14 @@ function stopSmith(reason = 'smithing'){
   return false;
 }
 on(document, 'click', '#smeltStopBtn, .smelt-stop-btn', ()=>{
-  if (isSmelting()) stopSmith('smelt');
+  if (isSmelting()) {
+    stopSmelt(state);
+    pushSmithLog('Stopped smelting.');
+    saveNow();
+    renderSmithing();
+    renderInventory();
+    renderSkills();
+  }
 });
 
 /* ---------- Upgrade filter ---------- */

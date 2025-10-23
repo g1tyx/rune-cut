@@ -19,6 +19,7 @@ export const maxBrewable     = (state, id)            => mod.maxCraftable(state,
 export const startBrew       = (state, id, onDone)    => mod.start(state, id, onDone);
 export const finishBrew      = (state, id)            => mod.finish(state, id);
 export const brewOnce        = (state)                => mod.finishOne(state);
+export const stopBrew        = (state)                => mod.stop(state);
 
 // (Optional helpers to keep parity with other skills)
 export const listAlchemyRecipes = () =>

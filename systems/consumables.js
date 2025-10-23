@@ -47,12 +47,10 @@ export function usePotion(state, idOrBase, { onHeal, onLog } = {}){
     return { ok:true, kind:'def' };
   }
 
-  // Weapon poison 
-
+  // Weapon poison
   if (Number(def.damage) > 0){
     const durMs = Math.max(1000, (def.durationSec|0)*1000 || 300000);
-    // effect data.key: weaponPoison -> integer extra damage per hit
-    applyEffect(state, { id: base, name: def.name || 'Weapon Poison', durationMs: durMs, data:{ weaponPoison: Number(def.damage)|0 } });
+    applyEffect(state, { id: base, name: def.name || 'Weapon Poison', durationMs: durMs, data:{ poisonDmg: Number(def.damage)|0 } });
     removeItem(state, id, 1);
     onLog?.(`You apply ${def.name || base}. Your weapon is coated in poison.`);
     try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
@@ -74,22 +72,6 @@ export function usePotion(state, idOrBase, { onHeal, onLog } = {}){
     try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
     try { window.dispatchEvent(new Event('hp:change')); } catch {}
     return { ok:true, kind:'heal', healed };
-  }
-
-  // Weapon poison buff
-  if (Number(def.damage) > 0) {
-    const durMs = Math.max(1000, (def.durationSec|0)*1000 || 180000);
-    applyEffect(state, {
-      id: base,
-      name: def.name || 'Weapon Poison',
-      durationMs: durMs,
-      data: { poisonDmg: Number(def.damage) }
-    });
-    removeItem(state, id, 1);
-    onLog?.(`You apply ${def.name || base} to your weapon.`);
-    try { window.dispatchEvent(new Event('inventory:changed')); } catch {}
-    try { window.dispatchEvent(new Event('effects:tick')); } catch {}
-    return { ok:true, kind:'poison' };
   }
 
   return { ok:false, reason:'unsupported' };

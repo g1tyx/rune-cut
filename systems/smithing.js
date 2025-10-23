@@ -6,7 +6,7 @@ import { ITEMS } from '../data/items.js';
 
 const XP_TABLE = buildXpTable();
 const speedFromLevel = lvl => 1 + 0.02*(lvl-1);
-const clampMs = (ms)=> Math.max(100, ms);
+const clampMs = (ms)=> Math.max(50, ms);
 
 const RARE_FORGE_CHANCE = 0.10;
 
@@ -124,7 +124,15 @@ export function startSmelt(state, outId='bar_copper', onDone){
   if (lvl < need) return false;
   if(!canSmelt(state, outId)) return false;
 
-  const dur = clampMs((r.time||2000) / speedFromLevel(lvl));
+  // Consume inputs immediately
+  r.inputs.forEach(inp => removeItem(state, inp.id, inp.qty));
+
+  let speedMult = speedFromLevel(lvl);
+  const toolEff = state.toolsActive?.smithing;
+  if (toolEff && toolEff.until > Date.now() && toolEff.smeltBonus > 0){
+    speedMult += toolEff.smeltBonus;
+  }
+  const dur = clampMs((r.time||2000) / speedMult);
   const now = performance.now();
   const jobId = nextJobId(state);
 
@@ -148,11 +156,7 @@ export function startSmelt(state, outId='bar_copper', onDone){
 export function finishSmelt(state){
   const key = state.action?.key;
   const r = smeltRec(key); if(!r){ state.action = null; return null; }
-
-  if(!(r.inputs||[]).every(inp => (state.inventory[inp.id]||0) >= inp.qty)){
-    state.action = null; return null;
-  }
-  r.inputs.forEach(inp => removeItem(state, inp.id, inp.qty));
+  
   addItem(state, key, 1);
   const gain = smithXpOf(r);
   state.smithXp = (state.smithXp||0) + gain;
@@ -184,6 +188,15 @@ export function startForge(state, outId, onDone){
   const rec = FORGE_RECIPES.find(x=>x.id===outId); if(!rec) return false;
   if(!canForge(state, outId)) return false;
 
+  // Consume inputs immediately
+  if (hasInputs(rec)) {
+    spendInputs(state, rec);
+  } else {
+    const barId = barIdFor(rec);
+    removeItem(state, barId, rec.bars || 0);
+    spendExtras(state, rec);
+  }
+
   const lvl = levelFromXp(state.smithXp||0, XP_TABLE);
   const dur = clampMs((rec.time||2000) / speedFromLevel(lvl));
   const now = performance.now();
@@ -210,16 +223,6 @@ export function startForge(state, outId, onDone){
 export function finishForge(state){
   const rec = FORGE_RECIPES.find(x => x.id === state.action?.key);
   if (!rec){ state.action = null; return null; }
-  if (!canForge(state, rec.id)){ state.action = null; return null; }
-
-  // Consume materials
-  if (hasInputs(rec)) {
-    spendInputs(state, rec);
-  } else {
-    const barId = barIdFor(rec);
-    removeItem(state, barId, rec.bars || 0);
-    spendExtras(state, rec);
-  }
 
   // Output (with possible quality)
   const lvl = levelFromXp(state.smithXp || 0, XP_TABLE);
@@ -240,6 +243,21 @@ export function finishForge(state){
 export function stopSmelt(state){
   const a = state.action;
   if (a && a.type === 'smith' && a.mode === 'smelt'){
+    const key = a.key;
+    const r = smeltRec(key);
+    // Return input items
+    if (r && r.inputs && r.inputs.length){
+      r.inputs.forEach(inp => addItem(state, inp.id, inp.qty));
+    }
+    state.action = null;
+    return true;
+  }
+  return false;
+}
+
+export function stopForge(state){
+  const a = state.action;
+  if (a && a.type === 'smith' && a.mode === 'forge'){
     state.action = null;
     return true;
   }

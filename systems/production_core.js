@@ -1,6 +1,6 @@
 // /systems/production_core.js
 // Centralized production skill engine (crafting, smithing, alchemy, …)
-// Now uses atomic inventory helpers to prevent “didn’t consume items” bugs.
+// Now uses atomic inventory helpers to prevent "didn't consume items" bugs.
 
 import { hasItems, spendItems, grantItems } from './inventory.js';
 import { buildXpTable, levelFromXp } from './xp.js';
@@ -111,6 +111,10 @@ export function createProductionSkill({
     const r = get(id); if (!r) return false;
     if (!canMake(state, id, 1)) return false;
 
+    // Consume inputs IMMEDIATELY on start (so stop() returns them atomically)
+    const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty|0 })).filter(x=>x.qty>0);
+    if (reqs.length && !spendItems(state, reqs)) return false;
+
     const dur = clampMs(r.time / speedMult(state, r), minActionMs);
     const now = performance.now();
 
@@ -132,12 +136,8 @@ export function createProductionSkill({
     return true;
   };
 
-  // Apply IO + XP atomically
+  // Apply outputs + XP (inputs already spent in start())
   const _applyIOAndXp = (state, r)=>{
-    // inputs (atomic): bail if anything missing (shouldn’t happen if guarded by canMake)
-    const reqs = r.inputs.map(i => ({ id:i.id, qty:i.qty|0 })).filter(x=>x.qty>0);
-    if (reqs.length && !spendItems(state, reqs)) return false;
-
     // outputs
     const outs = r.outputs.map(o => ({ id:o.id, qty:o.qty|0 })).filter(x=>x.qty>0);
     if (outs.length) grantItems(state, outs);
@@ -155,7 +155,6 @@ export function createProductionSkill({
   const finish = (state, id)=>{
     const key = id || state.action?.key;
     const r = get(key); if (!r){ state.action = null; return null; }
-    if (!canMake(state, key, 1)){ state.action = null; return null; }
 
     _applyIOAndXp(state, r);
     state.action = null;
@@ -169,7 +168,6 @@ export function createProductionSkill({
   const finishOne = (state)=>{
     const key = state.action?.key; if (!key) return null;
     const r = get(key); if (!r) return null;
-    if (!canMake(state, key, 1)) return null;
 
     _applyIOAndXp(state, r);
     return {
@@ -179,7 +177,20 @@ export function createProductionSkill({
     };
   };
 
+  // Stop action and return input items to inventory
+  const stop = (state)=>{
+    const key = state.action?.key;
+    const r = get(key);
+    if (r && r.inputs && r.inputs.length){
+      // Return all input items
+      const itemsToReturn = r.inputs.map(i => ({ id:i.id, qty:i.qty|0 })).filter(x=>x.qty>0);
+      if (itemsToReturn.length) grantItems(state, itemsToReturn);
+    }
+    state.action = null;
+    return true;
+  };
+
   return {
-    get, canMake, maxCraftable, start, finish, finishOne
+    get, canMake, maxCraftable, start, finish, finishOne, stop
   };
 }

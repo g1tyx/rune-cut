@@ -45,4 +45,53 @@ export const small_gear = {
     xp: [{ skill: 'mechanics', amount: 38 }],
     img: 'assets/mechanics/gearbox_saw.png'
   },
+  angler_reel: {
+    id: 'angler_reel',
+    name: 'Angler Reel',
+    level: 9,
+    time: 4200,
+    reqSkill: 'mechanics',
+    speedSkill: 'mechanics',
+    inputs: [
+      { id: 'small_gear', qty: 2},
+      { id: 'silk_coil', qty: 1},
+      { id: 'bar_bronze', qty: 1}
+    ],
+    outputs: [{ id: 'angler_reel', qty: 1 }],
+    xp: [{ skill: 'mechanics', amount: 45 }],
+    img: 'assets/mechanics/small_gear.png'
+  },
+  harvest_scythe: {
+    id: 'harvest_scythe',
+    name: 'Harvest Scythe',
+    level: 15,
+    time: 5100,
+    reqSkill: 'mechanics',
+    speedSkill: 'mechanics',
+    inputs: [
+      { id: 'bar_iron', qty: 2},
+      { id: 'wood_handle', qty: 1},
+      { id: 'leather', qty: 1}
+    ],
+    outputs: [{ id: 'harvest_scythe', qty: 1 }],
+    xp: [{ skill: 'mechanics', amount: 70 }],
+    img: 'assets/mechanics/handcrank_drill.png'
+  },
+
+  forge_bellows: {
+    id: 'forge_bellows',
+    name: 'Forge Bellows',
+    level: 20,
+    time: 5100,
+    reqSkill: 'mechanics',
+    speedSkill: 'mechanics',
+    inputs: [
+      { id: 'small_gear', qty: 2},
+      { id: 'bar_bronze', qty: 1},
+      { id: 'plank_oak', qty: 1}
+    ],
+    outputs: [{ id: 'forge_bellows', qty: 1 }],
+    xp: [{ skill: 'mechanics', amount: 100 }],
+    img: 'assets/mechanics/forge_bellows.png'
+  },
 }

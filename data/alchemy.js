@@ -155,5 +155,33 @@ export const ALCHEMY_RECIPES = {
       { id: 'toxic_poison', qty: 1 }
     ],
     xp: [{ skill: 'alch', amount: 100 }],
+  },
+  deathblight_toxin: {
+    id: 'deathblight_toxin',
+    name: 'Deathblight Toxin',
+    level: 35,
+    time: 3800,
+    inputs: [
+      { id: 'arcane_phial', qty: 1 },
+      { id: 'deathcap_toadstool', qty: 2 }
+    ],
+    outputs: [
+      { id: 'deathblight_toxin', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 175 }],
+  },
+  spore_toxin: {
+    id: 'spore_toxin',
+    name: 'Spore Toxin',
+    level: 50,
+    time: 4200,
+    inputs: [
+      { id: 'enchanted_phial', qty: 1 },
+      { id: 'sporeshroud_fungus', qty: 2 }
+    ],
+    outputs: [
+      { id: 'spore_toxin', qty: 1 }
+    ],
+    xp: [{ skill: 'alch', amount: 300 }],
   }
 };

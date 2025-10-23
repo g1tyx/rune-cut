@@ -266,6 +266,97 @@ export const ENCHANT_RECIPES = {
     desc: 'Applies a random stat to the Starstone Ring. Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
     apply: { targetSlots: ['ring'], mode: 'ring_enchant' }
   },
+
+  enchant_sapphire_amulet: {
+    id: 'enchant_sapphire_amulet',
+    name: 'Enchant Sapphire Amulet',
+    level: 20,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 200 },
+    desc: 'Applies a random stat to a Sapphire Amulet (Silver or Gold). Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['amulet'], mode: 'ring_enchant' }
+  },
+
+  enchant_ruby_amulet: {
+    id: 'enchant_ruby_amulet',
+    name: 'Enchant Ruby Amulet',
+    level: 27,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 350 },
+    desc: 'Applies a random stat to a Ruby Amulet (Silver or Gold). Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['amulet'], mode: 'ring_enchant' }
+  },
+
+  enchant_emerald_amulet: {
+    id: 'enchant_emerald_amulet',
+    name: 'Enchant Emerald Amulet',
+    level: 34,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 500 },
+    desc: 'Applies a random stat to an Emerald Amulet (Gold only). Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['amulet'], mode: 'ring_enchant' }
+  },
+
+  enchant_diamond_amulet: {
+    id: 'enchant_diamond_amulet',
+    name: 'Enchant Diamond Amulet',
+    level: 41,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 750 },
+    desc: 'Applies a random stat to a Diamond Amulet (Gold only). Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['amulet'], mode: 'ring_enchant' }
+  },
+
+  enchant_starstone_amulet: {
+    id: 'enchant_starstone_amulet',
+    name: 'Enchant Starstone Amulet',
+    level: 48,
+    time: 2800,
+    mana: 20,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 1000 },
+    desc: 'Applies a random stat to a Starstone Amulet (Gold only). Stone controls intensity odds; higher Enchanting level biases to stronger tiers.',
+    apply: { targetSlots: ['amulet'], mode: 'ring_enchant' }
+  },
+
+  dual_enchant_ring: {
+    id: 'dual_enchant_ring',
+    name: 'Dual Ring Enchant',
+    level: 60,
+    time: 7500,
+    mana: 80,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 500 },
+    desc: 'Adds a second enchantment to an already enchanted ring. If the ring already has 2 enchantments, replaces the weaker one.',
+    apply: { targetSlots: ['ring'], mode: 'dual_enchant' }
+  },
+
+  dual_enchant_amulet: {
+    id: 'dual_enchant_amulet',
+    name: 'Dual Amulet Enchant',
+    level: 65,
+    time: 7500,
+    mana: 80,
+    inputs: [],
+    outputs: [],
+    xp: { skill: 'enchant', amount: 600 },
+    desc: 'Adds a second enchantment to an already enchanted amulet. If the amulet already has 2 enchantments, replaces the weaker one.',
+    apply: { targetSlots: ['amulet'], mode: 'dual_enchant' }
+  },
   arcane_phial: {
     id: 'arcane_phial',
     name: 'Enchant Arcane Phial',

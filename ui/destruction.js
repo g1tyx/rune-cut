@@ -1,7 +1,7 @@
 import { DESTRUCTION_RECIPES } from "../data/destruction.js";
 import { initRecipePanel } from './recipe_ui.js';
 import { pushLog } from './logs.js';
-import { finishMake, maxMakable, startMake, canMake, getDestructionRecipes } from "../systems/destruction.js";
+import { finishMake, maxMakable, startMake, canMake, getDestructionRecipes, stopMake } from "../systems/destruction.js";
 
 const panel = initRecipePanel({
   actionType: 'destruction',
@@ -13,6 +13,7 @@ const panel = initRecipePanel({
   maxMake:  (s, id) => maxMakable(s, id),
   start:    (s, id, onDone) => startMake(s, id, onDone),
   finish:   (s, id) => finishMake(s, id),
+  stop:     (s) => stopMake(s),
   pushLog:  (txt) => pushLog(txt),
 });
 

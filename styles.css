@@ -1423,3 +1423,4 @@ body.camp-mode header { display:none !important; }
 .farm-store-info { flex:1; display:flex; flex-direction:column; }
 .farm-store-info .name { font-weight:600; }
 .farm-store-info .price { opacity:.75; font-size:0.9em; }
+

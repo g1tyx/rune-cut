@@ -44,11 +44,17 @@ export function attachInventoryTooltip(elInv, state){
       if (isTool && def.speed) lines.push(`Speed: ${Number(def.speed).toFixed(2)}×`);
       if (def.slot === 'tome'){ lines.push(...tomeTooltipLines(state, base)); }
       const req = equipReqLabel(base); if (req) lines.push(req);
-      if (def.slot === 'ring'){
-        const efx = enchantFromId(id);
-        if (efx){
-          const pretty = { hpMax:'HP', manaMax:'Mana', defense:'Defense', attack:'Attack', strength:'Strength' }[efx.stat] || efx.stat;
-          lines.push(`+${efx.add} ${pretty}${efx.tier?` (${efx.tier[0].toUpperCase()+efx.tier.slice(1)})`:''}`);
+      if (def.slot === 'ring' || def.slot === 'amulet'){
+        // Get all enchants from the item
+        const enchStr = String(id);
+        const enchMatches = [...enchStr.matchAll(/#e:([a-zA-Z_]+):(\d+)/g)];
+        if (enchMatches.length > 0){
+          for (const m of enchMatches){
+            const stat = m[1];
+            const value = parseInt(m[2], 10);
+            const pretty = { hpMax:'HP', manaMax:'Mana', defense:'Defense', attack:'Attack', strength:'Strength' }[stat] || stat;
+            lines.push(`+${value} ${pretty}`);
+          }
         }
       }
       const mSwift = String(id).match(/#swift:([0-9.]+)/);

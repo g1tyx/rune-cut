@@ -54,9 +54,19 @@ export const SMELT_RECIPES = {
     id:'bar_draconyx', name:'Draconyx Bar',
     level:60, time:3400, reqSkill:'smith', speedSkill:'smith',
     inputs:[{ id:'ore_draconyx', qty:2 }, { id:'ore_coal', qty:3 }],
-    outputs:[{ id:'bar_starsteel', qty:1 }],
+    outputs:[{ id:'bar_draconyx', qty:1 }],
     xp:[{ skill:'smith', amount:125 }]
   },
+
+  /*
+  bar_luminite: {
+    id:'bar_luminite', name:'Luminite Bar',
+    level:70, time:4200, reqSkill:'smith', speedSkill:'smith',
+    inputs:[{ id:'ore_luminite', qty:3 }, { id:'ore_voidcoal', qty:3 }],
+    outputs:[{ id:'bar_luminite', qty:1 }],
+    xp:[{ skill:'smith', amount:220 }]
+  },
+  */
 };
 
 export const FORGE_RECIPES = [
@@ -222,4 +232,5 @@ export const FORGE_RECIPES = [
   { id:'blacksteel_upgrade_bar', name:'Blacksteel Upgrade Bar', level:40, time:2700, reqSkill:'smith', speedSkill:'smith', metal:'blacksteel', inputs:[{id:'bar_blacksteel',qty:3}], outputs:[{id:'blacksteel_upgrade_bar',qty:1}], xp:[{skill:'smith',amount:270}], kind:'material', quality:false },
   { id:'starsteel_upgrade_bar',  name:'Starsteel Upgrade Bar',  level:50, time:2900, reqSkill:'smith', speedSkill:'smith', metal:'starsteel', inputs:[{id:'bar_starsteel',qty:3}], outputs:[{id:'starsteel_upgrade_bar',qty:1}],  xp:[{skill:'smith',amount:450}], kind:'material', quality:false },
   { id:'draconyx_upgrade_bar',  name:'Draconyx Upgrade Bar',  level:60, time:3400, reqSkill:'smith', speedSkill:'smith', metal:'draconyx', inputs:[{id:'bar_draconyx',qty:3}], outputs:[{id:'draconyx_upgrade_bar',qty:1}],  xp:[{skill:'smith',amount:750}], kind:'material', quality:false },
+  //{ id:'luminite_upgrade_bar',  name:'Luminite Upgrade Bar',  level:70, time:4200, reqSkill:'smith', speedSkill:'smith', metal:'luminite', inputs:[{id:'bar_luminite',qty:3}], outputs:[{id:'luminite_upgrade_bar',qty:1}],  xp:[{skill:'smith',amount:1320}], kind:'material', quality:false },
 ];

@@ -2,11 +2,12 @@
 import { state, saveNow } from './state.js';
 import { ITEMS } from '../data/items.js';
 import { recipeForSeed } from '../data/farming.js';
-import { pushLog } from '../ui/logs.js';
+import { pushFarmLog } from '../ui/logs.js';
 import { renderInventory } from '../ui/inventory.js';
 import { renderSkills } from '../ui/skills.js';
 import { renderAlchemy } from '../ui/alchemy.js';
 import { buildXpTable, levelFromXp } from './xp.js';
+import { toolEffectFor } from './tools.js';
 
 const XP_TABLE = buildXpTable();
 
@@ -53,15 +54,15 @@ export function unlockPlot(i){
   ensureFarmState();
   const cost   = UNLOCK_COSTS[i];
   const lvlReq = UNLOCK_LEVEL_REQS[i];
-  if (cost == null && lvlReq == null) return pushLog('This plot cannot be unlocked yet.', 'farming');
+  if (cost == null && lvlReq == null) return pushFarmLog('This plot cannot be unlocked yet.');
 
   const playerLvl = levelFromXp(state.farmingXp || 0, XP_TABLE);
   if (lvlReq != null && playerLvl < lvlReq) {
-    return pushLog(`You need Farming level ${lvlReq} to unlock Plot ${i+1}.`, 'farming');
+    return pushFarmLog(`You need Farming level ${lvlReq} to unlock Plot ${i+1}.`);
   }
 
   if ((state.gold|0) < (cost|0)) {
-    return pushLog(`Not enough gold (need ${cost}).`, 'farming');
+    return pushFarmLog(`Not enough gold (need ${cost}).`);
   }
 
   const p = state.farm.plots[i];
@@ -69,27 +70,36 @@ export function unlockPlot(i){
 
   state.gold -= (cost|0);
   p.unlocked = true;
-  pushLog(`Unlocked Plot ${i+1} (−${cost} gold).`, 'farming');
+  pushFarmLog(`Unlocked Plot ${i+1} (−${cost} gold).`);
   saveNow(); renderInventory();
 }
-
-// (rest of file unchanged)
-
 
 export function plantSeed(i, seedId){
   ensureFarmState();
   const p = state.farm.plots[i];
   if (!p.unlocked || p.seedId) return;
   const rec = recipeForSeed(seedId, ITEMS);
-  if (!rec) return pushLog(`Cannot plant ${seedId}.`, 'farming');
+  if (!rec) return pushFarmLog(`Cannot plant ${seedId}.`);
   const inv = state.inventory || {};
-  if ((inv[seedId]|0) <= 0) return pushLog(`You don't have ${seedId}.`, 'farming');
+  if ((inv[seedId]|0) <= 0) return pushFarmLog(`You don't have ${seedId}.`);
   inv[seedId] -= 1; if (inv[seedId] <= 0) delete inv[seedId];
   const now = Date.now();
+  let growTime = rec.time|0;
+  
+  // Apply Harvest Scythe growth time reduction
+  const eff = toolEffectFor(state, 'farming');
+  let bonusMsg = '';
+  if (eff && eff.id === 'harvest_scythe') {
+    const reduction = 0.2; // 20% faster growth
+    const savedTime = Math.floor(growTime * reduction);
+    growTime = Math.floor(growTime * (1 - reduction));
+    bonusMsg = ` (20% faster with Harvest Scythe · −${Math.floor(savedTime/1000)}s)`;
+  }
+  
   p.seedId = seedId;
   p.plantedAt = now;
-  p.doneAt = now + (rec.time|0);
-  pushLog(`Planted ${rec.name || seedId}.`, 'farming');
+  p.doneAt = now + growTime;
+  pushFarmLog(`Planted ${rec.name || seedId}.${bonusMsg}`);
   saveNow(); renderInventory();
 }
 
@@ -98,9 +108,9 @@ export function harvest(i){
   const p = state.farm.plots[i];
   if (!p.seedId) return;
   const rec = recipeForSeed(p.seedId, ITEMS);
-  if (!rec?.cropId) return pushLog('Error: unknown crop.', 'farming');
+  if (!rec?.cropId) return pushFarmLog('Error: unknown crop.');
   const now = Date.now();
-  if (now < p.doneAt) return pushLog('Not ready yet.', 'farming');
+  if (now < p.doneAt) return pushFarmLog('Not ready yet.');
 
   const add = Math.max(0, rec.xp) * 3;
   const crop = rec.cropId;
@@ -110,7 +120,7 @@ export function harvest(i){
   grantFarmingXp(add);
   saveNow();
 
-  pushLog(`Harvested 3× ${crop} → +${add} Farming XP`, 'farming');
+  pushFarmLog(`Harvested 3× ${crop} → +${add} Farming XP`);
 
   p.seedId = null; p.plantedAt = 0; p.doneAt = 0;
   saveNow();

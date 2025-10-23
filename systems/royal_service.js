@@ -2,6 +2,7 @@
 import { state, saveNow } from './state.js';
 import { hasItems, removeItem } from './inventory.js';
 import { XP_TABLE, levelFromXp } from './xp.js';
+import { addPet } from './pet.js';
 
 import { ITEMS } from '../data/items.js';
 import { COOK_RECIPES } from '../data/cooking.js';
@@ -580,8 +581,10 @@ export function ensureRoyalUnlocks(){
     if (favor >= 25) state.unlocks.autobattle = true;
     state.pets = state.pets || {};
     if (favor >= 50 && !state.pets.sterling){
-      state.pets.sterling = { id: 'sterling', level: 1, xp: 0, owned: true };
+      addPet(state, 'sterling');
+      saveNow();
       try { window.dispatchEvent(new CustomEvent('pets:change')); } catch {}
+      try { window.dispatchEvent(new Event('unlocks:changed')); } catch {}
     }
   } catch(e){}
 }

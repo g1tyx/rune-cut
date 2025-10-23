@@ -53,4 +53,19 @@ export const ROCKS = [
       { id:'gem_diamond',   chance:0.011 },
       { id:'gem_starstone', chance:0.004 }
     ]},
+/*
+  { id:'voidcoal_deposit', name:'Void Coal Deposit', level:70, baseTime:8000, xp:280, drop:'ore_voidcoal',
+    bonusDrops:[
+      { id:'gem_ruby',      chance:0.022 },
+      { id:'gem_emerald',   chance:0.017 },
+      { id:'gem_diamond',   chance:0.013 },
+      { id:'gem_starstone', chance:0.006 }
+    ]},
+
+  { id:'luminite_crystal', name:'Luminite Crystal', level:75, baseTime:8800, xp:350, drop:'ore_luminite',
+    bonusDrops:[
+      { id:'gem_emerald',   chance:0.020 },
+      { id:'gem_diamond',   chance:0.016 },
+      { id:'gem_starstone', chance:0.008 }
+    ]}, */
 ];
